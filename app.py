@@ -59,26 +59,36 @@ QUESTIONS = [
     {"category": "테스타리움", "sub": "", "item": "테스타리움 무료 검사 진행이 가능한가?"},
 ]
 
-CATEGORIES = sorted(list({q["category"] for q in QUESTIONS}))
+CATEGORY_ORDER = [
+    "기본탐색",
+    "사용자 인터페이스(UI) 및 반응형 디자인",
+    "기술적 성능",
+    "회원",
+    "구매",
+    "검사 관리",
+    "테스타리움",
+]
+
+CATEGORIES = CATEGORY_ORDER
 
 # -------------------------
 # 2) 세션 상태 초기화
 # -------------------------
-if "responses" not in st.session_state:
-    st.session_state["responses"] = {}  # key -> dict
+DEFAULT_FUNCTIONALITY = "Y"
+DEFAULT_SATISFACTION = 3
+
 
 def qkey(i: int) -> str:
     return f"q_{i:03d}"
 
-def init_default(i: int):
-    k = qkey(i)
-    if k not in st.session_state["responses"]:
-        st.session_state["responses"][k] = {
-            "functionality": None,   # "Y" / "N"
-            "satisfaction": None,    # 1~5
-            "improvement": "",
-            "comment": "",
-        }
+
+def init_defaults(i: int) -> None:
+    base = qkey(i)
+    st.session_state.setdefault(f"{base}_func", DEFAULT_FUNCTIONALITY)
+    st.session_state.setdefault(f"{base}_sat", DEFAULT_SATISFACTION)
+    st.session_state.setdefault(f"{base}_imp", "")
+    st.session_state.setdefault(f"{base}_cmt", "")
+
 
 # -------------------------
 # 3) UI 헤더
@@ -90,119 +100,107 @@ with st.sidebar:
     st.header("설문 페이지")
     category = st.selectbox("분류 선택", CATEGORIES, index=0)
     st.divider()
-    st.write("진행 팁")
-    st.write("- 페이지를 바꿔도 입력값은 유지됩니다.\n- 마지막에 '결과/제출'에서 다운로드 가능합니다.")
+    reset_confirm = st.checkbox("응답 초기화 확인", value=False)
+    if st.button("응답 초기화", type="secondary"):
+        if reset_confirm:
+            for i in range(len(QUESTIONS)):
+                base = qkey(i)
+                for suffix in ("func", "sat", "imp", "cmt"):
+                    st.session_state.pop(f"{base}_{suffix}", None)
+            st.success("응답이 초기화되었습니다.")
+            st.rerun()
+        else:
+            st.warning("체크박스를 선택한 뒤 초기화를 진행하세요.")
 
 # -------------------------
 # 4) 현재 분류 문항 필터
 # -------------------------
 filtered = [(idx, q) for idx, q in enumerate(QUESTIONS) if q["category"] == category]
 
-# 서브섹션별로 묶기
-subgroups = {}
-for idx, q in filtered:
-    sub = q["sub"].strip() if q["sub"] else ""
-    subgroups.setdefault(sub, []).append((idx, q))
-
 # -------------------------
 # 5) 문항 렌더링
 # -------------------------
-for sub, items in subgroups.items():
-    if sub:
-        st.subheader(sub)
-    else:
-        st.subheader(category)
+previous_sub = None
+for idx, q in filtered:
+    init_defaults(idx)
+    sub = q["sub"].strip() if q["sub"] else ""
+    if sub != previous_sub:
+        st.subheader(sub if sub else category)
+        previous_sub = sub
 
-    for idx, q in items:
-        init_default(idx)
-        k = qkey(idx)
-        resp = st.session_state["responses"][k]
+    base = qkey(idx)
 
-        with st.container(border=True):
-            st.markdown(f"**문항 {idx+1}. {q['item']}**")
+    with st.container(border=True):
+        st.markdown(f"**문항 {idx + 1}. {q['item']}**")
 
-            col1, col2 = st.columns([1, 1])
-            func_options = ["미선택", "Y", "N"]
-            sat_options = ["미선택", 1, 2, 3, 4, 5]
-            with col1:
-                func_index = func_options.index(resp["functionality"]) if resp["functionality"] in func_options else 0
-                func = st.radio(
-                    "기능 여부",
-                    options=func_options,
-                    index=func_index,
-                    horizontal=True,
-                    key=f"{k}_func",
-                )
-            with col2:
-                sat_index = sat_options.index(resp["satisfaction"]) if resp["satisfaction"] in sat_options else 0
-                sat = st.radio(
-                    "만족도 (1~5)",
-                    options=sat_options,
-                    index=sat_index,
-                    horizontal=True,
-                    key=f"{k}_sat",
-                )
+        col1, col2 = st.columns([1, 1])
+        func_options = ["Y", "N"]
+        sat_options = [1, 2, 3, 4, 5]
+        with col1:
+            func_value = st.session_state.get(f"{base}_func", DEFAULT_FUNCTIONALITY)
+            func_index = func_options.index(func_value) if func_value in func_options else 0
+            st.radio(
+                "기능 여부",
+                options=func_options,
+                index=func_index,
+                horizontal=True,
+                key=f"{base}_func",
+            )
+        with col2:
+            sat_value = st.session_state.get(f"{base}_sat", DEFAULT_SATISFACTION)
+            sat_index = sat_options.index(sat_value) if sat_value in sat_options else 2
+            st.radio(
+                "만족도 (1~5)",
+                options=sat_options,
+                index=sat_index,
+                horizontal=True,
+                key=f"{base}_sat",
+            )
 
-            imp = st.text_area("개선요청(주관식)", value=resp["improvement"], key=f"{k}_imp")
-            cmt = st.text_area("추가 의견(주관식)", value=resp["comment"], key=f"{k}_cmt")
-
-            # 세션에 즉시 반영
-            func_val = None if func in (None, "미선택") else func
-            sat_val = None if sat in (None, "미선택") else int(sat)
-            st.session_state["responses"][k] = {
-                "functionality": func_val,
-                "satisfaction": sat_val,
-                "improvement": imp.strip(),
-                "comment": cmt.strip(),
-            }
+        st.text_area("개선요청(주관식)", key=f"{base}_imp")
+        st.text_area("추가 의견(주관식)", key=f"{base}_cmt")
 
 # -------------------------
-# 6) 결과/제출 페이지(하단 고정 느낌)
+# 6) 제출/검증
 # -------------------------
 st.divider()
-st.header("결과 / 제출")
+submit = st.button("제출", type="primary")
 
-# 응답을 DF로 변환
-rows = []
-for i, q in enumerate(QUESTIONS):
-    init_default(i)
-    k = qkey(i)
-    r = st.session_state["responses"][k]
-    rows.append({
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "분류": q["category"],
-        "세부": q["sub"],
-        "문항": q["item"],
-        "기능여부": r["functionality"],
-        "만족도": r["satisfaction"],
-        "개선요청": r["improvement"],
-        "추가의견": r["comment"],
-    })
+if submit:
+    missing = []
+    for i in range(len(QUESTIONS)):
+        base = qkey(i)
+        func_val = st.session_state.get(f"{base}_func")
+        sat_val = st.session_state.get(f"{base}_sat")
+        if func_val not in {"Y", "N"} or sat_val not in {1, 2, 3, 4, 5}:
+            missing.append(i + 1)
 
-df = pd.DataFrame(rows)
-df["만족도"] = pd.to_numeric(df["만족도"], errors="coerce")
+    if missing:
+        missing_list = ", ".join(map(str, missing))
+        st.error(f"필수 응답이 누락되었습니다: 문항 {missing_list}")
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        rows = []
+        for i, q in enumerate(QUESTIONS):
+            base = qkey(i)
+            rows.append({
+                "timestamp": timestamp,
+                "분류": q["category"],
+                "세부": q["sub"],
+                "문항번호": i + 1,
+                "문항": q["item"],
+                "기능여부": st.session_state.get(f"{base}_func"),
+                "만족도": int(st.session_state.get(f"{base}_sat")),
+                "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
+                "추가의견": st.session_state.get(f"{base}_cmt", "").strip(),
+            })
 
-# 간단한 요약(분류별 평균 만족도)
-summary = df.groupby("분류", dropna=False)["만족도"].mean().reset_index().rename(columns={"만족도": "평균만족도"})
-
-c1, c2 = st.columns([2, 1])
-with c1:
-    st.write("응답 미리보기")
-    st.dataframe(df[["분류", "세부", "문항", "기능여부", "만족도", "개선요청", "추가의견"]], use_container_width=True, height=320)
-with c2:
-    st.write("분류별 평균 만족도")
-    st.dataframe(summary, use_container_width=True, height=320)
-
-# 다운로드
-csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-st.download_button(
-    label="응답 CSV 다운로드",
-    data=csv,
-    file_name="usability_survey_responses.csv",
-    mime="text/csv",
-)
-
-# 초기화 버튼
-if st.button("모든 응답 초기화", type="secondary"):
-    st.session_state["responses"] = {}
-    st.rerun()
+        df = pd.DataFrame(rows)
+        st.success("제출 완료")
+        csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+        st.download_button(
+            label="응답 CSV 다운로드",
+            data=csv,
+            file_name="usability_survey_responses.csv",
+            mime="text/csv",
+        )
