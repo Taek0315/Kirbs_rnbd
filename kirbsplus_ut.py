@@ -143,7 +143,7 @@ with st.sidebar:
             st.session_state["submission_complete"] = False
             st.session_state.pop("submission_csv", None)
             st.session_state.pop("saved_filepath", None)
-                    st.session_state.pop(f"{base}_{suffix}", None)
+            st.session_state.pop(f"{base}_{suffix}", None)
             st.session_state["step_idx"] = 0
             st.session_state["submission_complete"] = False
             st.session_state.pop("submission_csv", None)
