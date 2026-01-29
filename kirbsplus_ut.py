@@ -59,28 +59,12 @@ CATEGORY_ORDER = [
     "테스타리움",
 ]
 
-DEFAULT_FUNCTIONALITY = "Y"
-DEFAULT_SATISFACTION = 3
-
-
 # -------------------------
 # 2) 세션 상태 초기화
 # -------------------------
 
 def qkey(i: int) -> str:
     return f"q_{i:03d}"
-
-
-def coerce_sat(x) -> int:
-    try:
-        v = int(x)
-    except Exception:
-        return DEFAULT_SATISFACTION
-    return v if v in (1, 2, 3, 4, 5) else DEFAULT_SATISFACTION
-
-
-def coerce_func(x) -> str:
-    return x if x in ("Y", "N") else DEFAULT_FUNCTIONALITY
 
 
 def init_question_defaults(i: int) -> None:
@@ -93,20 +77,23 @@ def init_question_defaults(i: int) -> None:
     response = responses.setdefault(
         base,
         {
-            "functionality": DEFAULT_FUNCTIONALITY,
-            "satisfaction": DEFAULT_SATISFACTION,
+            "functionality": None,
+            "satisfaction": None,
             "improvement": "",
             "comment": "",
         },
     )
 
-    st.session_state[sat_key] = coerce_sat(st.session_state.get(sat_key))
-    st.session_state[func_key] = coerce_func(st.session_state.get(func_key))
+    if func_key in st.session_state:
+        func_val = st.session_state.get(func_key)
+        response["functionality"] = func_val if func_val in ("Y", "N") else None
+    if sat_key in st.session_state:
+        sat = st.session_state.get(sat_key)
+        response["satisfaction"] = int(sat) if sat is not None else None
+
     st.session_state[imp_key] = st.session_state.get(imp_key, "")
     st.session_state[cmt_key] = st.session_state.get(cmt_key, "")
 
-    response["functionality"] = coerce_func(st.session_state.get(func_key))
-    response["satisfaction"] = coerce_sat(st.session_state.get(sat_key))
     response["improvement"] = st.session_state.get(imp_key, "")
     response["comment"] = st.session_state.get(cmt_key, "")
 
@@ -119,7 +106,7 @@ def get_missing(question_indices: list[int]) -> list[int]:
         response = responses.get(base, {})
         func_val = response.get("functionality")
         sat_val = response.get("satisfaction")
-        if func_val not in {"Y", "N"} or sat_val not in {1, 2, 3, 4, 5}:
+        if func_val is None or sat_val is None:
             missing.append(i + 1)
     return missing
 
@@ -192,6 +179,7 @@ for idx, q in filtered:
                 "기능 여부",
                 options=["Y", "N"],
                 horizontal=True,
+                index=None,
                 key=f"{base}_func",
             )
         with col2:
@@ -199,14 +187,17 @@ for idx, q in filtered:
                 "만족도 (1~5)",
                 options=[1, 2, 3, 4, 5],
                 horizontal=True,
+                index=None,
                 key=f"{base}_sat",
             )
 
         st.text_area("개선요청(주관식)", key=f"{base}_imp")
         st.text_area("추가 의견(주관식)", key=f"{base}_cmt")
 
-    responses["functionality"] = coerce_func(st.session_state.get(f"{base}_func"))
-    responses["satisfaction"] = coerce_sat(st.session_state.get(f"{base}_sat"))
+    func_val = st.session_state.get(f"{base}_func")
+    responses["functionality"] = func_val if func_val in ("Y", "N") else None
+    sat = st.session_state.get(f"{base}_sat")
+    responses["satisfaction"] = int(sat) if sat is not None else None
     responses["improvement"] = (st.session_state.get(f"{base}_imp") or "").strip()
     responses["comment"] = (st.session_state.get(f"{base}_cmt") or "").strip()
 
@@ -240,8 +231,8 @@ def handle_submit() -> None:
                 "세부": q.get("sub", ""),
                 "문항번호": i + 1,
                 "문항": q["item"],
-                "기능여부": coerce_func(response.get("functionality")),
-                "만족도": coerce_sat(response.get("satisfaction")),
+                "기능여부": response.get("functionality"),
+                "만족도": int(response.get("satisfaction")),
                 "개선요청": (response.get("improvement") or "").strip(),
                 "추가의견": (response.get("comment") or "").strip(),
             }
