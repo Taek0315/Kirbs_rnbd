@@ -2,8 +2,11 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import streamlit as st
 import pandas as pd
 import streamlit as st
+
+from gcp_storage import save_to_gcp
 
 from gcp_storage import save_to_gcp
 
@@ -97,6 +100,12 @@ def init_question(i: int) -> None:
     st.session_state.setdefault(f"{key_prefix}_sat", responses[key_prefix]["satisfaction"])
     st.session_state.setdefault(f"{key_prefix}_imp", responses[key_prefix]["improvement"])
     st.session_state.setdefault(f"{key_prefix}_cmt", responses[key_prefix]["comment"])
+def init_defaults(i: int) -> None:
+    base = qkey(i)
+    st.session_state.setdefault(f"{base}_func", None)
+    st.session_state.setdefault(f"{base}_sat", None)
+    st.session_state.setdefault(f"{base}_imp", "")
+    st.session_state.setdefault(f"{base}_cmt", "")
 
 
 if "step_idx" not in st.session_state:
@@ -134,6 +143,10 @@ with st.sidebar:
             st.session_state["submission_complete"] = False
             st.session_state.pop("submission_csv", None)
             st.session_state.pop("saved_filepath", None)
+                    st.session_state.pop(f"{base}_{suffix}", None)
+            st.session_state["step_idx"] = 0
+            st.session_state["submission_complete"] = False
+            st.session_state.pop("submission_csv", None)
             st.success("응답이 초기화되었습니다.")
             st.rerun()
         else:
@@ -168,6 +181,8 @@ for idx, q in filtered:
         with col1:
             func_value = responses["functionality"]
             func_index = func_options.index(func_value) if func_value in func_options else 0
+            func_value = st.session_state.get(f"{base}_func")
+            func_index = func_options.index(func_value) if func_value in func_options else None
             st.radio(
                 "기능 여부",
                 options=func_options,
@@ -178,6 +193,8 @@ for idx, q in filtered:
         with col2:
             sat_value = responses["satisfaction"]
             sat_index = sat_options.index(sat_value) if sat_value in sat_options else 2
+            sat_value = st.session_state.get(f"{base}_sat")
+            sat_index = sat_options.index(sat_value) if sat_value in sat_options else None
             st.radio(
                 "만족도 (1~5)",
                 options=sat_options,
@@ -206,6 +223,10 @@ def missing_for_indices(indices: list[tuple[int, dict]]) -> list[int]:
         response = responses.get(key_prefix, {})
         func_val = response.get("functionality")
         sat_val = response.get("satisfaction")
+    for i, _ in indices:
+        base = qkey(i)
+        func_val = st.session_state.get(f"{base}_func")
+        sat_val = st.session_state.get(f"{base}_sat")
         if func_val not in {"Y", "N"} or sat_val not in {1, 2, 3, 4, 5}:
             missing.append(i + 1)
     return missing
@@ -215,11 +236,14 @@ st.divider()
 
 left_col, spacer, right_col = st.columns([1, 6, 1])
 with left_col:
+col_prev, col_next = st.columns([1, 1])
+with col_prev:
     if st.button("이전", disabled=st.session_state["step_idx"] == 0):
         st.session_state["step_idx"] -= 1
         st.rerun()
 
 with right_col:
+with col_next:
     is_last_step = st.session_state["step_idx"] == len(CATEGORY_ORDER) - 1
     next_label = "제출" if is_last_step else "다음"
     if st.button(next_label, type="primary"):
@@ -239,6 +263,9 @@ with right_col:
                 for i, q in enumerate(QUESTIONS):
                     key_prefix = qkey(i)
                     response = st.session_state["responses"][key_prefix]
+                rows = []
+                for i, q in enumerate(QUESTIONS):
+                    base = qkey(i)
                     rows.append({
                         "submission_ts": timestamp,
                         "분류": q["category"],
@@ -258,6 +285,13 @@ with right_col:
                 df.to_csv(filepath, index=False, encoding="utf-8-sig")
                 st.session_state["saved_filepath"] = str(filepath)
 
+                        "기능여부": st.session_state.get(f"{base}_func"),
+                        "만족도": int(st.session_state.get(f"{base}_sat")),
+                        "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
+                        "추가의견": st.session_state.get(f"{base}_cmt", "").strip(),
+                    })
+
+                df = pd.DataFrame(rows)
                 try:
                     save_to_gcp(df)
                 except Exception as exc:  # noqa: BLE001
@@ -266,6 +300,7 @@ with right_col:
                 st.session_state["submission_complete"] = True
                 st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
                 st.success(f"제출 완료: {filepath}")
+                st.success("제출 완료")
         else:
             missing = missing_for_indices(filtered)
             if missing:
