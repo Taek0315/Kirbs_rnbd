@@ -33,18 +33,20 @@ def _ensure_header(
 
 def append_one_row_to_sheet(wide_row: dict) -> None:
     service_account_info = st.secrets["gcp_service_account"]
-    sheet_id = st.secrets["survey"]["sheet_id"]
+    spreadsheet_id = st.secrets["sheets"]["spreadsheet_id"]
+    worksheet_name = st.secrets["sheets"]["worksheet_name"]
 
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
     credentials = Credentials.from_service_account_info(
         service_account_info,
         scopes=scopes,
     )
     client = gspread.authorize(credentials)
-    sheet = client.open_by_key(sheet_id)
-    worksheet = sheet.get_worksheet(0)
-    if worksheet is None:
-        raise ValueError("No worksheet found in the spreadsheet.")
+    sheet = client.open_by_key(spreadsheet_id)
+    worksheet = sheet.worksheet(worksheet_name)
 
     header = _ensure_header(worksheet, wide_row.keys())
     values = [wide_row.get(col, "") for col in header]
