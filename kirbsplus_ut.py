@@ -234,13 +234,21 @@ def missing_for_indices(indices: list[tuple[int, dict]]) -> list[int]:
 
 st.divider()
 
-left_col, spacer, right_col = st.columns([1, 6, 1])
-with left_col:
-col_prev, col_next = st.columns([1, 1])
-with col_prev:
+col_left, col_spacer, col_right = st.columns([1, 6, 1])
+
+with col_left:
     if st.button("이전", disabled=st.session_state["step_idx"] == 0):
         st.session_state["step_idx"] -= 1
         st.rerun()
+
+with col_right:
+    if is_last_step:
+        if st.button("제출"):
+            submit_survey()
+    else:
+        if st.button("다음"):
+            st.session_state["step_idx"] += 1
+            st.rerun()
 
 with right_col:
 with col_next:
