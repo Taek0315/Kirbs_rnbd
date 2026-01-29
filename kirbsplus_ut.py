@@ -122,19 +122,23 @@ for sub, items in subgroups.items():
             st.markdown(f"**문항 {idx+1}. {q['item']}**")
 
             col1, col2 = st.columns([1, 1])
+            func_options = ["미선택", "Y", "N"]
+            sat_options = ["미선택", 1, 2, 3, 4, 5]
             with col1:
+                func_index = func_options.index(resp["functionality"]) if resp["functionality"] in func_options else 0
                 func = st.radio(
                     "기능 여부",
-                    options=["Y", "N"],
-                    index=0 if resp["functionality"] == "Y" else (1 if resp["functionality"] == "N" else None),
+                    options=func_options,
+                    index=func_index,
                     horizontal=True,
                     key=f"{k}_func",
                 )
             with col2:
+                sat_index = sat_options.index(resp["satisfaction"]) if resp["satisfaction"] in sat_options else 0
                 sat = st.radio(
                     "만족도 (1~5)",
-                    options=[1, 2, 3, 4, 5],
-                    index=(resp["satisfaction"] - 1) if isinstance(resp["satisfaction"], int) else None,
+                    options=sat_options,
+                    index=sat_index,
                     horizontal=True,
                     key=f"{k}_sat",
                 )
@@ -143,9 +147,11 @@ for sub, items in subgroups.items():
             cmt = st.text_area("추가 의견(주관식)", value=resp["comment"], key=f"{k}_cmt")
 
             # 세션에 즉시 반영
+            func_val = None if func in (None, "미선택") else func
+            sat_val = None if sat in (None, "미선택") else int(sat)
             st.session_state["responses"][k] = {
-                "functionality": func,
-                "satisfaction": int(sat),
+                "functionality": func_val,
+                "satisfaction": sat_val,
                 "improvement": imp.strip(),
                 "comment": cmt.strip(),
             }
@@ -174,6 +180,7 @@ for i, q in enumerate(QUESTIONS):
     })
 
 df = pd.DataFrame(rows)
+df["만족도"] = pd.to_numeric(df["만족도"], errors="coerce")
 
 # 간단한 요약(분류별 평균 만족도)
 summary = df.groupby("분류", dropna=False)["만족도"].mean().reset_index().rename(columns={"만족도": "평균만족도"})
