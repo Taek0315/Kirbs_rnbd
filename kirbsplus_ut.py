@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from uuid import uuid4
 
 import pandas as pd
@@ -158,7 +157,6 @@ with st.sidebar:
             st.session_state.pop("last_submission_id", None)
             st.session_state.pop("last_submission_ts", None)
             st.session_state.pop("submission_csv", None)
-            st.session_state.pop("saved_filepath", None)
             st.success("응답이 초기화되었습니다.")
             st.rerun()
         else:
@@ -273,13 +271,7 @@ def handle_submit() -> None:
 
     df = pd.DataFrame(rows)
 
-    submissions_dir = Path("submissions")
-    submissions_dir.mkdir(parents=True, exist_ok=True)
-    filepath = submissions_dir / f"submission_{timestamp_compact}.csv"
-    df.to_csv(filepath, index=False, encoding="utf-8-sig")
-
     st.session_state["submission_complete"] = True
-    st.session_state["saved_filepath"] = str(filepath)
     st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
     try:
@@ -290,8 +282,6 @@ def handle_submit() -> None:
         st.success("저장 완료")
     except Exception as exc:
         st.warning(f"저장 실패, 연구사업부로 알려주세요: {exc}")
-
-    st.success(f"csv생성완료: {filepath}")
 
 
 st.divider()
@@ -326,4 +316,3 @@ if st.session_state.get("submission_complete"):
         file_name="usability_survey_responses.csv",
         mime="text/csv",
     )
-    st.caption(f"서버 저장 위치: {st.session_state.get('saved_filepath')}")
