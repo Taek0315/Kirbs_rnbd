@@ -1,9 +1,8 @@
-# app.py
-# streamlit run app.py
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+
+from gcp_storage import save_to_gcp
 
 st.set_page_config(page_title="사용성 평가 설문", layout="wide")
 
@@ -69,14 +68,9 @@ CATEGORY_ORDER = [
     "테스타리움",
 ]
 
-CATEGORIES = CATEGORY_ORDER
-
 # -------------------------
 # 2) 세션 상태 초기화
 # -------------------------
-DEFAULT_FUNCTIONALITY = "Y"
-DEFAULT_SATISFACTION = 3
-
 
 def qkey(i: int) -> str:
     return f"q_{i:03d}"
@@ -84,11 +78,17 @@ def qkey(i: int) -> str:
 
 def init_defaults(i: int) -> None:
     base = qkey(i)
-    st.session_state.setdefault(f"{base}_func", DEFAULT_FUNCTIONALITY)
-    st.session_state.setdefault(f"{base}_sat", DEFAULT_SATISFACTION)
+    st.session_state.setdefault(f"{base}_func", None)
+    st.session_state.setdefault(f"{base}_sat", None)
     st.session_state.setdefault(f"{base}_imp", "")
     st.session_state.setdefault(f"{base}_cmt", "")
 
+
+if "step_idx" not in st.session_state:
+    st.session_state["step_idx"] = 0
+
+if "submission_complete" not in st.session_state:
+    st.session_state["submission_complete"] = False
 
 # -------------------------
 # 3) UI 헤더
@@ -96,9 +96,13 @@ def init_defaults(i: int) -> None:
 st.title("사용성 평가 설문지 (Streamlit)")
 st.caption("각 문항에 대해 기능 여부(Y/N), 만족도(1~5), 개선요청/추가의견을 입력해주세요.")
 
+if st.session_state.get("error_message"):
+    st.error(st.session_state.pop("error_message"))
+
 with st.sidebar:
     st.header("설문 페이지")
-    category = st.selectbox("분류 선택", CATEGORIES, index=0)
+    st.caption(f"진행: {st.session_state['step_idx'] + 1}/{len(CATEGORY_ORDER)}")
+    st.progress((st.session_state["step_idx"] + 1) / len(CATEGORY_ORDER))
     st.divider()
     reset_confirm = st.checkbox("응답 초기화 확인", value=False)
     if st.button("응답 초기화", type="secondary"):
@@ -107,6 +111,9 @@ with st.sidebar:
                 base = qkey(i)
                 for suffix in ("func", "sat", "imp", "cmt"):
                     st.session_state.pop(f"{base}_{suffix}", None)
+            st.session_state["step_idx"] = 0
+            st.session_state["submission_complete"] = False
+            st.session_state.pop("submission_csv", None)
             st.success("응답이 초기화되었습니다.")
             st.rerun()
         else:
@@ -115,7 +122,8 @@ with st.sidebar:
 # -------------------------
 # 4) 현재 분류 문항 필터
 # -------------------------
-filtered = [(idx, q) for idx, q in enumerate(QUESTIONS) if q["category"] == category]
+current_category = CATEGORY_ORDER[st.session_state["step_idx"]]
+filtered = [(idx, q) for idx, q in enumerate(QUESTIONS) if q["category"] == current_category]
 
 # -------------------------
 # 5) 문항 렌더링
@@ -125,7 +133,7 @@ for idx, q in filtered:
     init_defaults(idx)
     sub = q["sub"].strip() if q["sub"] else ""
     if sub != previous_sub:
-        st.subheader(sub if sub else category)
+        st.subheader(sub if sub else current_category)
         previous_sub = sub
 
     base = qkey(idx)
@@ -137,8 +145,8 @@ for idx, q in filtered:
         func_options = ["Y", "N"]
         sat_options = [1, 2, 3, 4, 5]
         with col1:
-            func_value = st.session_state.get(f"{base}_func", DEFAULT_FUNCTIONALITY)
-            func_index = func_options.index(func_value) if func_value in func_options else 0
+            func_value = st.session_state.get(f"{base}_func")
+            func_index = func_options.index(func_value) if func_value in func_options else None
             st.radio(
                 "기능 여부",
                 options=func_options,
@@ -147,8 +155,8 @@ for idx, q in filtered:
                 key=f"{base}_func",
             )
         with col2:
-            sat_value = st.session_state.get(f"{base}_sat", DEFAULT_SATISFACTION)
-            sat_index = sat_options.index(sat_value) if sat_value in sat_options else 2
+            sat_value = st.session_state.get(f"{base}_sat")
+            sat_index = sat_options.index(sat_value) if sat_value in sat_options else None
             st.radio(
                 "만족도 (1~5)",
                 options=sat_options,
@@ -161,46 +169,80 @@ for idx, q in filtered:
         st.text_area("추가 의견(주관식)", key=f"{base}_cmt")
 
 # -------------------------
-# 6) 제출/검증
+# 6) 검증 및 제출
 # -------------------------
-st.divider()
-submit = st.button("제출", type="primary")
 
-if submit:
+def missing_for_indices(indices: list[tuple[int, dict]]) -> list[int]:
     missing = []
-    for i in range(len(QUESTIONS)):
+    for i, _ in indices:
         base = qkey(i)
         func_val = st.session_state.get(f"{base}_func")
         sat_val = st.session_state.get(f"{base}_sat")
         if func_val not in {"Y", "N"} or sat_val not in {1, 2, 3, 4, 5}:
             missing.append(i + 1)
+    return missing
 
-    if missing:
-        missing_list = ", ".join(map(str, missing))
-        st.error(f"필수 응답이 누락되었습니다: 문항 {missing_list}")
-    else:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        rows = []
-        for i, q in enumerate(QUESTIONS):
-            base = qkey(i)
-            rows.append({
-                "timestamp": timestamp,
-                "분류": q["category"],
-                "세부": q["sub"],
-                "문항번호": i + 1,
-                "문항": q["item"],
-                "기능여부": st.session_state.get(f"{base}_func"),
-                "만족도": int(st.session_state.get(f"{base}_sat")),
-                "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
-                "추가의견": st.session_state.get(f"{base}_cmt", "").strip(),
-            })
 
-        df = pd.DataFrame(rows)
-        st.success("제출 완료")
-        csv = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-        st.download_button(
-            label="응답 CSV 다운로드",
-            data=csv,
-            file_name="usability_survey_responses.csv",
-            mime="text/csv",
-        )
+st.divider()
+
+col_prev, col_next = st.columns([1, 1])
+with col_prev:
+    if st.button("이전", disabled=st.session_state["step_idx"] == 0):
+        st.session_state["step_idx"] -= 1
+        st.rerun()
+
+with col_next:
+    is_last_step = st.session_state["step_idx"] == len(CATEGORY_ORDER) - 1
+    next_label = "제출" if is_last_step else "다음"
+    if st.button(next_label, type="primary"):
+        if is_last_step:
+            all_missing = missing_for_indices(list(enumerate(QUESTIONS)))
+            if all_missing:
+                missing_list = ", ".join(map(str, all_missing))
+                first_missing_idx = all_missing[0] - 1
+                missing_category = QUESTIONS[first_missing_idx]["category"]
+                st.session_state["step_idx"] = CATEGORY_ORDER.index(missing_category)
+                st.session_state["error_message"] = f"필수 응답이 누락되었습니다: 문항 {missing_list}"
+                st.rerun()
+            else:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                rows = []
+                for i, q in enumerate(QUESTIONS):
+                    base = qkey(i)
+                    rows.append({
+                        "submission_ts": timestamp,
+                        "분류": q["category"],
+                        "세부": q["sub"],
+                        "문항번호": i + 1,
+                        "문항": q["item"],
+                        "기능여부": st.session_state.get(f"{base}_func"),
+                        "만족도": int(st.session_state.get(f"{base}_sat")),
+                        "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
+                        "추가의견": st.session_state.get(f"{base}_cmt", "").strip(),
+                    })
+
+                df = pd.DataFrame(rows)
+                try:
+                    save_to_gcp(df)
+                except Exception as exc:  # noqa: BLE001
+                    st.warning(f"저장 실패: {exc}")
+
+                st.session_state["submission_complete"] = True
+                st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+                st.success("제출 완료")
+        else:
+            missing = missing_for_indices(filtered)
+            if missing:
+                missing_list = ", ".join(map(str, missing))
+                st.error(f"필수 응답이 누락되었습니다: 문항 {missing_list}")
+            else:
+                st.session_state["step_idx"] += 1
+                st.rerun()
+
+if st.session_state.get("submission_complete"):
+    st.download_button(
+        label="응답 CSV 다운로드",
+        data=st.session_state.get("submission_csv"),
+        file_name="usability_survey_responses.csv",
+        mime="text/csv",
+    )
