@@ -71,10 +71,26 @@ def qkey(i: int) -> str:
     return f"q_{i:03d}"
 
 
+def coerce_sat(x) -> int:
+    try:
+        v = int(x)
+    except Exception:
+        return DEFAULT_SATISFACTION
+    return v if v in (1, 2, 3, 4, 5) else DEFAULT_SATISFACTION
+
+
+def coerce_func(x) -> str:
+    return x if x in ("Y", "N") else DEFAULT_FUNCTIONALITY
+
+
 def init_question_defaults(i: int) -> None:
     base = qkey(i)
+    sat_key = f"{base}_sat"
+    func_key = f"{base}_func"
+    imp_key = f"{base}_imp"
+    cmt_key = f"{base}_cmt"
     responses = st.session_state.setdefault("responses", {})
-    responses.setdefault(
+    response = responses.setdefault(
         base,
         {
             "functionality": DEFAULT_FUNCTIONALITY,
@@ -84,14 +100,15 @@ def init_question_defaults(i: int) -> None:
         },
     )
 
-    if f"{base}_func" not in st.session_state:
-        st.session_state[f"{base}_func"] = responses[base]["functionality"]
-    if f"{base}_sat" not in st.session_state:
-        st.session_state[f"{base}_sat"] = responses[base]["satisfaction"]
-    if f"{base}_imp" not in st.session_state:
-        st.session_state[f"{base}_imp"] = responses[base]["improvement"]
-    if f"{base}_cmt" not in st.session_state:
-        st.session_state[f"{base}_cmt"] = responses[base]["comment"]
+    st.session_state[sat_key] = coerce_sat(st.session_state.get(sat_key))
+    st.session_state[func_key] = coerce_func(st.session_state.get(func_key))
+    st.session_state[imp_key] = st.session_state.get(imp_key, "")
+    st.session_state[cmt_key] = st.session_state.get(cmt_key, "")
+
+    response["functionality"] = coerce_func(st.session_state.get(func_key))
+    response["satisfaction"] = coerce_sat(st.session_state.get(sat_key))
+    response["improvement"] = st.session_state.get(imp_key, "")
+    response["comment"] = st.session_state.get(cmt_key, "")
 
 
 def get_missing(question_indices: list[int]) -> list[int]:
@@ -170,25 +187,17 @@ for idx, q in filtered:
         st.markdown(f"**문항 {idx + 1}. {q['item']}**")
 
         col1, col2 = st.columns([1, 1])
-        func_options = ["Y", "N"]
-        sat_options = [1, 2, 3, 4, 5]
         with col1:
-            func_value = st.session_state[f"{base}_func"]
-            func_index = func_options.index(func_value) if func_value in func_options else 0
             st.radio(
                 "기능 여부",
-                options=func_options,
-                index=func_index,
+                options=["Y", "N"],
                 horizontal=True,
                 key=f"{base}_func",
             )
         with col2:
-            sat_value = st.session_state[f"{base}_sat"]
-            sat_index = sat_options.index(sat_value) if sat_value in sat_options else 2
             st.radio(
                 "만족도 (1~5)",
-                options=sat_options,
-                index=sat_index,
+                options=[1, 2, 3, 4, 5],
                 horizontal=True,
                 key=f"{base}_sat",
             )
@@ -196,10 +205,10 @@ for idx, q in filtered:
         st.text_area("개선요청(주관식)", key=f"{base}_imp")
         st.text_area("추가 의견(주관식)", key=f"{base}_cmt")
 
-    responses["functionality"] = st.session_state[f"{base}_func"]
-    responses["satisfaction"] = int(st.session_state[f"{base}_sat"])
-    responses["improvement"] = st.session_state[f"{base}_imp"].strip()
-    responses["comment"] = st.session_state[f"{base}_cmt"].strip()
+    responses["functionality"] = coerce_func(st.session_state.get(f"{base}_func"))
+    responses["satisfaction"] = coerce_sat(st.session_state.get(f"{base}_sat"))
+    responses["improvement"] = (st.session_state.get(f"{base}_imp") or "").strip()
+    responses["comment"] = (st.session_state.get(f"{base}_cmt") or "").strip()
 
 # -------------------------
 # 6) 검증 및 제출
@@ -231,8 +240,8 @@ def handle_submit() -> None:
                 "세부": q.get("sub", ""),
                 "문항번호": i + 1,
                 "문항": q["item"],
-                "기능여부": response.get("functionality"),
-                "만족도": int(response.get("satisfaction", DEFAULT_SATISFACTION)),
+                "기능여부": coerce_func(response.get("functionality")),
+                "만족도": coerce_sat(response.get("satisfaction")),
                 "개선요청": (response.get("improvement") or "").strip(),
                 "추가의견": (response.get("comment") or "").strip(),
             }
