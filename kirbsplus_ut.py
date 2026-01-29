@@ -132,7 +132,7 @@ for i in range(len(QUESTIONS)):
 # -------------------------
 # 3) UI 헤더
 # -------------------------
-st.title("사용성 평가 설문지 (Streamlit)")
+st.title("사용성 평가 설문지 (KIRBSPLUS)")
 st.caption("각 문항에 대해 기능 여부(Y/N), 만족도(1~5), 개선요청/추가의견을 입력해주세요.")
 
 if st.session_state.get("error_message"):
@@ -287,11 +287,11 @@ def handle_submit() -> None:
         st.session_state["submitted"] = True
         st.session_state["last_submission_ts"] = timestamp
         st.session_state["last_submission_id"] = submission_id
-        st.success("Google Sheets 저장 완료")
+        st.success("저장 완료")
     except Exception as exc:
-        st.warning(f"Google Sheets 저장 실패: {exc}")
+        st.warning(f"저장 실패, 연구사업부로 알려주세요: {exc}")
 
-    st.success(f"제출 완료 (로컬 저장): {filepath}")
+    st.success(f"csv생성완료: {filepath}")
 
 
 st.divider()
