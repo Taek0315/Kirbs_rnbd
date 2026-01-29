@@ -251,65 +251,67 @@ with col_right:
             st.rerun()
 
 with right_col:
-with col_next:
     is_last_step = st.session_state["step_idx"] == len(CATEGORY_ORDER) - 1
     next_label = "제출" if is_last_step else "다음"
+
     if st.button(next_label, type="primary"):
         if is_last_step:
+            # --- validate ALL questions ---
             all_missing = missing_for_indices(list(enumerate(QUESTIONS)))
             if all_missing:
                 missing_list = ", ".join(map(str, all_missing))
                 first_missing_idx = all_missing[0] - 1
                 missing_category = QUESTIONS[first_missing_idx]["category"]
+
                 st.session_state["step_idx"] = CATEGORY_ORDER.index(missing_category)
                 st.session_state["error_message"] = f"필수 응답이 누락되었습니다: 문항 {missing_list}"
                 st.rerun()
-            else:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                timestamp_compact = datetime.now().strftime("%Y%m%d_%H%M%S")
-                rows = []
-                for i, q in enumerate(QUESTIONS):
-                    key_prefix = qkey(i)
-                    response = st.session_state["responses"][key_prefix]
-                rows = []
-                for i, q in enumerate(QUESTIONS):
-                    base = qkey(i)
-                    rows.append({
-                        "submission_ts": timestamp,
-                        "분류": q["category"],
-                        "세부": q["sub"],
-                        "문항번호": i + 1,
-                        "문항": q["item"],
-                        "기능여부": response["functionality"],
-                        "만족도": int(response["satisfaction"]),
-                        "개선요청": response["improvement"],
-                        "추가의견": response["comment"],
-                    })
 
-                df = pd.DataFrame(rows)
-                submissions_dir = Path("submissions")
-                os.makedirs(submissions_dir, exist_ok=True)
-                filepath = submissions_dir / f"submission_{timestamp_compact}.csv"
-                df.to_csv(filepath, index=False, encoding="utf-8-sig")
-                st.session_state["saved_filepath"] = str(filepath)
+            # --- build rows from responses dict ---
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            timestamp_compact = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-                        "기능여부": st.session_state.get(f"{base}_func"),
-                        "만족도": int(st.session_state.get(f"{base}_sat")),
-                        "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
-                        "추가의견": st.session_state.get(f"{base}_cmt", "").strip(),
-                    })
+            rows = []
+            for i, q in enumerate(QUESTIONS):
+                base = qkey(i)
+                response = st.session_state["responses"].get(base, {})
 
-                df = pd.DataFrame(rows)
-                try:
-                    save_to_gcp(df)
-                except Exception as exc:  # noqa: BLE001
-                    st.warning(f"저장 실패: {exc}")
+                rows.append({
+                    "submission_ts": timestamp,
+                    "분류": q["category"],
+                    "세부": q.get("sub", ""),
+                    "문항번호": i + 1,
+                    "문항": q["item"],
+                    "기능여부": response.get("functionality"),
+                    "만족도": int(response.get("satisfaction")),
+                    "개선요청": (response.get("improvement") or "").strip(),
+                    "추가의견": (response.get("comment") or "").strip(),
+                })
 
-                st.session_state["submission_complete"] = True
-                st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-                st.success(f"제출 완료: {filepath}")
-                st.success("제출 완료")
+            df = pd.DataFrame(rows)
+
+            # --- save local CSV to submissions/ ---
+            submissions_dir = Path("submissions")
+            submissions_dir.mkdir(parents=True, exist_ok=True)
+            filepath = submissions_dir / f"submission_{timestamp_compact}.csv"
+            df.to_csv(filepath, index=False, encoding="utf-8-sig")
+
+            st.session_state["submission_complete"] = True
+            st.session_state["saved_filepath"] = str(filepath)
+            st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+
+            # --- (optional) try GCP save if function exists ---
+            try:
+                save_to_gcp(df)  # noqa: F821
+            except NameError:
+                pass
+            except Exception as exc:  # noqa: BLE001
+                st.warning(f"저장 실패: {exc}")
+
+            st.success(f"제출 완료 (로컬 저장): {filepath}")
+
         else:
+            # --- validate CURRENT category only before moving next ---
             missing = missing_for_indices(filtered)
             if missing:
                 missing_list = ", ".join(map(str, missing))
@@ -325,3 +327,5 @@ if st.session_state.get("submission_complete"):
         file_name="usability_survey_responses.csv",
         mime="text/csv",
     )
+    st.caption(f"서버 저장 위치: {st.session_state.get('saved_filepath')}")
+
