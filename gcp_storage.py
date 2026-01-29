@@ -1,30 +1,51 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
+from typing import Iterable
 
-import pandas as pd
+import gspread
+import streamlit as st
+from google.oauth2.service_account import Credentials
 
 
-def save_to_gcp(df: pd.DataFrame) -> None:
-    """Save survey responses to a future GCP backend.
+def _get_header_row(worksheet: gspread.Worksheet) -> list[str]:
+    header = worksheet.row_values(1)
+    return [col.strip() for col in header if col is not None]
 
-    TODO:
-    - Google Sheets via gspread + service account JSON in Streamlit secrets
-    - BigQuery insert
-    - GCS upload
-    """
 
-    gcp_env_vars = [
-        "GCP_PROJECT",
-        "GOOGLE_APPLICATION_CREDENTIALS",
-        "GCP_SERVICE_ACCOUNT_JSON",
-    ]
-    has_gcp_config = any(os.getenv(key) for key in gcp_env_vars)
+def _ensure_header(
+    worksheet: gspread.Worksheet,
+    desired_header: Iterable[str],
+) -> list[str]:
+    desired = list(desired_header)
+    header = _get_header_row(worksheet)
 
-    if not has_gcp_config:
-        output_path = Path("usability_survey_responses_local.csv")
-        df.to_csv(output_path, index=False, encoding="utf-8-sig")
-        return
+    if not header:
+        worksheet.update("A1", [desired])
+        return desired
 
-    raise NotImplementedError("GCP 저장 백엔드가 아직 구성되지 않았습니다.")
+    missing = [col for col in desired if col not in header]
+    if missing:
+        header = header + missing
+        worksheet.update("A1", [header])
+
+    return header
+
+
+def append_one_row_to_sheet(wide_row: dict) -> None:
+    service_account_info = st.secrets["gcp_service_account"]
+    sheet_id = st.secrets["survey"]["sheet_id"]
+
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    credentials = Credentials.from_service_account_info(
+        service_account_info,
+        scopes=scopes,
+    )
+    client = gspread.authorize(credentials)
+    sheet = client.open_by_key(sheet_id)
+    worksheet = sheet.get_worksheet(0)
+    if worksheet is None:
+        raise ValueError("No worksheet found in the spreadsheet.")
+
+    header = _ensure_header(worksheet, wide_row.keys())
+    values = [wide_row.get(col, "") for col in header]
+    worksheet.append_row(values, value_input_option="RAW")

@@ -1,8 +1,11 @@
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 import pandas as pd
 import streamlit as st
+
+from gcp_storage import append_one_row_to_sheet
 
 st.set_page_config(page_title="사용성 평가 설문", layout="wide")
 
@@ -117,6 +120,12 @@ if "step_idx" not in st.session_state:
 if "submission_complete" not in st.session_state:
     st.session_state["submission_complete"] = False
 
+if "submitted" not in st.session_state:
+    st.session_state["submitted"] = False
+
+if "respondent_id" not in st.session_state:
+    st.session_state["respondent_id"] = str(uuid4())
+
 for i in range(len(QUESTIONS)):
     init_question_defaults(i)
 
@@ -144,6 +153,10 @@ with st.sidebar:
             st.session_state["responses"] = {}
             st.session_state["step_idx"] = 0
             st.session_state["submission_complete"] = False
+            st.session_state["submitted"] = False
+            st.session_state.pop("respondent_id", None)
+            st.session_state.pop("last_submission_id", None)
+            st.session_state.pop("last_submission_ts", None)
             st.session_state.pop("submission_csv", None)
             st.session_state.pop("saved_filepath", None)
             st.success("응답이 초기화되었습니다.")
@@ -206,6 +219,10 @@ for idx, q in filtered:
 # -------------------------
 
 def handle_submit() -> None:
+    if st.session_state.get("submitted"):
+        st.info("이미 제출되었습니다. 새 제출을 위해 응답을 초기화하세요.")
+        return
+
     all_missing = get_missing(list(range(len(QUESTIONS))))
     if all_missing:
         missing_list = ", ".join(map(str, all_missing))
@@ -218,12 +235,28 @@ def handle_submit() -> None:
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     timestamp_compact = datetime.now().strftime("%Y%m%d_%H%M%S")
+    respondent_id = st.session_state.get("respondent_id") or str(uuid4())
+    st.session_state["respondent_id"] = respondent_id
+    submission_id = f"{respondent_id}_{timestamp_compact}"
+
+    if st.session_state.get("last_submission_id") == submission_id:
+        st.info("이미 제출 처리되었습니다.")
+        return
+
+    wide_row: dict[str, str] = {
+        "submission_ts": timestamp,
+        "respondent_id": respondent_id,
+    }
 
     rows = []
     responses = st.session_state.get("responses", {})
     for i, q in enumerate(QUESTIONS):
         base = qkey(i)
         response = responses.get(base, {})
+        wide_row[f"Q{i + 1}_func"] = response.get("functionality") or ""
+        wide_row[f"Q{i + 1}_sat"] = response.get("satisfaction") or ""
+        wide_row[f"Q{i + 1}_imp"] = (response.get("improvement") or "").strip()
+        wide_row[f"Q{i + 1}_cmt"] = (response.get("comment") or "").strip()
         rows.append(
             {
                 "submission_ts": timestamp,
@@ -248,6 +281,15 @@ def handle_submit() -> None:
     st.session_state["submission_complete"] = True
     st.session_state["saved_filepath"] = str(filepath)
     st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+
+    try:
+        append_one_row_to_sheet(wide_row)
+        st.session_state["submitted"] = True
+        st.session_state["last_submission_ts"] = timestamp
+        st.session_state["last_submission_id"] = submission_id
+        st.success("Google Sheets 저장 완료")
+    except Exception as exc:
+        st.warning(f"Google Sheets 저장에 실패했습니다: {exc}")
 
     st.success(f"제출 완료 (로컬 저장): {filepath}")
 
