@@ -1,6 +1,12 @@
+import os
+from datetime import datetime
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import streamlit as st
+
+from gcp_storage import save_to_gcp
 
 from gcp_storage import save_to_gcp
 
@@ -68,6 +74,9 @@ CATEGORY_ORDER = [
     "테스타리움",
 ]
 
+DEFAULT_FUNCTIONALITY = "Y"
+DEFAULT_SATISFACTION = 3
+
 # -------------------------
 # 2) 세션 상태 초기화
 # -------------------------
@@ -76,6 +85,21 @@ def qkey(i: int) -> str:
     return f"q_{i:03d}"
 
 
+def init_question(i: int) -> None:
+    key_prefix = qkey(i)
+    responses = st.session_state.setdefault("responses", {})
+    if key_prefix not in responses:
+        responses[key_prefix] = {
+            "functionality": DEFAULT_FUNCTIONALITY,
+            "satisfaction": DEFAULT_SATISFACTION,
+            "improvement": "",
+            "comment": "",
+        }
+
+    st.session_state.setdefault(f"{key_prefix}_func", responses[key_prefix]["functionality"])
+    st.session_state.setdefault(f"{key_prefix}_sat", responses[key_prefix]["satisfaction"])
+    st.session_state.setdefault(f"{key_prefix}_imp", responses[key_prefix]["improvement"])
+    st.session_state.setdefault(f"{key_prefix}_cmt", responses[key_prefix]["comment"])
 def init_defaults(i: int) -> None:
     base = qkey(i)
     st.session_state.setdefault(f"{base}_func", None)
@@ -89,6 +113,9 @@ if "step_idx" not in st.session_state:
 
 if "submission_complete" not in st.session_state:
     st.session_state["submission_complete"] = False
+
+for i in range(len(QUESTIONS)):
+    init_question(i)
 
 # -------------------------
 # 3) UI 헤더
@@ -108,8 +135,14 @@ with st.sidebar:
     if st.button("응답 초기화", type="secondary"):
         if reset_confirm:
             for i in range(len(QUESTIONS)):
-                base = qkey(i)
+                key_prefix = qkey(i)
                 for suffix in ("func", "sat", "imp", "cmt"):
+                    st.session_state.pop(f"{key_prefix}_{suffix}", None)
+            st.session_state["responses"] = {}
+            st.session_state["step_idx"] = 0
+            st.session_state["submission_complete"] = False
+            st.session_state.pop("submission_csv", None)
+            st.session_state.pop("saved_filepath", None)
                     st.session_state.pop(f"{base}_{suffix}", None)
             st.session_state["step_idx"] = 0
             st.session_state["submission_complete"] = False
@@ -130,13 +163,14 @@ filtered = [(idx, q) for idx, q in enumerate(QUESTIONS) if q["category"] == curr
 # -------------------------
 previous_sub = None
 for idx, q in filtered:
-    init_defaults(idx)
+    init_question(idx)
     sub = q["sub"].strip() if q["sub"] else ""
     if sub != previous_sub:
         st.subheader(sub if sub else current_category)
         previous_sub = sub
 
-    base = qkey(idx)
+    key_prefix = qkey(idx)
+    responses = st.session_state["responses"][key_prefix]
 
     with st.container(border=True):
         st.markdown(f"**문항 {idx + 1}. {q['item']}**")
@@ -145,6 +179,8 @@ for idx, q in filtered:
         func_options = ["Y", "N"]
         sat_options = [1, 2, 3, 4, 5]
         with col1:
+            func_value = responses["functionality"]
+            func_index = func_options.index(func_value) if func_value in func_options else 0
             func_value = st.session_state.get(f"{base}_func")
             func_index = func_options.index(func_value) if func_value in func_options else None
             st.radio(
@@ -152,9 +188,11 @@ for idx, q in filtered:
                 options=func_options,
                 index=func_index,
                 horizontal=True,
-                key=f"{base}_func",
+                key=f"{key_prefix}_func",
             )
         with col2:
+            sat_value = responses["satisfaction"]
+            sat_index = sat_options.index(sat_value) if sat_value in sat_options else 2
             sat_value = st.session_state.get(f"{base}_sat")
             sat_index = sat_options.index(sat_value) if sat_value in sat_options else None
             st.radio(
@@ -162,11 +200,16 @@ for idx, q in filtered:
                 options=sat_options,
                 index=sat_index,
                 horizontal=True,
-                key=f"{base}_sat",
+                key=f"{key_prefix}_sat",
             )
 
-        st.text_area("개선요청(주관식)", key=f"{base}_imp")
-        st.text_area("추가 의견(주관식)", key=f"{base}_cmt")
+        st.text_area("개선요청(주관식)", key=f"{key_prefix}_imp")
+        st.text_area("추가 의견(주관식)", key=f"{key_prefix}_cmt")
+
+    responses["functionality"] = st.session_state[f"{key_prefix}_func"]
+    responses["satisfaction"] = st.session_state[f"{key_prefix}_sat"]
+    responses["improvement"] = st.session_state[f"{key_prefix}_imp"].strip()
+    responses["comment"] = st.session_state[f"{key_prefix}_cmt"].strip()
 
 # -------------------------
 # 6) 검증 및 제출
@@ -174,6 +217,12 @@ for idx, q in filtered:
 
 def missing_for_indices(indices: list[tuple[int, dict]]) -> list[int]:
     missing = []
+    responses = st.session_state.get("responses", {})
+    for i, _ in indices:
+        key_prefix = qkey(i)
+        response = responses.get(key_prefix, {})
+        func_val = response.get("functionality")
+        sat_val = response.get("satisfaction")
     for i, _ in indices:
         base = qkey(i)
         func_val = st.session_state.get(f"{base}_func")
@@ -185,12 +234,15 @@ def missing_for_indices(indices: list[tuple[int, dict]]) -> list[int]:
 
 st.divider()
 
+left_col, spacer, right_col = st.columns([1, 6, 1])
+with left_col:
 col_prev, col_next = st.columns([1, 1])
 with col_prev:
     if st.button("이전", disabled=st.session_state["step_idx"] == 0):
         st.session_state["step_idx"] -= 1
         st.rerun()
 
+with right_col:
 with col_next:
     is_last_step = st.session_state["step_idx"] == len(CATEGORY_ORDER) - 1
     next_label = "제출" if is_last_step else "다음"
@@ -206,6 +258,11 @@ with col_next:
                 st.rerun()
             else:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                timestamp_compact = datetime.now().strftime("%Y%m%d_%H%M%S")
+                rows = []
+                for i, q in enumerate(QUESTIONS):
+                    key_prefix = qkey(i)
+                    response = st.session_state["responses"][key_prefix]
                 rows = []
                 for i, q in enumerate(QUESTIONS):
                     base = qkey(i)
@@ -215,6 +272,19 @@ with col_next:
                         "세부": q["sub"],
                         "문항번호": i + 1,
                         "문항": q["item"],
+                        "기능여부": response["functionality"],
+                        "만족도": int(response["satisfaction"]),
+                        "개선요청": response["improvement"],
+                        "추가의견": response["comment"],
+                    })
+
+                df = pd.DataFrame(rows)
+                submissions_dir = Path("submissions")
+                os.makedirs(submissions_dir, exist_ok=True)
+                filepath = submissions_dir / f"submission_{timestamp_compact}.csv"
+                df.to_csv(filepath, index=False, encoding="utf-8-sig")
+                st.session_state["saved_filepath"] = str(filepath)
+
                         "기능여부": st.session_state.get(f"{base}_func"),
                         "만족도": int(st.session_state.get(f"{base}_sat")),
                         "개선요청": st.session_state.get(f"{base}_imp", "").strip(),
@@ -229,6 +299,7 @@ with col_next:
 
                 st.session_state["submission_complete"] = True
                 st.session_state["submission_csv"] = df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+                st.success(f"제출 완료: {filepath}")
                 st.success("제출 완료")
         else:
             missing = missing_for_indices(filtered)
