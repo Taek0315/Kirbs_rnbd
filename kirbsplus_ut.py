@@ -289,7 +289,7 @@ def handle_submit() -> None:
         st.session_state["last_submission_id"] = submission_id
         st.success("Google Sheets 저장 완료")
     except Exception as exc:
-        st.warning(f"Google Sheets 저장에 실패했습니다: {exc}")
+        st.warning(f"Google Sheets 저장 실패: {exc}")
 
     st.success(f"제출 완료 (로컬 저장): {filepath}")
 
