@@ -309,10 +309,4 @@ with col_right:
                 st.session_state["step_idx"] += 1
                 st.rerun()
 
-if st.session_state.get("submission_complete"):
-    st.download_button(
-        label="응답 CSV 다운로드",
-        data=st.session_state.get("submission_csv"),
-        file_name="usability_survey_responses.csv",
-        mime="text/csv",
-    )
+
