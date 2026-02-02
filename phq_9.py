@@ -14,27 +14,6 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from PIL import Image, ImageDraw, ImageFont  # PNG 합성용 (현재 파일 내에서 직접 사용하지 않아도 유지)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# DB 저장: dev 환경 방어 래퍼 (전산센터 공통 메서드가 있을 때만 insert)
-def safe_db_insert(payload: dict) -> bool:
-    """
-    dev 단계: ENABLE_DB_INSERT=0 (기본) → 저장 호출 안 함
-    운영 탑재: ENABLE_DB_INSERT=1 → utils.database.Database().insert(payload) 수행
-    """
-    enable = os.getenv("ENABLE_DB_INSERT", "0") == "1"
-    if not enable:
-        return False
-
-    try:
-        from utils.database import Database  # 전산센터 공통 모듈
-        db = Database()
-        db.insert(payload)
-        return True
-    except Exception as e:
-        st.warning("DB 저장 모듈이 없거나 저장 중 오류가 발생했습니다. (개발환경에서는 정상일 수 있음)")
-        st.exception(e)
-        return False
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 앱 상태 초기화
@@ -1184,11 +1163,10 @@ def render_result_page() -> None:
         )
         payload = build_phq9_payload()
 
-        with st.expander("저장 payload(개발용)", expanded=False):
-            st.json(payload)
-
-        if os.getenv("ENABLE_DB_INSERT", "0") != "1":
-            st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=0)")
+        if not ENABLE_DB_INSERT:
+            with st.expander("DB 저장 payload (개발용)", expanded=False):
+                st.json(payload)
+            st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
         else:
             if st.button("DB 저장", type="primary"):
                 if not st.session_state.examinee.get("name"):
@@ -1202,6 +1180,31 @@ def render_result_page() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DB 연동 전용 블록
+ENABLE_DB_INSERT = os.getenv("ENABLE_DB_INSERT", "false").lower() == "true"
+
+if ENABLE_DB_INSERT:
+    from utils.database import Database
+
+
+def safe_db_insert(payload: dict) -> bool:
+    """
+    dev 단계: ENABLE_DB_INSERT=false (기본) → 저장 호출 안 함
+    운영 탑재: ENABLE_DB_INSERT=true → utils.database.Database().insert(payload) 수행
+    """
+    if ENABLE_DB_INSERT:
+        try:
+            db = Database()
+            db.insert(payload)
+            return True
+        except Exception as e:
+            # 운영 환경 로그용
+            print(f"[DB INSERT ERROR] {e}")
+            return False
+    return False
 
 
 if st.session_state.page == "intro":
