@@ -39,14 +39,23 @@ def safe_db_insert(payload: dict) -> bool:
 # ──────────────────────────────────────────────────────────────────────────────
 # 앱 상태 초기화
 def _reset_to_survey():
-    """앱 상태 초기화 후 설문 첫 화면으로 이동"""
+    """앱 상태 초기화 후 인트로로 이동"""
+    st.session_state.page = "intro"
+    st.session_state.consent = False
+    st.session_state.consent_ts = None
     st.session_state.answers = {}
     st.session_state.functional = None
     st.session_state.summary = None
+    st.session_state.examinee = {
+        "user_id": str(uuid.uuid4()),
+        "name": "",
+        "email": "",
+        "phone": "",
+    }
     for i in range(1, 10):
         st.session_state.pop(f"q{i}", None)
     st.session_state.pop("functional-impact", None)
-    st.session_state.page = "survey"
+    st.session_state.pop("consent_checkbox", None)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -140,6 +149,25 @@ body, p, div, span, li, button, label {{
 .page-frame {{
   max-width: 960px;
   margin: 16px auto;
+}}
+
+.app-wrap {{
+  max-width: 960px;
+  margin: 16px auto;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.app-wrap) {{
+  max-width: 960px;
+  margin: 16px auto;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.card-shell) {{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 32px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  margin: 16px auto 0;
 }}
 
 .section-card {{
@@ -425,15 +453,23 @@ body, p, div, span, li, button, label {{
   line-height: 1.5;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta),
-div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
-  max-width: 960px;
-  margin: 0 auto 12px;
+.question-card,
+.functional-card {{
   background: var(--inner-card);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 22px 24px 12px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-card),
+div[data-testid="stVerticalBlock"]:has(.functional-card) {{
+  max-width: 960px;
+  margin: 0 auto 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
 }}
 
 .functional-divider {{
@@ -731,49 +767,49 @@ div[data-testid="stHorizontalBlock"]:has(.button-anchor) {{
 }}
 
 /* --- FIX: Question text becomes invisible on light background --- */
-div[data-testid="stVerticalBlock"]:has(.question-meta),
-div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
+div[data-testid="stVerticalBlock"]:has(.question-card),
+div[data-testid="stVerticalBlock"]:has(.functional-card) {{
   color: var(--ink) !important;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta) .question-label,
-div[data-testid="stVerticalBlock"]:has(.question-meta) .question-text,
-div[data-testid="stVerticalBlock"]:has(.question-meta) p,
-div[data-testid="stVerticalBlock"]:has(.question-meta) span,
-div[data-testid="stVerticalBlock"]:has(.question-meta) div,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) .functional-label,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) .functional-text,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) p,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) span,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) div {{
+div[data-testid="stVerticalBlock"]:has(.question-card) .question-label,
+div[data-testid="stVerticalBlock"]:has(.question-card) .question-text,
+div[data-testid="stVerticalBlock"]:has(.question-card) p,
+div[data-testid="stVerticalBlock"]:has(.question-card) span,
+div[data-testid="stVerticalBlock"]:has(.question-card) div,
+div[data-testid="stVerticalBlock"]:has(.functional-card) .functional-label,
+div[data-testid="stVerticalBlock"]:has(.functional-card) .functional-text,
+div[data-testid="stVerticalBlock"]:has(.functional-card) p,
+div[data-testid="stVerticalBlock"]:has(.functional-card) span,
+div[data-testid="stVerticalBlock"]:has(.functional-card) div {{
   color: var(--ink) !important;
   -webkit-text-fill-color: var(--ink) !important;
   opacity: 1 !important;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta) .small-muted,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) .small-muted {{
+div[data-testid="stVerticalBlock"]:has(.question-card) .small-muted,
+div[data-testid="stVerticalBlock"]:has(.functional-card) .small-muted {{
   color: var(--subtle) !important;
   -webkit-text-fill-color: var(--subtle) !important;
   opacity: 1 !important;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta) .stRadio [role="radio"] *,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) .stRadio [role="radio"] * {{
+div[data-testid="stVerticalBlock"]:has(.question-card) .stRadio [role="radio"] *,
+div[data-testid="stVerticalBlock"]:has(.functional-card) .stRadio [role="radio"] * {{
   color: var(--chip-text) !important;
   -webkit-text-fill-color: var(--chip-text) !important;
   opacity: 1 !important;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta) .stRadio [role="radio"][aria-checked="true"] *,
-div[data-testid="stVerticalBlock"]:has(.functional-meta) .stRadio [role="radio"][aria-checked="true"] * {{
+div[data-testid="stVerticalBlock"]:has(.question-card) .stRadio [role="radio"][aria-checked="true"] *,
+div[data-testid="stVerticalBlock"]:has(.functional-card) .stRadio [role="radio"][aria-checked="true"] * {{
   color: var(--ink) !important;
   -webkit-text-fill-color: var(--ink) !important;
 }}
 
-div[data-testid="stVerticalBlock"]:has(.question-meta),
-div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
-  background: #FFFFFF !important;
+div[data-testid="stVerticalBlock"]:has(.question-card),
+div[data-testid="stVerticalBlock"]:has(.functional-card) {{
+  background: transparent !important;
 }}
 
 /* =========================================================
@@ -853,7 +889,11 @@ div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
 # ──────────────────────────────────────────────────────────────────────────────
 # 상태 관리
 if "page" not in st.session_state:
-    st.session_state.page = "survey"   # 'survey' | 'result'
+    st.session_state.page = "intro"   # 'intro' | 'examinee' | 'survey' | 'result'
+if "consent" not in st.session_state:
+    st.session_state.consent = False
+if "consent_ts" not in st.session_state:
+    st.session_state.consent_ts = None
 if "answers" not in st.session_state:
     st.session_state.answers: Dict[int, str] = {}
 if "functional" not in st.session_state:
@@ -1093,138 +1133,238 @@ def compose_narrative(total: int, severity: str, functional: str | None, item9: 
     return base + functional_text + safety_text
 
 
+def kst_iso_now() -> str:
+    kst = timezone(timedelta(hours=9))
+    return datetime.now(kst).isoformat(timespec="seconds")
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # UI 헬퍼
 def render_question_item(question: Dict[str, str | int]) -> None:
-    st.markdown(
-        dedent(
-            f"""
-            <div class="question-meta">
-              <div class="question-label">문항 {question['no']}</div>
-              <div class="question-text">{question['ko']}</div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
-    st.session_state.answers[question["no"]] = st.radio(
-        label=f"문항 {question['no']}",
-        options=LABELS,
-        index=None,
-        horizontal=True,
-        label_visibility="collapsed",
-        key=f"q{question['no']}",
-    )
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                f"""
+                <div class="question-card">
+                  <div class="question-meta">
+                    <div class="question-label">문항 {question['no']}</div>
+                    <div class="question-text">{question['ko']}</div>
+                  </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+        st.session_state.answers[question["no"]] = st.radio(
+            label=f"문항 {question['no']}",
+            options=LABELS,
+            index=None,
+            horizontal=True,
+            label_visibility="collapsed",
+            key=f"q{question['no']}",
+        )
 
 
 def render_functional_block() -> None:
-    st.markdown('<div class="functional-divider"></div>', unsafe_allow_html=True)
-    st.markdown(
-        dedent(
-            """
-            <div class="functional-meta">
-              <div class="functional-label">기능 손상</div>
-              <div class="functional-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
-              <div class="small-muted" style="margin-top:4px;">가장 가까운 수준을 선택해 주세요.</div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
-    st.session_state.functional = st.radio(
-        "기능 손상",
-        options=["전혀 어렵지 않음", "어렵지 않음", "어려움", "매우 어려움"],
-        index=None,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="functional-impact",
-    )
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
+                <div class="functional-card">
+                  <div class="functional-meta">
+                    <div class="functional-label">기능 손상</div>
+                    <div class="functional-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
+                    <div class="small-muted" style="margin-top:4px;">가장 가까운 수준을 선택해 주세요.</div>
+                  </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+        st.session_state.functional = st.radio(
+            "기능 손상",
+            options=["전혀 어렵지 않음", "어렵지 않음", "어려움", "매우 어려움"],
+            index=None,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="functional-impact",
+        )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 상단 헤더
-st.markdown(
-    dedent(
-        """
-        <div class="page-frame">
-          <div class="section-card header-card">
-            <div class="header-badge">PHQ-9</div>
-            <div class="header-title">우울 증상 자기보고 검사</div>
-            <p class="small-muted">지난 2주 동안 경험한 증상 빈도를 0~3점 척도로 기록하는 표준화된 자기보고 도구입니다.</p>
-          </div>
-        </div>
-        """
-    ),
-    unsafe_allow_html=True,
-)
+def render_intro_page() -> None:
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
+                <div class="section-card header-card">
+                  <div class="header-badge">PHQ-9</div>
+                  <div class="header-title">우울 증상 자기보고 검사</div>
+                  <p class="small-muted">지난 2주 동안 경험한 증상 빈도를 0~3점 척도로 기록하는 표준화된 자기보고 도구입니다.</p>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 응시자 정보 (PHQ-9에 기존 없던 인적사항 저장 영역 추가)
-with st.container():
-    st.markdown("### 응시자 정보")
-    st.session_state.examinee["name"] = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
-    st.session_state.examinee["email"] = st.text_input("이메일", value=st.session_state.examinee.get("email", ""))
-    st.session_state.examinee["phone"] = st.text_input("연락처", value=st.session_state.examinee.get("phone", ""))
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
+                <div class="section-card">
+                  <div class="section-heading">PHQ-9 검사 안내</div>
+                  <ul class="instruction-list">
+                    <li>목적: 최근 2주간 우울 관련 증상의 빈도를 자가 보고하여 현재 상태를 점검합니다.</li>
+                    <li>대상: 만 12세 이상 누구나 스스로 응답할 수 있습니다.</li>
+                    <li>응답 방식: 각 문항은 <b>전혀 아님(0)</b>부터 <b>거의 매일(3)</b>까지의 0~3점 척도로 응답합니다.</li>
+                  </ul>
+                  <p class="small-muted" style="margin-top:10px;">※ 결과 해석은 참고용이며, 의학적 진단을 대신하지 않습니다.</p>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 설문 페이지
-if st.session_state.page == "survey":
-    st.markdown(
-        dedent(
-            """
-            <div class="page-frame">
-              <div class="section-card instruction-card">
-                <div class="section-heading">지시문</div>
+    with st.container():
+        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">개인정보 수집·이용 동의</div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
                 <ul class="instruction-list">
-                  <li>각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</li>
-                  <li>모든 문항과 기능 손상 질문을 완료한 뒤 ‘결과 보기’를 누르면 총점, 중증도, 영역별 분석을 바로 확인할 수 있습니다.</li>
+                  <li>수집 항목: 이름, 이메일, 연락처, 응답 내용, 결과, 제출 시각</li>
+                  <li>이용 목적: 검사 수행 및 결과 제공, 통계 및 품질 개선, DB 저장</li>
+                  <li>보관 기간: 내부 정책에 따름</li>
+                  <li>제3자 제공: 없음</li>
+                  <li>동의 거부 권리 및 불이익: 동의하지 않으실 경우 검사를 진행할 수 없습니다.</li>
                 </ul>
-              </div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+        consent_checked = st.checkbox(
+            "개인정보 수집 및 이용에 동의합니다. (필수)",
+            key="consent_checkbox",
+            value=st.session_state.consent,
+        )
+        if consent_checked != st.session_state.consent:
+            st.session_state.consent = consent_checked
+            if not consent_checked:
+                st.session_state.consent_ts = None
 
-    st.markdown(
-        dedent(
-            """
-            <div class="page-frame">
-              <div class="section-card question-section">
-                <div class="section-heading">질문지 (지난 2주)</div>
-                <div class="small-muted">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
-              </div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
+        next_clicked = st.button("다음", type="primary", use_container_width=True)
+        if next_clicked:
+            if not st.session_state.consent:
+                st.warning("동의가 필요합니다.")
+            else:
+                if not st.session_state.consent_ts:
+                    st.session_state.consent_ts = kst_iso_now()
+                st.session_state.page = "examinee"
+                st.rerun()
+
+
+def render_examinee_page() -> None:
+    with st.container():
+        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">응답자 정보</div>', unsafe_allow_html=True)
+        name_col, email_col = st.columns([1, 1], gap="medium")
+        with name_col:
+            st.session_state.examinee["name"] = st.text_input(
+                "이름",
+                value=st.session_state.examinee.get("name", ""),
+            )
+        with email_col:
+            st.session_state.examinee["email"] = st.text_input(
+                "이메일 (선택)",
+                value=st.session_state.examinee.get("email", ""),
+            )
+        st.session_state.examinee["phone"] = st.text_input(
+            "연락처 (선택)",
+            value=st.session_state.examinee.get("phone", ""),
+        )
+
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        back_col, next_col = st.columns([1, 1], gap="medium")
+        with back_col:
+            if st.button("이전", use_container_width=True):
+                st.session_state.page = "intro"
+                st.rerun()
+        with next_col:
+            if st.button("다음", type="primary", use_container_width=True):
+                if not st.session_state.examinee.get("name", "").strip():
+                    st.warning("이름을 입력해 주세요.")
+                else:
+                    st.session_state.page = "survey"
+                    st.rerun()
+
+
+def render_survey_page() -> None:
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
+                <div class="section-card instruction-card">
+                  <div class="section-heading">지시문</div>
+                  <ul class="instruction-list">
+                    <li>각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</li>
+                    <li>모든 문항과 기능 손상 질문을 완료한 뒤 ‘결과 보기’를 누르면 총점, 중증도, 영역별 분석을 바로 확인할 수 있습니다.</li>
+                  </ul>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        st.markdown(
+            dedent(
+                """
+                <div class="section-card question-section">
+                  <div class="section-heading">질문지 (지난 2주)</div>
+                  <div class="small-muted">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
 
     for q in QUESTIONS:
         render_question_item(q)
 
     render_functional_block()
 
-    if st.button("결과 보기", type="primary", use_container_width=True):
-        scores, unanswered = [], 0
-        for i in range(1, 10):
-            lab = st.session_state.answers.get(i)
-            if lab is None:
-                unanswered += 1
-                scores.append(0)
-            else:
-                scores.append(LABEL2SCORE[lab])
-        total = sum(scores)
-        sev = phq_severity(total)
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-        st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
-        st.session_state.page = "result"
-        st.rerun()
+    with st.container():
+        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
+        back_col, next_col = st.columns([1, 1], gap="medium")
+        with back_col:
+            if st.button("이전", use_container_width=True):
+                st.session_state.page = "examinee"
+                st.rerun()
+        with next_col:
+            if st.button("결과 보기", type="primary", use_container_width=True):
+                scores, unanswered = [], 0
+                for i in range(1, 10):
+                    lab = st.session_state.answers.get(i)
+                    if lab is None:
+                        unanswered += 1
+                        scores.append(0)
+                    else:
+                        scores.append(LABEL2SCORE[lab])
+                total = sum(scores)
+                sev = phq_severity(total)
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+                st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
+                st.session_state.page = "result"
+                st.rerun()
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 결과 페이지
-if st.session_state.page == "result":
+
+def render_result_page() -> None:
     if not st.session_state.summary:
         st.warning("먼저 설문을 완료해 주세요.")
         st.stop()
@@ -1240,7 +1380,7 @@ if st.session_state.page == "result":
     st.markdown(
         dedent(
             f"""
-            <div class="page-frame">
+            <div class="app-wrap">
               <div class="report-shell">
                 <div class="report-header">
                   <div>
@@ -1281,7 +1421,7 @@ if st.session_state.page == "result":
     domain_html = build_domain_profile_html(scores)
     domain_section_html = dedent(
         """
-        <div class="page-frame">
+        <div class="app-wrap">
           <div class="report-shell">
             <div class="section-heading" style="margin-bottom:12px;">II. 증상 영역별 프로파일</div>
             {domain_panel}
@@ -1305,7 +1445,6 @@ if st.session_state.page == "result":
             unsafe_allow_html=True,
         )
 
-    # 버튼 영역
     button_zone = st.container()
     with button_zone:
         st.markdown('<div class="button-anchor"></div>', unsafe_allow_html=True)
@@ -1331,17 +1470,13 @@ if st.session_state.page == "result":
         unsafe_allow_html=True,
     )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # DB 저장 payload 구성 + 저장 UI (결과 페이지에서만 실행)
-    # ──────────────────────────────────────────────────────────────────────────
     def build_phq9_payload() -> dict:
         total_, sev_, functional_, scores_, ts_, unanswered_ = st.session_state.summary
 
         somatic_score = sum(scores_[i - 1] for i in SOMATIC)
         cog_aff_score = sum(scores_[i - 1] for i in COG_AFF)
 
-        kst = timezone(timedelta(hours=9))
-        submitted_at = datetime.now(kst).isoformat(timespec="seconds")
+        submitted_at = kst_iso_now()
 
         exam_data = {
             "exam": {"title": "PHQ_9", "version": "v1"},
@@ -1362,30 +1497,42 @@ if st.session_state.page == "result":
             "meta": {
                 "submitted_at": submitted_at,
                 "client_reported_ts": ts_,
+                "consent": st.session_state.consent,
+                "consent_ts": st.session_state.consent_ts,
             },
         }
         return exam_data
 
-    st.markdown("### 결과 저장")
-    payload = build_phq9_payload()
+    with st.container():
+        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">결과 저장</div>', unsafe_allow_html=True)
+        payload = build_phq9_payload()
 
-    # 개발 확인용: 운영에서는 주석 처리 권장
-    st.write(payload)
+        with st.expander("저장 payload(개발용)", expanded=False):
+            st.json(payload)
 
-    # 개발 단계에서는 버튼 자체를 숨겨도 되지만, 현재는 안내 문구로 처리
-    if os.getenv("ENABLE_DB_INSERT", "0") != "1":
-        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=0)")
-    else:
-        if st.button("DB 저장", type="primary", use_container_width=True):
-            # 최소 입력 검증(원하시면 더 엄격하게 가능)
-            if not st.session_state.examinee.get("name"):
-                st.error("이름을 입력해 주세요.")
-            else:
-                ok = safe_db_insert(payload)
-                if ok:
-                    st.success("저장 완료")
+        if os.getenv("ENABLE_DB_INSERT", "0") != "1":
+            st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=0)")
+        else:
+            if st.button("DB 저장", type="primary", use_container_width=True):
+                if not st.session_state.examinee.get("name"):
+                    st.error("이름을 입력해 주세요.")
                 else:
-                    st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+                    ok = safe_db_insert(payload)
+                    if ok:
+                        st.success("저장 완료")
+                    else:
+                        st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+
+
+if st.session_state.page == "intro":
+    render_intro_page()
+elif st.session_state.page == "examinee":
+    render_examinee_page()
+elif st.session_state.page == "survey":
+    render_survey_page()
+elif st.session_state.page == "result":
+    render_result_page()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 끝
