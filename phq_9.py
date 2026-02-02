@@ -154,6 +154,7 @@ body, p, div, span, li, button, label, input, textarea {
 .divider { height:1px; background: var(--border); margin: 10px 0; }
 .actions { display:flex; gap:12px; justify-content:center; align-items:center; margin-top: 6px; }
 .actions .stButton { margin:0 !important; }
+.actions-row { display:flex; gap:12px; }
 
 .badge {
   display: inline-flex;
@@ -409,6 +410,12 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
 }
 
+/* Alerts */
+[data-testid="stAlert"] * {
+  color: #0F172A !important;
+  opacity: 1 !important;
+}
+
 /* Buttons */
 .stButton > button {
   border-radius: 14px !important;
@@ -424,23 +431,31 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: 0 0 0 3px rgba(37,99,235,.25) !important;
 }
 
-.stButton > button[kind="primary"],
-.stButton > button[data-testid="baseButton-primary"] {
+.stButton > button[kind="primary"] {
   background: var(--brand) !important;
-  color: #fff !important;
-  border: 1px solid var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: #FFFFFF !important;
 }
 
-.stButton > button[kind="primary"]:hover,
-.stButton > button[data-testid="baseButton-primary"]:hover {
+.stButton > button[kind="primary"] * {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+.stButton > button[kind="primary"]:hover {
   background: var(--brand-600) !important;
   border-color: var(--brand-600) !important;
 }
 
-.stButton > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
+.stButton > button:not([kind="primary"]) {
   background: #fff !important;
   color: var(--brand) !important;
   border: 1.5px solid var(--brand) !important;
+}
+
+.stButton > button:not([kind="primary"]) * {
+  color: var(--brand) !important;
+  -webkit-text-fill-color: var(--brand) !important;
 }
 
 .stButton > button:disabled {
@@ -833,17 +848,19 @@ def render_intro_page() -> None:
                 st.session_state.consent_ts = None
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
-        next_clicked = st.button("다음", type="primary")
-        if next_clicked:
-            if not st.session_state.consent:
-                st.warning("동의가 필요합니다.")
-            else:
-                if not st.session_state.consent_ts:
-                    st.session_state.consent_ts = kst_iso_now()
-                st.session_state.page = "examinee"
-                st.rerun()
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        actions = st.columns([1, 1], gap="medium")
+        with actions[0]:
+            st.empty()
+        with actions[1]:
+            next_clicked = st.button("다음", type="primary", use_container_width=True)
+            if next_clicked:
+                if not st.session_state.consent:
+                    st.warning("동의가 필요합니다.", icon="⚠️")
+                else:
+                    if not st.session_state.consent_ts:
+                        st.session_state.consent_ts = kst_iso_now()
+                    st.session_state.page = "examinee"
+                    st.rerun()
 
         st.markdown("</div></div>", unsafe_allow_html=True)
 
@@ -879,17 +896,18 @@ def render_examinee_page() -> None:
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
-        if st.button("이전"):
-            st.session_state.page = "intro"
-            st.rerun()
-        if st.button("다음", type="primary"):
-            if not st.session_state.examinee.get("name", "").strip():
-                st.warning("이름을 입력해 주세요.")
-            else:
-                st.session_state.page = "survey"
+        actions = st.columns([1, 1], gap="medium")
+        with actions[0]:
+            if st.button("이전", use_container_width=True):
+                st.session_state.page = "intro"
                 st.rerun()
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        with actions[1]:
+            if st.button("다음", type="primary", use_container_width=True):
+                if not st.session_state.examinee.get("name", "").strip():
+                    st.warning("이름을 입력해 주세요.", icon="⚠️")
+                else:
+                    st.session_state.page = "survey"
+                    st.rerun()
 
         st.markdown("</div></div>", unsafe_allow_html=True)
 
@@ -934,26 +952,27 @@ def render_survey_page() -> None:
 
         render_functional_block()
 
-        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
-        if st.button("이전"):
-            st.session_state.page = "examinee"
-            st.rerun()
-        if st.button("결과 보기", type="primary"):
-            scores, unanswered = [], 0
-            for i in range(1, 10):
-                lab = st.session_state.answers.get(i)
-                if lab is None:
-                    unanswered += 1
-                    scores.append(0)
-                else:
-                    scores.append(LABEL2SCORE[lab])
-            total = sum(scores)
-            sev = phq_severity(total)
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-            st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
-            st.session_state.page = "result"
-            st.rerun()
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        actions = st.columns([1, 1], gap="medium")
+        with actions[0]:
+            if st.button("이전", use_container_width=True):
+                st.session_state.page = "examinee"
+                st.rerun()
+        with actions[1]:
+            if st.button("결과 보기", type="primary", use_container_width=True):
+                scores, unanswered = [], 0
+                for i in range(1, 10):
+                    lab = st.session_state.answers.get(i)
+                    if lab is None:
+                        unanswered += 1
+                        scores.append(0)
+                    else:
+                        scores.append(LABEL2SCORE[lab])
+                total = sum(scores)
+                sev = phq_severity(total)
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+                st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
+                st.session_state.page = "result"
+                st.rerun()
 
         st.markdown("</div></div>", unsafe_allow_html=True)
 
@@ -973,6 +992,9 @@ def render_result_page() -> None:
 
     st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
 
+    name_value = st.session_state.examinee.get("name", "").strip()
+    name_text = name_value if name_value else "(미입력)"
+
     st.markdown(
         dedent(
             f"""
@@ -980,6 +1002,7 @@ def render_result_page() -> None:
               <div class="card-header">
                 <div class="title-lg">I. 종합 소견</div>
                 <div class="text">검사 일시: {ts}</div>
+                <div class="text">응답자: {name_text}</div>
               </div>
               <div class="summary-layout">
                 <div class="gauge-card">
@@ -1043,14 +1066,15 @@ def render_result_page() -> None:
             unsafe_allow_html=True,
         )
 
-    st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
-    if st.button("새 검사 시작", type="primary"):
-        _reset_to_survey()
-        st.rerun()
-    if st.button("닫기"):
-        components.html("<script>window.close();</script>", height=0)
-        st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    actions = st.columns([1, 1], gap="medium")
+    with actions[0]:
+        if st.button("닫기", use_container_width=True):
+            components.html("<script>window.close();</script>", height=0)
+            st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
+    with actions[1]:
+        if st.button("새 검사 시작", type="primary", use_container_width=True):
+            _reset_to_survey()
+            st.rerun()
 
     st.markdown(
         dedent(
