@@ -1,0 +1,1391 @@
+# -*- coding: utf-8 -*-
+import os
+import shutil
+import platform
+import uuid
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List
+from textwrap import dedent
+
+import io
+import streamlit as st
+import streamlit.components.v1 as components  # 창 닫기용
+import plotly.graph_objects as go
+import plotly.io as pio
+from PIL import Image, ImageDraw, ImageFont  # PNG 합성용 (현재 파일 내에서 직접 사용하지 않아도 유지)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DB 저장: dev 환경 방어 래퍼 (전산센터 공통 메서드가 있을 때만 insert)
+def safe_db_insert(payload: dict) -> bool:
+    """
+    dev 단계: ENABLE_DB_INSERT=0 (기본) → 저장 호출 안 함
+    운영 탑재: ENABLE_DB_INSERT=1 → utils.database.Database().insert(payload) 수행
+    """
+    enable = os.getenv("ENABLE_DB_INSERT", "0") == "1"
+    if not enable:
+        return False
+
+    try:
+        from utils.database import Database  # 전산센터 공통 모듈
+        db = Database()
+        db.insert(payload)
+        return True
+    except Exception as e:
+        st.warning("DB 저장 모듈이 없거나 저장 중 오류가 발생했습니다. (개발환경에서는 정상일 수 있음)")
+        st.exception(e)
+        return False
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 앱 상태 초기화
+def _reset_to_survey():
+    """앱 상태 초기화 후 설문 첫 화면으로 이동"""
+    st.session_state.answers = {}
+    st.session_state.functional = None
+    st.session_state.summary = None
+    for i in range(1, 10):
+        st.session_state.pop(f"q{i}", None)
+    st.session_state.pop("functional-impact", None)
+    st.session_state.page = "survey"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 페이지 설정
+st.set_page_config(page_title="PHQ-9 자기보고 검사", page_icon="📝", layout="centered")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ORCA 초기화 (필수: ORCA만 사용)
+def _init_orca():
+    """
+    ORCA 실행파일을 환경변수 PLOTLY_ORCA 또는 PATH에서 찾고 plotly에 등록한다.
+    리눅스/맥 헤드리스 환경은 xvfb 사용을 활성화한다.
+    """
+    orca_path = os.environ.get("PLOTLY_ORCA", "").strip() or shutil.which("orca")
+    if orca_path:
+        pio.orca.config.executable = orca_path
+    if platform.system() != "Windows":
+        try:
+            pio.orca.config.use_xvfb = True
+        except Exception:
+            pass
+    return orca_path
+
+
+_ORCA_PATH = _init_orca()
+
+# 색상 토큰 (라이트 테마 기본값 – CSS 변수로 재정의)
+INK     = "#0F172A"   # primary text (dark navy)
+SUBTLE  = "#475569"   # secondary text (slate)
+CARD_BG = "#FFFFFF"   # cards are clean white
+APP_BG  = "#F6F8FB"   # off-white app background
+BORDER  = "#E2E8F0"   # subtle border
+BRAND   = "#2563EB"   # keep as-is (brand blue)
+ACCENT  = "#DC2626"   # keep as-is (danger)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 전역 스타일
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+:root {{
+  --bg: #F6F8FB;
+  --card: #FFFFFF;
+  --ink: #0F172A;
+  --subtle: #475569;
+  --border: #E2E8F0;
+  --brand: #2563EB;
+  --accent: #DC2626;
+
+  --soft: #F8FAFC;
+  --shell-bg: rgba(255,255,255,0.98);
+  --inner-card: #FFFFFF;
+
+  --chip-bg: #FFFFFF;
+  --chip-border: #CBD5E1;
+  --chip-text: #0F172A;
+}}
+
+[data-testid="stAppViewContainer"] {{
+  color-scheme: light !important;
+  background: var(--bg) !important;
+}}
+
+html, body {{
+  color-scheme: light !important;
+}}
+
+[data-testid="stAppViewContainer"] * {{
+  color-scheme: light !important;
+}}
+
+html, body {{
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}}
+
+body, p, div, span, li, button, label {{
+  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif !important;
+}}
+
+[data-testid="block-container"] {{
+  max-width: 1100px;
+  padding: 0 1.75rem 3rem;
+  margin: 0 auto;
+}}
+
+.page-frame {{
+  max-width: 960px;
+  margin: 16px auto;
+}}
+
+.section-card {{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 32px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+.report-shell {{
+  background: var(--shell-bg);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 32px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+.report-shell.compact {{
+  padding: 24px 28px;
+}}
+
+.report-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}}
+
+.header-card {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+
+.header-badge {{
+  display: inline-flex;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(37,99,235,0.12);
+  color: var(--brand);
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid rgba(37,99,235,0.25);
+  width: fit-content;
+}}
+
+.header-title {{
+  font-size: 1.32rem;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+}}
+
+.section-heading {{
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}}
+
+.instruction-list {{
+  margin: 14px 0 0;
+  padding-left: 20px;
+  line-height: 1.6;
+  color: var(--ink);
+}}
+
+.instruction-list li {{
+  margin-bottom: 8px;
+}}
+
+.small-muted {{
+  color: var(--subtle) !important;
+  font-size: 0.92rem;
+  letter-spacing: -0.1px;
+}}
+
+.section-card, .report-shell, .report-card, .gauge-card, .narrative-card {{
+  color: var(--ink);
+}}
+
+  .report-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }}
+
+  .report-card {{
+    background: var(--inner-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }}
+
+  .summary-layout {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 28px;
+    align-items: stretch;
+    margin-top: 28px;
+  }}
+
+  .gauge-card {{
+    background: var(--inner-card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 24px 36px;
+    text-align: center;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }}
+
+  .gauge-circle {{
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+  }}
+
+  .gauge-circle::after {{
+    content: "";
+    position: absolute;
+    inset: 24px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+  }}
+
+  .gauge-inner {{
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }}
+
+  .gauge-number {{
+    font-size: 3.2rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--ink);
+  }}
+
+  .gauge-denom {{
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--subtle);
+  }}
+
+  .gauge-severity {{
+    display: inline-flex;
+    padding: 6px 20px;
+    border-radius: 999px;
+    font-weight: 800;
+    border: 1.5px solid currentColor;
+    font-size: 1rem;
+  }}
+
+  .narrative-card {{
+    background: var(--inner-card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px 30px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }}
+
+  .narrative-title {{
+    font-weight: 800;
+    font-size: 1rem;
+  }}
+
+  .functional-highlight {{
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }}
+
+  .functional-title {{
+    font-size: 0.92rem;
+    color: var(--subtle);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }}
+
+  .functional-value {{
+    font-size: 1.05rem;
+  }}
+
+.report-score-card {{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}}
+
+.metric-label {{
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--subtle);
+  text-transform: uppercase;
+}}
+
+.metric-value {{
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}}
+
+.metric-number {{
+  font-size: 3.6rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink);
+}}
+
+.metric-denom {{
+  font-size: 1.2rem;
+  color: var(--subtle);
+  font-weight: 600;
+}}
+
+.severity-tag {{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  width: fit-content;
+  border: 1.5px solid transparent;
+}}
+
+.report-card-title {{
+  font-size: 0.84rem;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--subtle);
+  margin-bottom: 10px;
+  font-weight: 700;
+}}
+
+.report-shell p {{
+  line-height: 1.65;
+  margin: 0 0 12px;
+}}
+
+.question-section {{
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
+}}
+
+.question-meta {{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}}
+
+.question-label {{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--subtle);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}}
+
+.question-text {{
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta),
+div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
+  max-width: 960px;
+  margin: 0 auto 12px;
+  background: var(--inner-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 24px 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+.functional-divider {{
+  height: 1px;
+  width: 100%;
+  max-width: 960px;
+  background: var(--border);
+  margin: 10px auto 18px;
+}}
+
+.functional-label {{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--subtle);
+  letter-spacing: 0.1px;
+  text-transform: uppercase;
+}}
+
+.functional-text {{
+  font-weight: 650;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}}
+
+.severity-legend {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}}
+
+.legend-chip {{
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--inner-card);
+  min-width: 140px;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}}
+
+.legend-chip strong {{
+  font-size: 0.95rem;
+}}
+
+.legend-chip small {{
+  color: var(--subtle);
+  font-size: 0.8rem;
+}}
+
+.domain-panel {{
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px 28px;
+  background: var(--inner-card);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+.domain-profile {{
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}}
+
+.domain-note {{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148,163,184,0.3);
+  font-size: 0.82rem;
+  color: var(--subtle);
+  line-height: 1.45;
+}}
+
+.domain-row {{
+  display: grid;
+  grid-template-columns: 1.4fr 2.5fr 0.5fr;
+  gap: 18px;
+  align-items: center;
+}}
+
+.domain-title {{
+  font-weight: 700;
+  font-size: 1rem;
+}}
+
+.domain-desc {{
+  font-size: 0.85rem;
+  color: var(--subtle);
+  margin-top: 4px;
+}}
+
+.domain-bar {{
+  position: relative;
+  height: 16px;
+  background: rgba(226,232,240,0.8);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(203,213,225,0.9);
+}}
+
+.domain-fill {{
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35);
+}}
+
+.domain-score {{
+  justify-self: end;
+  font-weight: 700;
+}}
+
+.warn {{
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  color: #7C2D12;
+  border-radius:18px;
+  padding:16px 20px;
+  max-width: 960px;
+  margin: 18px auto 0;
+  font-weight: 600;
+}}
+
+.safety {{
+  background: #FFF1F2;
+  border: 1px solid #FDA4AF;
+  color: var(--ink);
+  border-radius:22px;
+  padding:24px 28px;
+  max-width:960px;
+  margin: 24px auto 0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+.safety .section-heading {{
+  color: var(--accent);
+}}
+
+.footer-note {{
+  color: var(--subtle);
+  font-size: 12px;
+  max-width: 960px;
+  margin: 24px auto 0;
+  line-height: 1.5;
+  text-align: center;
+}}
+
+div[data-testid="stPlotlyChart"] {{
+  max-width: 960px;
+  margin: 12px auto 18px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  padding: 18px 18px 6px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+div[data-testid="stPlotlyChart"] > div > div {{
+  width: 100% !important;
+}}
+
+div[data-testid="stHorizontalBlock"] {{
+  max-width: 960px;
+  margin: 16px auto 0 !important;
+}}
+
+.button-anchor {{
+    display:none;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(.button-anchor) {{
+    margin: 40px auto 0 !important;
+    background: var(--shell-bg);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 28px 32px 32px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}}
+
+[data-testid="stToolbar"], #MainMenu, header, footer {{
+  display: none !important;
+}}
+
+/* ───── 라디오 칩 ───── */
+.stRadio {{
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 6px 0 10px;
+}}
+
+.stRadio > div[role="radiogroup"] {{
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+}}
+
+.stRadio [role="radio"] {{
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 10px 22px !important;
+  border-radius: 999px !important;
+  background: var(--chip-bg) !important;
+  border: 1px solid var(--chip-border) !important;
+  cursor: pointer !important;
+  transition: all .15s ease;
+  font-weight:600 !important;
+  opacity: 1 !important;
+  color: var(--chip-text) !important;
+}}
+
+.stRadio [role="radio"] * {{
+  color: var(--chip-text) !important;
+  -webkit-text-fill-color: var(--chip-text) !important;
+  opacity: 1 !important;
+}}
+
+.stRadio [role="radio"]:hover {{
+  border-color: var(--brand) !important;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+}}
+
+.stRadio [role="radio"][aria-checked="true"] {{
+  background: rgba(37, 99, 235, 0.10) !important;
+  border-color: var(--brand) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+}}
+
+.stRadio [role="radio"][aria-checked="true"] * {{
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  opacity: 1 !important;
+}}
+
+/* 버튼 */
+.stButton {{
+  max-width: 960px;
+  margin: 0 auto 14px;
+}}
+
+.stButton > button {{
+  width: 100%;
+}}
+
+.stButton > button[data-testid="baseButton-primary"],
+.stButton > button[kind="primary"] {{
+  background: var(--brand) !important;
+  color: #fff !important;
+  border: 1.5px solid var(--brand) !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.2px;
+  min-height: 48px;
+  box-shadow: 0 12px 24px rgba(37,99,235,0.28) !important;
+}}
+
+.stButton > button:not([data-testid="baseButton-primary"]) {{
+  background: var(--inner-card) !important;
+  color: var(--brand) !important;
+  border: 1.5px solid var(--brand) !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  min-height: 48px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}}
+
+@media (max-width: 640px) {{
+  [data-testid="block-container"] {{
+    padding: 0 1rem 2rem;
+  }}
+  .report-shell {{
+    padding: 24px;
+  }}
+  .gauge-circle {{
+    width: 180px;
+    height: 180px;
+  }}
+  .domain-row {{
+    grid-template-columns: 1fr;
+  }}
+  .domain-score {{
+    justify-self: start;
+  }}
+    div[data-testid="stHorizontalBlock"]:has(.button-anchor) {{
+      padding: 20px;
+      margin: 28px auto 0 !important;
+    }}
+}}
+
+/* --- FIX: Question text becomes invisible on light background --- */
+div[data-testid="stVerticalBlock"]:has(.question-meta),
+div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
+  color: var(--ink) !important;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta) .question-label,
+div[data-testid="stVerticalBlock"]:has(.question-meta) .question-text,
+div[data-testid="stVerticalBlock"]:has(.question-meta) p,
+div[data-testid="stVerticalBlock"]:has(.question-meta) span,
+div[data-testid="stVerticalBlock"]:has(.question-meta) div,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) .functional-label,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) .functional-text,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) p,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) span,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) div {{
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  opacity: 1 !important;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta) .small-muted,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) .small-muted {{
+  color: var(--subtle) !important;
+  -webkit-text-fill-color: var(--subtle) !important;
+  opacity: 1 !important;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta) .stRadio [role="radio"] *,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) .stRadio [role="radio"] * {{
+  color: var(--chip-text) !important;
+  -webkit-text-fill-color: var(--chip-text) !important;
+  opacity: 1 !important;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta) .stRadio [role="radio"][aria-checked="true"] *,
+div[data-testid="stVerticalBlock"]:has(.functional-meta) .stRadio [role="radio"][aria-checked="true"] * {{
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}}
+
+div[data-testid="stVerticalBlock"]:has(.question-meta),
+div[data-testid="stVerticalBlock"]:has(.functional-meta) {{
+  background: #FFFFFF !important;
+}}
+
+/* =========================================================
+   RADIO: hollow when unchecked, dot when checked (stable)
+   Targets both SVG-based and DIV-based BaseWeb radios.
+   ========================================================= */
+
+.stRadio div[role="radiogroup"] label {{
+  color: var(--ink) !important;
+}}
+
+.stRadio div[role="radiogroup"] label:not(:has(input:checked)) svg * {{
+  fill: transparent !important;
+}}
+.stRadio div[role="radiogroup"] label:not(:has(input:checked)) svg * {{
+  stroke: #94A3B8 !important;
+  stroke-width: 2 !important;
+  opacity: 1 !important;
+}}
+
+.stRadio div[role="radiogroup"] label:has(input:checked) svg * {{
+  stroke: var(--brand) !important;
+  stroke-width: 2 !important;
+  opacity: 1 !important;
+}}
+
+.stRadio div[role="radiogroup"] label:has(input:checked) svg *:last-child {{
+  fill: var(--brand) !important;
+}}
+
+.stRadio div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {{
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  border-radius: 999px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 10px !important;
+}}
+
+.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:not(:has(input:checked)) > div:first-child {{
+  border: 2px solid #94A3B8 !important;
+  background: transparent !important;
+}}
+.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:not(:has(input:checked)) > div:first-child * {{
+  background: transparent !important;
+}}
+
+.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {{
+  border: 2px solid var(--brand) !important;
+  background: transparent !important;
+  position: relative !important;
+}}
+.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child::after {{
+  content: "" !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: var(--brand) !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}}
+
+.stRadio div[role="radiogroup"] label * {{
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  opacity: 1 !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 상태 관리
+if "page" not in st.session_state:
+    st.session_state.page = "survey"   # 'survey' | 'result'
+if "answers" not in st.session_state:
+    st.session_state.answers: Dict[int, str] = {}
+if "functional" not in st.session_state:
+    st.session_state.functional = None
+if "summary" not in st.session_state:
+    st.session_state.summary = None  # (total, sev, functional, scores, ts, unanswered)
+if "examinee" not in st.session_state:
+    st.session_state.examinee = {
+        "user_id": str(uuid.uuid4()),
+        "name": "",
+        "email": "",
+        "phone": "",
+    }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 문항/선택지
+QUESTIONS = [
+    {"no":1,"ko":"일상적인 활동(예: 취미나 일상 일과 등)에 흥미나 즐거움을 거의 느끼지 못한다.","domain":"흥미/즐거움 상실"},
+    {"no":2,"ko":"기분이 가라앉거나, 우울하거나, 희망이 없다고 느낀다.","domain":"우울한 기분"},
+    {"no":3,"ko":"잠들기 어렵거나 자주 깨는 등 수면에 문제가 있었거나, 반대로 너무 많이 잠을 잔다.","domain":"수면 문제"},
+    {"no":4,"ko":"평소보다 피곤함을 더 자주 느꼈거나, 기운이 거의 없다.","domain":"피로/에너지 부족"},
+    {"no":5,"ko":"식욕이 줄었거나 반대로 평소보다 더 많이 먹는다.","domain":"식욕 변화"},
+    {"no":6,"ko":"자신을 부정적으로 느끼거나, 스스로 실패자라고 생각한다.","domain":"죄책감/무가치감"},
+    {"no":7,"ko":"일상생활 및 같은 일에 집중하는 것이 어렵다.","domain":"집중력 저하"},
+    {"no":8,"ko":"다른 사람들이 눈치챌 정도로 매우 느리게 말하고 움직이거나, 반대로 평소보다 초조하고 안절부절 못한다.","domain":"느려짐/초조함"},
+    {"no":9,"ko":"죽는 게 낫겠다는 생각하거나, 어떤 식으로든 자신을 해치고 싶은 생각이 든다.","domain":"자살/자해 생각"},
+]
+LABELS = ["전혀 아님 (0)", "며칠 동안 (1)", "절반 이상 (2)", "거의 매일 (3)"]
+LABEL2SCORE = {LABELS[0]:0, LABELS[1]:1, LABELS[2]:2, LABELS[3]:3}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 유틸: 중증도 라벨
+def phq_severity(total: int) -> str:
+    return ("정상" if total<=4 else
+            "경미" if total<=9 else
+            "중등도" if total<=14 else
+            "중증" if total<=19 else
+            "심각")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PHQ-9 도메인 인덱스(1-based)
+COG_AFF = [1, 2, 6, 7, 9]   # 인지·정서(5문항)
+SOMATIC = [3, 4, 5, 8]      # 신체/생리(4문항)
+
+# ──────────────────────────────────────────────────────────────────────────────
+SEVERITY_SEGMENTS = [
+    {"label": "정상", "display": "0–4",  "start": 0,  "end": 5,  "color": "#CDEED6"},
+    {"label": "경미", "display": "5–9",  "start": 5,  "end": 10, "color": "#F8F1C7"},
+    {"label": "중등도", "display": "10–14","start": 10, "end": 15, "color": "#FFE0B2"},
+    {"label": "중증", "display": "15–19","start": 15, "end": 20, "color": "#FBC0A8"},
+    {"label": "심각", "display": "20–27","start": 20, "end": 27, "color": "#F6A6A6"},
+]
+
+SEVERITY_PILL = {
+    "정상": ("#DBEAFE", "#1E3A8A"),
+    "경미": ("#FEF3C7", "#92400E"),
+    "중등도": ("#FFE4E6", "#9F1239"),
+    "중증": ("#FED7AA", "#9A3412"),
+    "심각": ("#FECACA", "#7F1D1D"),
+}
+
+SEVERITY_ARC_COLOR = {
+    "정상": "#16a34a",
+    "경미": "#f59e0b",
+    "중등도": "#f97316",
+    "중증": "#f43f5e",
+    "심각": "#b91c1c",
+}
+
+SEVERITY_GUIDANCE = {
+    "정상": "현재 보고된 주관적 우울 증상은 정상 범위에 해당하며, 기본적인 자기 관리와 모니터링을 이어가시면 됩니다.",
+    "경미": "경미 수준의 우울감이 보고되었습니다. 생활리듬 조정과 상담 자원 안내 등 예방적 개입을 고려할 수 있습니다.",
+    "중등도": "임상적으로 의미 있는 중등도 수준으로, 정신건강 전문인의 평가와 치료적 개입을 권장합니다.",
+    "중증": "중증 수준의 우울 증상이 보고되어, 신속한 전문 평가와 적극적인 치료 계획 수립이 필요합니다.",
+    "심각": "심각 수준의 우울 증상이 보고되었습니다. 안전 평가를 포함한 즉각적인 전문 개입이 권고됩니다.",
+}
+
+DOMAIN_META = [
+    {
+        "name": "신체/생리 증상",
+        "desc": "(수면, 피곤함, 식욕, 정신운동 문제)",
+        "items": SOMATIC,
+        "max": 12,
+    },
+    {
+        "name": "인지/정서 증상",
+        "desc": "(흥미저하, 우울감, 죄책감, 집중력, 자살사고)",
+        "items": COG_AFF,
+        "max": 15,
+    },
+]
+
+
+def build_total_severity_bar(total: int) -> go.Figure:
+    total = max(0, min(total, 27))
+    fig = go.Figure()
+    annotations = []
+
+    for seg in SEVERITY_SEGMENTS:
+        width = seg["end"] - seg["start"]
+        fig.add_trace(
+            go.Bar(
+                x=[width],
+                y=["총점"],
+                base=seg["start"],
+                orientation="h",
+                marker=dict(color=seg["color"], line=dict(width=0)),
+                hovertemplate=f"{seg['label']} · {seg['display']}점<extra></extra>",
+                showlegend=False,
+            )
+        )
+        midpoint = seg["start"] + width / 2
+        annotations.append(
+            dict(
+                x=midpoint,
+                y=-0.12,
+                xref="x",
+                yref="paper",
+                text=f"<b>{seg['label']}</b><br><span style='font-size:11px;'>{seg['display']}점</span>",
+                showarrow=False,
+                align="center",
+                font=dict(size=12, color=INK),
+            )
+        )
+
+    fig.add_shape(
+        type="line",
+        x0=total,
+        x1=total,
+        y0=-0.05,
+        y1=1.05,
+        xref="x",
+        yref="paper",
+        line=dict(color=BRAND, width=3),
+    )
+    annotations.append(
+        dict(
+            x=total,
+            y=1.08,
+            xref="x",
+            yref="paper",
+            text=f"{total}점",
+            showarrow=False,
+            font=dict(size=14, color=BRAND, family="Inter, 'Noto Sans KR', sans-serif"),
+            bgcolor="#e0ecff",
+            bordercolor=BRAND,
+            borderwidth=1,
+            borderpad=6,
+        )
+    )
+
+    fig.update_layout(
+        barmode="stack",
+        xaxis=dict(
+            range=[0, 27],
+            showgrid=False,
+            zeroline=False,
+            tickvals=[0, 5, 10, 15, 20, 27],
+            ticks="outside",
+            tickfont=dict(size=11),
+        ),
+        yaxis=dict(showticklabels=False),
+        margin=dict(l=30, r=30, t=50, b=60),
+        height=260,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(color=INK, family="Inter, 'Noto Sans KR', Arial, sans-serif"),
+        annotations=annotations,
+    )
+    return fig
+
+
+def render_severity_legend():
+    spans = "".join(
+        f"<div class='legend-chip'><strong>{seg['label']}</strong><small>{seg['display']}점</small></div>"
+        for seg in SEVERITY_SEGMENTS
+    )
+    st.markdown(
+        f"""
+<div class="page-frame">
+  <div class="report-shell compact">
+    <div class="severity-legend">{spans}</div>
+  </div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def build_domain_profile_html(scores: List[int]) -> str:
+    if len(scores) < 9:
+        scores = (scores + [0] * 9)[:9]
+
+    rows: List[str] = []
+    for meta in DOMAIN_META:
+        score = sum(scores[i - 1] for i in meta["items"])
+        ratio = (score / meta["max"]) if meta["max"] else 0
+        rows.append(
+            dedent(
+                f"""
+                <div class="domain-row">
+                  <div>
+                    <div class="domain-title">{meta['name']}</div>
+                    <div class="domain-desc">{meta['desc']}</div>
+                  </div>
+                  <div class="domain-bar">
+                    <div class="domain-fill" style="width:{ratio*100:.1f}%"></div>
+                  </div>
+                  <div class="domain-score">{score} / {meta['max']}</div>
+                </div>
+                """
+            ).strip()
+        )
+    rows_html = "\n".join(rows)
+    note_html = (
+        '<div class="domain-note small-muted">※ 각 영역의 점수는 높을수록 해당 영역의 우울 관련 증상이 더 많이 보고되었음을 의미합니다.</div>'
+    )
+    return (
+        '<div class="domain-panel">\n'
+        '  <div class="domain-profile">\n'
+        f'{rows_html}\n'
+        '  </div>\n'
+        f'{note_html}\n'
+        '</div>'
+    )
+
+
+def compose_narrative(total: int, severity: str, functional: str | None, item9: int) -> str:
+    base = f"총점 {total}점(27점 만점)으로, [{severity}] 수준의 우울 증상이 보고되었습니다. {SEVERITY_GUIDANCE[severity]}"
+    functional_text = (
+        f" 응답자 보고에 따르면, 이러한 증상으로 인한 일·집안일·대인관계의 어려움은 ‘{functional}’ 수준입니다."
+        if functional else ""
+    )
+    safety_text = (
+        " 특히, 자해/자살 관련 사고(9번 문항)가 보고되어 이에 대한 즉각적인 관심과 평가가 매우 중요합니다."
+        if item9 > 0 else ""
+    )
+    return base + functional_text + safety_text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# UI 헬퍼
+def render_question_item(question: Dict[str, str | int]) -> None:
+    st.markdown(
+        dedent(
+            f"""
+            <div class="question-meta">
+              <div class="question-label">문항 {question['no']}</div>
+              <div class="question-text">{question['ko']}</div>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+    st.session_state.answers[question["no"]] = st.radio(
+        label=f"문항 {question['no']}",
+        options=LABELS,
+        index=None,
+        horizontal=True,
+        label_visibility="collapsed",
+        key=f"q{question['no']}",
+    )
+
+
+def render_functional_block() -> None:
+    st.markdown('<div class="functional-divider"></div>', unsafe_allow_html=True)
+    st.markdown(
+        dedent(
+            """
+            <div class="functional-meta">
+              <div class="functional-label">기능 손상</div>
+              <div class="functional-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
+              <div class="small-muted" style="margin-top:4px;">가장 가까운 수준을 선택해 주세요.</div>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+    st.session_state.functional = st.radio(
+        "기능 손상",
+        options=["전혀 어렵지 않음", "어렵지 않음", "어려움", "매우 어려움"],
+        index=None,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="functional-impact",
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 상단 헤더
+st.markdown(
+    dedent(
+        """
+        <div class="page-frame">
+          <div class="section-card header-card">
+            <div class="header-badge">PHQ-9</div>
+            <div class="header-title">우울 증상 자기보고 검사</div>
+            <p class="small-muted">지난 2주 동안 경험한 증상 빈도를 0~3점 척도로 기록하는 표준화된 자기보고 도구입니다.</p>
+          </div>
+        </div>
+        """
+    ),
+    unsafe_allow_html=True,
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 응시자 정보 (PHQ-9에 기존 없던 인적사항 저장 영역 추가)
+with st.container():
+    st.markdown("### 응시자 정보")
+    st.session_state.examinee["name"] = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+    st.session_state.examinee["email"] = st.text_input("이메일", value=st.session_state.examinee.get("email", ""))
+    st.session_state.examinee["phone"] = st.text_input("연락처", value=st.session_state.examinee.get("phone", ""))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 설문 페이지
+if st.session_state.page == "survey":
+    st.markdown(
+        dedent(
+            """
+            <div class="page-frame">
+              <div class="section-card instruction-card">
+                <div class="section-heading">지시문</div>
+                <ul class="instruction-list">
+                  <li>각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</li>
+                  <li>모든 문항과 기능 손상 질문을 완료한 뒤 ‘결과 보기’를 누르면 총점, 중증도, 영역별 분석을 바로 확인할 수 있습니다.</li>
+                </ul>
+              </div>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        dedent(
+            """
+            <div class="page-frame">
+              <div class="section-card question-section">
+                <div class="section-heading">질문지 (지난 2주)</div>
+                <div class="small-muted">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
+              </div>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+    for q in QUESTIONS:
+        render_question_item(q)
+
+    render_functional_block()
+
+    if st.button("결과 보기", type="primary", use_container_width=True):
+        scores, unanswered = [], 0
+        for i in range(1, 10):
+            lab = st.session_state.answers.get(i)
+            if lab is None:
+                unanswered += 1
+                scores.append(0)
+            else:
+                scores.append(LABEL2SCORE[lab])
+        total = sum(scores)
+        sev = phq_severity(total)
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
+        st.session_state.page = "result"
+        st.rerun()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 결과 페이지
+if st.session_state.page == "result":
+    if not st.session_state.summary:
+        st.warning("먼저 설문을 완료해 주세요.")
+        st.stop()
+
+    total, sev, functional, scores, ts, unanswered = st.session_state.summary
+    item9_score = scores[8] if len(scores) >= 9 else 0
+
+    narrative = compose_narrative(total, sev, functional, item9_score)
+    arc_color = SEVERITY_ARC_COLOR.get(sev, BRAND)
+    gauge_percent = (max(0, min(total, 27)) / 27) * 100
+    functional_value = functional if functional else "미응답"
+
+    st.markdown(
+        dedent(
+            f"""
+            <div class="page-frame">
+              <div class="report-shell">
+                <div class="report-header">
+                  <div>
+                    <div class="section-heading">I. 종합 소견</div>
+                    <div class="small-muted">검사 일시: {ts}</div>
+                  </div>
+                </div>
+                <div class="summary-layout">
+                  <div class="gauge-card">
+                    <div class="metric-label">총점</div>
+                    <div class="gauge-circle" style="background: conic-gradient({arc_color} {gauge_percent:.2f}%, rgba(226,232,240,0.9) {gauge_percent:.2f}%, rgba(226,232,240,0.9) 100%);">
+                      <div class="gauge-inner">
+                        <div class="gauge-number">{total}</div>
+                        <div class="gauge-denom">/ 27</div>
+                      </div>
+                    </div>
+                    <div class="gauge-severity" style="color:{arc_color};">{sev}</div>
+                  </div>
+                  <div class="narrative-card">
+                    <div class="narrative-title">주요 소견</div>
+                    <p>{narrative}</p>
+                    <div class="functional-highlight">
+                      <div class="functional-title">일상 기능 손상 (10번 문항)</div>
+                      <div class="functional-value"><strong>{functional_value}</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+    if unanswered > 0:
+        st.markdown(f'<div class="warn">⚠️ 미응답 {unanswered}개 문항은 0점으로 계산되었습니다.</div>', unsafe_allow_html=True)
+
+    domain_html = build_domain_profile_html(scores)
+    domain_section_html = dedent(
+        """
+        <div class="page-frame">
+          <div class="report-shell">
+            <div class="section-heading" style="margin-bottom:12px;">II. 증상 영역별 프로파일</div>
+            {domain_panel}
+          </div>
+        </div>
+        """
+    ).strip().format(domain_panel=domain_html)
+    st.markdown(domain_section_html, unsafe_allow_html=True)
+
+    if item9_score > 0:
+        st.markdown(
+            dedent(
+                """
+                <div class="safety">
+                  <div class="section-heading">안전 안내 (문항 9 관련)</div>
+                  <div class="small-muted">자살·자해 생각이 있을 때 즉시 도움 받기</div>
+                  <div>한국: <b>1393 자살예방상담(24시간)</b>, <b>정신건강상담 1577-0199</b> · 긴급 시 <b>112/119</b>.</div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+    # 버튼 영역
+    button_zone = st.container()
+    with button_zone:
+        st.markdown('<div class="button-anchor"></div>', unsafe_allow_html=True)
+        start_col, close_col = st.columns([1, 1], gap="medium")
+        with start_col:
+            if st.button("새 검사 시작", type="primary", use_container_width=True):
+                _reset_to_survey()
+                st.rerun()
+        with close_col:
+            if st.button("닫기", use_container_width=True):
+                components.html("<script>window.close();</script>", height=0)
+                st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
+
+    st.markdown(
+        dedent(
+            """
+            <div class="footer-note">
+              PHQ-9는 공공 도메인(Pfizer 별도 허가 불필요).<br>
+              Kroenke, Spitzer, & Williams (2001) JGIM · Spitzer, Kroenke, & Williams (1999) JAMA.
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # DB 저장 payload 구성 + 저장 UI (결과 페이지에서만 실행)
+    # ──────────────────────────────────────────────────────────────────────────
+    def build_phq9_payload() -> dict:
+        total_, sev_, functional_, scores_, ts_, unanswered_ = st.session_state.summary
+
+        somatic_score = sum(scores_[i - 1] for i in SOMATIC)
+        cog_aff_score = sum(scores_[i - 1] for i in COG_AFF)
+
+        kst = timezone(timedelta(hours=9))
+        submitted_at = datetime.now(kst).isoformat(timespec="seconds")
+
+        exam_data = {
+            "exam": {"title": "PHQ_9", "version": "v1"},
+            "examinee": dict(st.session_state.examinee),  # name/email/phone/user_id
+            "answers": {
+                **{f"q{i}": scores_[i - 1] for i in range(1, 10)},
+                "functional_impact": functional_ if functional_ else None,
+            },
+            "result": {
+                "total": total_,
+                "severity": sev_,
+                "domain_scores": {
+                    "somatic": somatic_score,
+                    "cog_aff": cog_aff_score,
+                },
+                "unanswered": unanswered_,
+            },
+            "meta": {
+                "submitted_at": submitted_at,
+                "client_reported_ts": ts_,
+            },
+        }
+        return exam_data
+
+    st.markdown("### 결과 저장")
+    payload = build_phq9_payload()
+
+    # 개발 확인용: 운영에서는 주석 처리 권장
+    st.write(payload)
+
+    # 개발 단계에서는 버튼 자체를 숨겨도 되지만, 현재는 안내 문구로 처리
+    if os.getenv("ENABLE_DB_INSERT", "0") != "1":
+        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=0)")
+    else:
+        if st.button("DB 저장", type="primary", use_container_width=True):
+            # 최소 입력 검증(원하시면 더 엄격하게 가능)
+            if not st.session_state.examinee.get("name"):
+                st.error("이름을 입력해 주세요.")
+            else:
+                ok = safe_db_insert(payload)
+                if ok:
+                    st.success("저장 완료")
+                else:
+                    st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 끝
