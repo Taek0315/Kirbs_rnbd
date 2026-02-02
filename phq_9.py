@@ -93,886 +93,373 @@ ACCENT  = "#DC2626"   # keep as-is (danger)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 전역 스타일
-st.markdown(f"""
+st.markdown(
+    """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
-:root {{
+:root {
   --bg: #F6F8FB;
-  --card: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFC;
   --ink: #0F172A;
   --muted: #475569;
+  --muted-2: #64748B;
   --border: #E2E8F0;
+  --shadow: 0 10px 30px rgba(15,23,42,.08);
+  --radius-lg: 24px;
+  --radius-md: 16px;
   --brand: #2563EB;
+  --brand-600: #1D4ED8;
+  --brand-50: rgba(37,99,235,.10);
   --danger: #DC2626;
+  --danger-50: rgba(220,38,38,.10);
+}
 
-  --soft: #F8FAFC;
-  --shell-bg: #FFFFFF;
-  --inner-card: #FFFFFF;
+* {
+  box-sizing: border-box;
+}
 
-  --chip-bg: #FFFFFF;
-  --chip-border: #CBD5E1;
-  --chip-text: #0F172A;
-}}
-
-[data-testid="stAppViewContainer"] {{
+html, body {
   color-scheme: light !important;
-  background: var(--bg) !important;
-}}
-
-html, body {{
-  color-scheme: light !important;
-}}
-
-[data-testid="stAppViewContainer"] * {{
-  color-scheme: light !important;
-}}
-
-html, body {{
   background: var(--bg);
   color: var(--ink);
   font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-}}
+}
 
-body, p, div, span, li, button, label {{
-  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif !important;
-}}
+[data-testid="stAppViewContainer"] {
+  background: var(--bg) !important;
+}
 
-[data-testid="block-container"] {{
+[data-testid="block-container"] {
   max-width: 100%;
-  padding: 0 0 3rem;
-  margin: 0;
-}}
-
-.page-frame {{
-  max-width: 960px;
-  margin: 16px auto;
-  padding: 0 24px;
-}}
-
-.app-wrap {{
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 24px;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.app-wrap) {{
-  max-width: 960px;
-  margin: 0 auto 20px;
   padding: 0;
-}}
+  margin: 0;
+}
 
-div[data-testid="stVerticalBlock"]:has(.card-shell) {{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  margin: 18px auto 0;
-}}
+body, p, div, span, li, button, label, input, textarea {
+  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif !important;
+}
 
-.section-card {{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  margin-bottom: 20px;
-}}
+.app-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 56px; }
+.stack { display:flex; flex-direction:column; gap:16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 28px; }
+.card.compact { padding: 20px; border-radius: var(--radius-md); }
+.card-header { display:flex; flex-direction:column; gap:6px; }
+.title-xl { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.4px; color: var(--ink); }
+.title-lg { font-size: 1.15rem; font-weight: 850; color: var(--ink); }
+.text { color: var(--muted); line-height: 1.7; font-size: 0.98rem; }
+.divider { height:1px; background: var(--border); margin: 10px 0; }
+.actions { display:flex; gap:12px; justify-content:center; align-items:center; margin-top: 6px; }
+.actions .stButton { margin:0 !important; }
 
-.report-shell {{
-  background: var(--shell-bg);
-  border: 1px solid var(--border);
-  border-radius: 26px;
-  padding: 32px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  margin-bottom: 20px;
-}}
-
-.report-shell.compact {{
-  padding: 24px 28px;
-}}
-
-.report-header {{
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}}
-
-.header-card {{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}}
-
-.header-badge {{
+.badge {
   display: inline-flex;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(37,99,235,0.12);
+  background: var(--brand-50);
   color: var(--brand);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 12px;
   border: 1px solid rgba(37,99,235,0.25);
   width: fit-content;
-}}
+}
 
-.header-title {{
-  font-size: 1.32rem;
-  font-weight: 900;
-  letter-spacing: -0.4px;
-}}
-
-.section-heading {{
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
-}}
-
-.instruction-list {{
-  margin: 14px 0 0;
-  padding-left: 20px;
+.instruction-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
   line-height: 1.7;
   color: var(--ink);
   font-size: 0.98rem;
-}}
+}
 
-.instruction-list li {{
-  margin-bottom: 8px;
+.instruction-list li { margin-bottom: 8px; }
+
+.question-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.6;
   color: var(--ink);
-}}
+}
 
-.small-muted {{
-  color: var(--muted) !important;
-  font-size: 0.92rem;
-  letter-spacing: -0.1px;
-}}
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-.section-card, .report-shell, .report-card, .gauge-card, .narrative-card {{
-  color: var(--ink);
-}}
+.summary-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  margin-top: 18px;
+}
 
-  .report-grid {{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-  }}
+.gauge-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 22px 32px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  .report-card {{
-    background: var(--inner-card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  }}
+.gauge-circle {
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
 
-  .summary-layout {{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 28px;
-    align-items: stretch;
-    margin-top: 28px;
-  }}
+.gauge-circle::after {
+  content: "";
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
 
-  .gauge-card {{
-    background: var(--inner-card);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 32px 24px 36px;
-    text-align: center;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }}
+.gauge-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 
-  .gauge-circle {{
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    margin: 0 auto 10px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-  }}
+.gauge-number { font-size: 3rem; font-weight: 900; line-height: 1; color: var(--ink); }
+.gauge-denom { font-size: 1rem; font-weight: 700; color: var(--muted); }
+.gauge-severity { display: inline-flex; padding: 6px 18px; border-radius: 999px; font-weight: 800; border: 1.5px solid currentColor; font-size: 1rem; }
 
-  .gauge-circle::after {{
-    content: "";
-    position: absolute;
-    inset: 24px;
-    border-radius: 50%;
-    background: var(--card);
-    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-  }}
-
-  .gauge-inner {{
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }}
-
-  .gauge-number {{
-    font-size: 3.2rem;
-    font-weight: 900;
-    line-height: 1;
-    color: var(--ink);
-  }}
-
-  .gauge-denom {{
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--muted);
-  }}
-
-  .gauge-severity {{
-    display: inline-flex;
-    padding: 6px 20px;
-    border-radius: 999px;
-    font-weight: 800;
-    border: 1.5px solid currentColor;
-    font-size: 1rem;
-  }}
-
-  .narrative-card {{
-    background: var(--inner-card);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 28px 30px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }}
-
-  .narrative-title {{
-    font-weight: 800;
-    font-size: 1rem;
-  }}
-
-  .functional-highlight {{
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
-  }}
-
-  .functional-title {{
-    font-size: 0.92rem;
-    color: var(--muted);
-    font-weight: 700;
-    margin-bottom: 6px;
-  }}
-
-  .functional-value {{
-    font-size: 1.05rem;
-  }}
-
-.report-score-card {{
+.narrative-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 14px;
-}}
+}
 
-.metric-label {{
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  color: var(--muted);
-  text-transform: uppercase;
-}}
+.narrative-title { font-weight: 800; font-size: 1rem; }
+.functional-highlight { border-top: 1px solid var(--border); padding-top: 14px; }
+.functional-title { font-size: 0.9rem; color: var(--muted-2); font-weight: 700; margin-bottom: 6px; }
+.functional-value { font-size: 1.05rem; }
 
-.metric-value {{
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}}
+.domain-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
+}
 
-.metric-number {{
-  font-size: 3.6rem;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--ink);
-}}
-
-.metric-denom {{
-  font-size: 1.2rem;
-  color: var(--muted);
-  font-weight: 600;
-}}
-
-.severity-tag {{
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 18px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  width: fit-content;
-  border: 1.5px solid transparent;
-}}
-
-.report-card-title {{
-  font-size: 0.84rem;
-  letter-spacing: 1.3px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-  font-weight: 700;
-}}
-
-.report-shell p {{
-  line-height: 1.65;
-  margin: 0 0 12px;
-}}
-
-.question-section {{
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  margin-bottom: 0;
-}}
-
-.question-meta {{
+.domain-profile {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}}
+  gap: 18px;
+}
 
-.question-label {{
-  font-size: 12px;
-  font-weight: 700;
+.domain-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
   color: var(--muted);
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-}}
-
-.question-text {{
-  font-weight: 700;
-  font-size: 1.02rem;
   line-height: 1.5;
-}}
+}
 
-.question-card,
-.functional-card {{
-  background: var(--inner-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 24px 26px 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  margin-bottom: 20px;
-}}
+.domain-row {
+  display: grid;
+  grid-template-columns: 1.4fr 2.2fr 0.6fr;
+  gap: 16px;
+  align-items: center;
+}
 
-div[data-testid="stVerticalBlock"]:has(.question-card),
-div[data-testid="stVerticalBlock"]:has(.functional-card) {{
-  max-width: 960px;
-  margin: 0 auto 12px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  box-shadow: none;
-}}
+.domain-title { font-weight: 700; font-size: 1rem; }
+.domain-desc { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+.domain-bar { position: relative; height: 14px; background: rgba(226,232,240,0.9); border-radius: 999px; overflow: hidden; border: 1px solid rgba(203,213,225,0.9); }
+.domain-fill { position: absolute; inset: 0; border-radius: 999px; background: var(--brand); }
+.domain-score { justify-self: end; font-weight: 700; }
 
-.functional-divider {{
-  height: 1px;
-  width: 100%;
-  max-width: 960px;
-  background: var(--border);
-  margin: 10px auto 18px;
-}}
-
-.functional-label {{
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 0.1px;
-  text-transform: uppercase;
-}}
-
-.functional-text {{
-  font-weight: 650;
-  font-size: 0.98rem;
-  line-height: 1.5;
-}}
-
-.severity-legend {{
+.severity-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 18px;
-}}
+}
 
-.legend-chip {{
+.legend-chip {
   display: flex;
   flex-direction: column;
   padding: 10px 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: var(--inner-card);
+  background: var(--surface);
   min-width: 140px;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-}}
+}
 
-.legend-chip strong {{
-  font-size: 0.95rem;
-}}
+.legend-chip strong { font-size: 0.95rem; }
+.legend-chip small { color: var(--muted-2); font-size: 0.8rem; }
 
-.legend-chip small {{
-  color: var(--muted);
-  font-size: 0.8rem;
-}}
+.warn { background: #FFF7ED; border: 1px solid #FDBA74; color: #7C2D12; border-radius: var(--radius-md); padding: 14px 18px; font-weight: 600; }
+.safety-card { background: var(--danger-50); border: 1px solid var(--danger); color: var(--ink); border-radius: var(--radius-lg); padding: 22px 24px; box-shadow: var(--shadow); }
+.safety-card .title-lg { color: var(--danger); }
 
-.domain-panel {{
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 24px 28px;
-  background: var(--inner-card);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-}}
+.footer-note { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
 
-.domain-profile {{
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}}
+[data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
-.domain-note {{
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(148,163,184,0.3);
-  font-size: 0.82rem;
-  color: var(--muted);
-  line-height: 1.45;
-}}
+/* Inputs */
+[data-testid="stTextInput"] input {
+  background:#fff !important;
+  color:var(--ink) !important;
+  border:1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  height: 44px !important;
+}
 
-.domain-row {{
-  display: grid;
-  grid-template-columns: 1.4fr 2.5fr 0.5fr;
-  gap: 18px;
-  align-items: center;
-}}
+[data-testid="stTextInput"] label {
+  color: var(--muted-2) !important;
+  font-weight: 700 !important;
+}
 
-.domain-title {{
-  font-weight: 700;
-  font-size: 1rem;
-}}
+[data-testid="stTextInput"] input:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+}
 
-.domain-desc {{
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 4px;
-}}
+/* Checkbox */
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p,
+[data-testid="stCheckbox"] span {
+  color: var(--ink) !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+}
 
-.domain-bar {{
-  position: relative;
-  height: 16px;
-  background: rgba(226,232,240,0.8);
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid rgba(203,213,225,0.9);
-}}
+[data-testid="stCheckbox"] svg {
+  color: var(--brand) !important;
+}
 
-.domain-fill {{
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  border-radius: 999px;
-  background: var(--brand);
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35);
-}}
+[data-testid="stCheckbox"] input:focus-visible + div {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+  border-radius: 6px;
+}
 
-.domain-score {{
-  justify-self: end;
-  font-weight: 700;
-}}
-
-.warn {{
-  background: #FFF7ED;
-  border: 1px solid #FDBA74;
-  color: #7C2D12;
-  border-radius:18px;
-  padding:16px 20px;
-  max-width: 960px;
-  margin: 18px auto 0;
-  font-weight: 600;
-}}
-
-.safety {{
-  background: #FFF1F2;
-  border: 1px solid #FDA4AF;
-  color: var(--ink);
-  border-radius:22px;
-  padding:24px 28px;
-  max-width:960px;
-  margin: 24px auto 0;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-}}
-
-.safety .section-heading {{
-  color: var(--danger);
-}}
-
-.footer-note {{
-  color: var(--muted);
-  font-size: 12px;
-  max-width: 960px;
-  margin: 24px auto 0;
-  line-height: 1.5;
-  text-align: center;
-}}
-
-div[data-testid="stPlotlyChart"] {{
-  max-width: 960px;
-  margin: 12px auto 18px;
-  background: #FFFFFF;
-  border: 1px solid var(--border);
-  border-radius: 26px;
-  padding: 18px 18px 6px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-}}
-
-div[data-testid="stPlotlyChart"] > div > div {{
-  width: 100% !important;
-}}
-
-div[data-testid="stHorizontalBlock"] {{
-  max-width: 960px;
-  margin: 16px auto 0 !important;
-}}
-
-.button-anchor {{
-    display:none;
-}}
-
-div[data-testid="stHorizontalBlock"]:has(.button-anchor) {{
-    margin: 40px auto 0 !important;
-    background: var(--shell-bg);
-    border: 1px solid var(--border);
-    border-radius: 28px;
-    padding: 28px 32px 32px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-}}
-
-[data-testid="stToolbar"], #MainMenu, header, footer {{
-  display: none !important;
-}}
-
-/* ───── 라디오 칩 ───── */
-.stRadio {{
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  margin: 6px 0 10px;
-}}
-
-.stRadio > div[role="radiogroup"] {{
+/* Radios */
+[data-testid="stRadio"] > div[role="radiogroup"] {
   display: flex !important;
-  gap: 8px !important;
   flex-wrap: wrap !important;
+  gap: 10px !important;
   align-items: center !important;
-}}
+}
 
-.stRadio [role="radio"] {{
+[data-testid="stRadio"] {
+  margin-top: 6px;
+}
+
+[data-testid="stRadio"] [role="radio"] {
   display: inline-flex !important;
   align-items: center !important;
-  padding: 10px 22px !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
   border-radius: 999px !important;
-  background: var(--chip-bg) !important;
-  border: 1px solid var(--chip-border) !important;
-  cursor: pointer !important;
-  transition: all .15s ease;
-  font-weight:600 !important;
-  opacity: 1 !important;
-  color: var(--chip-text) !important;
-}}
-
-.stRadio [role="radio"] * {{
-  color: var(--chip-text) !important;
-  -webkit-text-fill-color: var(--chip-text) !important;
-  opacity: 1 !important;
-}}
-
-.stRadio [role="radio"]:hover {{
-  border-color: var(--brand) !important;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
-}}
-
-.stRadio [role="radio"][aria-checked="true"] {{
-  background: rgba(37, 99, 235, 0.10) !important;
-  border-color: var(--brand) !important;
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
   color: var(--ink) !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
-}}
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
 
-.stRadio [role="radio"][aria-checked="true"] * {{
+[data-testid="stRadio"] [role="radio"][aria-checked="true"] {
+  background: var(--brand-50) !important;
+  border-color: var(--brand) !important;
+}
+
+[data-testid="stRadio"] label,
+[data-testid="stRadio"] label span {
   color: var(--ink) !important;
-  -webkit-text-fill-color: var(--ink) !important;
   opacity: 1 !important;
-}}
+  white-space: nowrap !important;
+}
 
-/* 버튼 */
-.stButton {{
-  max-width: 960px;
-  margin: 0 auto 14px;
-}}
+[data-testid="stRadio"] label:focus-within {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+}
 
-.stButton > button {{
-  width: 100%;
+/* Buttons */
+.stButton > button {
+  border-radius: 14px !important;
+  min-height: 46px !important;
+  font-weight: 900 !important;
   white-space: nowrap !important;
   word-break: keep-all !important;
-  line-height: 1 !important;
-  min-height: 48px !important;
-}}
+  padding: 0 22px !important;
+}
 
-.stButton > button[data-testid="baseButton-primary"],
-.stButton > button[kind="primary"] {{
+.stButton > button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.25) !important;
+}
+
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="baseButton-primary"] {
   background: var(--brand) !important;
   color: #fff !important;
-  border: 1.5px solid var(--brand) !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.2px;
-  min-height: 48px;
-  box-shadow: 0 10px 18px rgba(37,99,235,0.22) !important;
-}}
+  border: 1px solid var(--brand) !important;
+}
 
-.stButton > button:not([data-testid="baseButton-primary"]) {{
-  background: var(--inner-card) !important;
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="baseButton-primary"]:hover {
+  background: var(--brand-600) !important;
+  border-color: var(--brand-600) !important;
+}
+
+.stButton > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
+  background: #fff !important;
   color: var(--brand) !important;
   border: 1.5px solid var(--brand) !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  min-height: 48px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08) !important;
-}}
+}
 
-@media (max-width: 640px) {{
-  [data-testid="block-container"] {{
-    padding: 0 1rem 2rem;
-  }}
-  .report-shell {{
-    padding: 24px;
-  }}
-  .gauge-circle {{
-    width: 180px;
-    height: 180px;
-  }}
-  .domain-row {{
-    grid-template-columns: 1fr;
-  }}
-  .domain-score {{
-    justify-self: start;
-  }}
-    div[data-testid="stHorizontalBlock"]:has(.button-anchor) {{
-      padding: 20px;
-      margin: 28px auto 0 !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(.stButton) {{
-      flex-direction: column !important;
-      gap: 12px !important;
-    }}
-}}
+.stButton > button:disabled {
+  background: var(--surface-2) !important;
+  color: var(--muted-2) !important;
+  border-color: var(--border) !important;
+  cursor: not-allowed !important;
+}
 
-/* --- FIX: Question text becomes invisible on light background --- */
-div[data-testid="stVerticalBlock"]:has(.question-card),
-div[data-testid="stVerticalBlock"]:has(.functional-card) {{
-  color: var(--ink) !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.question-card) .question-label,
-div[data-testid="stVerticalBlock"]:has(.question-card) .question-text,
-div[data-testid="stVerticalBlock"]:has(.question-card) p,
-div[data-testid="stVerticalBlock"]:has(.question-card) span,
-div[data-testid="stVerticalBlock"]:has(.question-card) div,
-div[data-testid="stVerticalBlock"]:has(.functional-card) .functional-label,
-div[data-testid="stVerticalBlock"]:has(.functional-card) .functional-text,
-div[data-testid="stVerticalBlock"]:has(.functional-card) p,
-div[data-testid="stVerticalBlock"]:has(.functional-card) span,
-div[data-testid="stVerticalBlock"]:has(.functional-card) div {{
-  color: var(--ink) !important;
-  -webkit-text-fill-color: var(--ink) !important;
-  opacity: 1 !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.question-card) .small-muted,
-div[data-testid="stVerticalBlock"]:has(.functional-card) .small-muted {{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.question-card) .stRadio [role="radio"] *,
-div[data-testid="stVerticalBlock"]:has(.functional-card) .stRadio [role="radio"] * {{
-  color: var(--chip-text) !important;
-  -webkit-text-fill-color: var(--chip-text) !important;
-  opacity: 1 !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.question-card) .stRadio [role="radio"][aria-checked="true"] *,
-div[data-testid="stVerticalBlock"]:has(.functional-card) .stRadio [role="radio"][aria-checked="true"] * {{
-  color: var(--ink) !important;
-  -webkit-text-fill-color: var(--ink) !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.question-card),
-div[data-testid="stVerticalBlock"]:has(.functional-card) {{
-  background: transparent !important;
-}}
-
-/* =========================================================
-   RADIO: hollow when unchecked, dot when checked (stable)
-   Targets both SVG-based and DIV-based BaseWeb radios.
-   ========================================================= */
-
-.stRadio div[role="radiogroup"] label {{
-  color: var(--ink) !important;
-}}
-
-.stRadio div[role="radiogroup"] label:not(:has(input:checked)) svg * {{
-  fill: transparent !important;
-}}
-.stRadio div[role="radiogroup"] label:not(:has(input:checked)) svg * {{
-  stroke: #94A3B8 !important;
-  stroke-width: 2 !important;
-  opacity: 1 !important;
-}}
-
-.stRadio div[role="radiogroup"] label:has(input:checked) svg * {{
-  stroke: var(--brand) !important;
-  stroke-width: 2 !important;
-  opacity: 1 !important;
-}}
-
-.stRadio div[role="radiogroup"] label:has(input:checked) svg *:last-child {{
-  fill: var(--brand) !important;
-}}
-
-.stRadio div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {{
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  min-height: 16px !important;
-  border-radius: 999px !important;
-  box-sizing: border-box !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-right: 10px !important;
-}}
-
-.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:not(:has(input:checked)) > div:first-child {{
-  border: 2px solid #94A3B8 !important;
-  background: transparent !important;
-}}
-.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:not(:has(input:checked)) > div:first-child * {{
-  background: transparent !important;
-}}
-
-.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {{
-  border: 2px solid var(--brand) !important;
-  background: transparent !important;
-  position: relative !important;
-}}
-.stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child::after {{
-  content: "" !important;
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: 999px !important;
-  background: var(--brand) !important;
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-}}
-
-.stRadio div[role="radiogroup"] label * {{
-  color: var(--ink) !important;
-  -webkit-text-fill-color: var(--ink) !important;
-  opacity: 1 !important;
-}}
-
-/* Input + checkbox (force light theme) */
-[data-testid="stTextInput"] input,
-[data-testid="stTextArea"] textarea {{
-  background: #FFFFFF !important;
-  color: var(--ink) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  padding: 0 14px !important;
-  min-height: 44px !important;
-  box-shadow: none !important;
-}}
-
-[data-testid="stTextInput"] input::placeholder,
-[data-testid="stTextArea"] textarea::placeholder {{
-  color: var(--muted) !important;
-  opacity: 1 !important;
-}}
-
-[data-testid="stTextInput"] label,
-[data-testid="stTextArea"] label,
-[data-testid="stTextInput"] label span,
-[data-testid="stTextArea"] label span {{
-  color: var(--muted) !important;
-  font-weight: 600 !important;
-}}
-
-[data-testid="stTextInput"] input:focus,
-[data-testid="stTextArea"] textarea:focus {{
-  border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
-}}
-
-[data-testid="stCheckbox"] label,
-[data-testid="stCheckbox"] label span {{
-  color: var(--ink) !important;
-  opacity: 1 !important;
-}}
-
-[data-testid="stCheckbox"] svg {{
-  color: var(--brand) !important;
-}}
-
-[data-testid="stCaption"] {{
-  color: var(--muted) !important;
-  opacity: 1 !important;
-}}
-
-div[data-testid="stVerticalBlock"]:has(.action-card) {{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 24px 28px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  margin-bottom: 20px;
-}}
-
-.form-grid {{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}}
-
-.form-grid .full {{
-  grid-column: 1 / -1;
-}}
-
-@media (max-width: 640px) {{
-  .form-grid {{
-    grid-template-columns: 1fr;
-  }}
-}}
+@media (max-width: 640px) {
+  .app-wrap { padding: 0 18px 40px; }
+  .gauge-circle { width: 180px; height: 180px; }
+  .domain-row { grid-template-columns: 1fr; }
+  .domain-score { justify-self: start; }
+}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 상태 관리
@@ -1162,7 +649,7 @@ def render_severity_legend():
     st.markdown(
         f"""
 <div class="app-wrap">
-  <div class="report-shell compact">
+  <div class="card compact">
     <div class="severity-legend">{spans}</div>
   </div>
 </div>""",
@@ -1196,7 +683,7 @@ def build_domain_profile_html(scores: List[int]) -> str:
         )
     rows_html = "\n".join(rows)
     note_html = (
-        '<div class="domain-note small-muted">※ 각 영역의 점수는 높을수록 해당 영역의 우울 관련 증상이 더 많이 보고되었음을 의미합니다.</div>'
+        '<div class="domain-note">※ 각 영역의 점수는 높을수록 해당 영역의 우울 관련 증상이 더 많이 보고되었음을 의미합니다.</div>'
     )
     return (
         '<div class="domain-panel">\n'
@@ -1233,14 +720,11 @@ def render_question_item(question: Dict[str, str | int]) -> None:
         st.markdown(
             dedent(
                 f"""
-                <div class="app-wrap">
-                  <div class="question-card">
-                    <div class="question-meta">
-                      <div class="question-label">문항 {question['no']}</div>
-                      <div class="question-text">{question['ko']}</div>
-                    </div>
+                <div class="card compact question-card">
+                  <div class="question-header">
+                    <div class="badge">문항 {question['no']}</div>
+                    <div class="question-text">{question['ko']}</div>
                   </div>
-                </div>
                 """
             ),
             unsafe_allow_html=True,
@@ -1253,6 +737,7 @@ def render_question_item(question: Dict[str, str | int]) -> None:
             label_visibility="collapsed",
             key=f"q{question['no']}",
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_functional_block() -> None:
@@ -1260,15 +745,12 @@ def render_functional_block() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="app-wrap">
-                  <div class="functional-card">
-                    <div class="functional-meta">
-                      <div class="functional-label">기능 손상</div>
-                      <div class="functional-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
-                      <div class="small-muted" style="margin-top:4px;">가장 가까운 수준을 선택해 주세요.</div>
-                    </div>
+                <div class="card compact">
+                  <div class="question-header">
+                    <div class="badge">기능 손상</div>
+                    <div class="question-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
+                    <div class="text" style="margin-top:4px;">가장 가까운 수준을 선택해 주세요.</div>
                   </div>
-                </div>
                 """
             ),
             unsafe_allow_html=True,
@@ -1281,18 +763,21 @@ def render_functional_block() -> None:
             label_visibility="collapsed",
             key="functional-impact",
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_intro_page() -> None:
     with st.container():
+        st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
+
         st.markdown(
             dedent(
                 """
-                <div class="app-wrap">
-                  <div class="section-card header-card">
-                    <div class="header-badge">PHQ-9</div>
-                    <div class="header-title">우울 증상 자기보고 검사</div>
-                    <p class="small-muted">지난 2주 동안 경험한 증상 빈도를 0~3점 척도로 기록하는 표준화된 자기보고 도구입니다.</p>
+                <div class="card">
+                  <div class="card-header">
+                    <div class="badge">PHQ-9</div>
+                    <div class="title-xl">우울 증상 자기보고 검사</div>
+                    <div class="text">지난 2주 동안 경험한 증상 빈도를 0~3점 척도로 기록하는 표준화된 자기보고 도구입니다.</div>
                   </div>
                 </div>
                 """
@@ -1300,39 +785,39 @@ def render_intro_page() -> None:
             unsafe_allow_html=True,
         )
 
-    with st.container():
         st.markdown(
             dedent(
                 """
-                <div class="app-wrap">
-                  <div class="section-card">
-                    <div class="section-heading">PHQ-9 검사 안내</div>
-                    <ul class="instruction-list">
-                      <li>목적: 최근 2주간 우울 관련 증상의 빈도를 자가 보고하여 현재 상태를 점검합니다.</li>
-                      <li>대상: 만 12세 이상 누구나 스스로 응답할 수 있습니다.</li>
-                      <li>응답 방식: 각 문항은 <b>전혀 아님(0)</b>부터 <b>거의 매일(3)</b>까지의 0~3점 척도로 응답합니다.</li>
-                    </ul>
-                    <p class="small-muted" style="margin-top:10px;">※ 결과 해석은 참고용이며, 의학적 진단을 대신하지 않습니다.</p>
+                <div class="card">
+                  <div class="card-header">
+                    <div class="title-lg">PHQ-9 검사 안내</div>
                   </div>
+                  <ul class="instruction-list">
+                    <li>목적: 최근 2주간 우울 관련 증상의 빈도를 자가 보고하여 현재 상태를 점검합니다.</li>
+                    <li>대상: 만 12세 이상 누구나 스스로 응답할 수 있습니다.</li>
+                    <li>응답 방식: 각 문항은 <b>전혀 아님(0)</b>부터 <b>거의 매일(3)</b>까지의 0~3점 척도로 응답합니다.</li>
+                  </ul>
+                  <div class="text" style="margin-top:10px;">※ 결과 해석은 참고용이며, 의학적 진단을 대신하지 않습니다.</div>
                 </div>
                 """
             ),
             unsafe_allow_html=True,
         )
 
-    with st.container():
-        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-heading">개인정보 수집·이용 동의</div>', unsafe_allow_html=True)
         st.markdown(
             dedent(
                 """
-                <ul class="instruction-list">
-                  <li>수집 항목: 이름, 이메일, 연락처, 응답 내용, 결과, 제출 시각</li>
-                  <li>이용 목적: 검사 수행 및 결과 제공, 통계 및 품질 개선, DB 저장</li>
-                  <li>보관 기간: 내부 정책에 따름</li>
-                  <li>제3자 제공: 없음</li>
-                  <li>동의 거부 권리 및 불이익: 동의하지 않으실 경우 검사를 진행할 수 없습니다.</li>
-                </ul>
+                <div class="card">
+                  <div class="card-header">
+                    <div class="title-lg">개인정보 수집·이용 동의</div>
+                  </div>
+                  <ul class="instruction-list">
+                    <li>수집 항목: 이름, 이메일, 연락처, 응답 내용, 결과, 제출 시각</li>
+                    <li>이용 목적: 검사 수행 및 결과 제공, 통계 및 품질 개선, DB 저장</li>
+                    <li>보관 기간: 내부 정책에 따름</li>
+                    <li>제3자 제공: 없음</li>
+                    <li>동의 거부 권리 및 불이익: 동의하지 않으실 경우 검사를 진행할 수 없습니다.</li>
+                  </ul>
                 """
             ),
             unsafe_allow_html=True,
@@ -1346,10 +831,10 @@ def render_intro_page() -> None:
             st.session_state.consent = consent_checked
             if not consent_checked:
                 st.session_state.consent_ts = None
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="app-wrap action-card"></div>', unsafe_allow_html=True)
-        next_clicked = st.button("다음", type="primary", use_container_width=True)
+        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
+        next_clicked = st.button("다음", type="primary")
         if next_clicked:
             if not st.session_state.consent:
                 st.warning("동의가 필요합니다.")
@@ -1358,12 +843,25 @@ def render_intro_page() -> None:
                     st.session_state.consent_ts = kst_iso_now()
                 st.session_state.page = "examinee"
                 st.rerun()
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_examinee_page() -> None:
     with st.container():
-        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-heading">응답자 정보</div>', unsafe_allow_html=True)
+        st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
+
+        st.markdown(
+            """
+            <div class="card">
+              <div class="card-header">
+                <div class="title-lg">응답자 정보</div>
+                <div class="text">검사 결과 제공을 위해 필수 정보를 입력해 주세요.</div>
+              </div>
+            """,
+            unsafe_allow_html=True,
+        )
         name_col, email_col = st.columns([1, 1], gap="medium")
         with name_col:
             st.session_state.examinee["name"] = st.text_input(
@@ -1379,35 +877,51 @@ def render_examinee_page() -> None:
             "연락처 (선택)",
             value=st.session_state.examinee.get("phone", ""),
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
-        back_col, next_col = st.columns([1, 1], gap="medium")
-        with back_col:
-            if st.button("이전", use_container_width=True):
-                st.session_state.page = "intro"
+        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
+        if st.button("이전"):
+            st.session_state.page = "intro"
+            st.rerun()
+        if st.button("다음", type="primary"):
+            if not st.session_state.examinee.get("name", "").strip():
+                st.warning("이름을 입력해 주세요.")
+            else:
+                st.session_state.page = "survey"
                 st.rerun()
-        with next_col:
-            if st.button("다음", type="primary", use_container_width=True):
-                if not st.session_state.examinee.get("name", "").strip():
-                    st.warning("이름을 입력해 주세요.")
-                else:
-                    st.session_state.page = "survey"
-                    st.rerun()
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_survey_page() -> None:
     with st.container():
+        st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
+
         st.markdown(
             dedent(
                 """
-                <div class="app-wrap">
-                  <div class="section-card instruction-card">
-                    <div class="section-heading">지시문</div>
-                    <ul class="instruction-list">
-                      <li>각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</li>
-                      <li>모든 문항과 기능 손상 질문을 완료한 뒤 ‘결과 보기’를 누르면 총점, 중증도, 영역별 분석을 바로 확인할 수 있습니다.</li>
-                    </ul>
+                <div class="card">
+                  <div class="card-header">
+                    <div class="title-lg">지시문</div>
+                  </div>
+                  <ul class="instruction-list">
+                    <li>각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</li>
+                    <li>모든 문항과 기능 손상 질문을 완료한 뒤 ‘결과 보기’를 누르면 총점, 중증도, 영역별 분석을 바로 확인할 수 있습니다.</li>
+                  </ul>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            dedent(
+                """
+                <div class="card">
+                  <div class="card-header">
+                    <div class="title-lg">질문지 (지난 2주)</div>
+                    <div class="text">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
                   </div>
                 </div>
                 """
@@ -1415,49 +929,33 @@ def render_survey_page() -> None:
             unsafe_allow_html=True,
         )
 
-    with st.container():
-        st.markdown(
-            dedent(
-                """
-                <div class="app-wrap">
-                  <div class="section-card question-section">
-                    <div class="section-heading">질문지 (지난 2주)</div>
-                    <div class="small-muted">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
-                  </div>
-                </div>
-                """
-            ),
-            unsafe_allow_html=True,
-        )
+        for q in QUESTIONS:
+            render_question_item(q)
 
-    for q in QUESTIONS:
-        render_question_item(q)
+        render_functional_block()
 
-    render_functional_block()
+        st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
+        if st.button("이전"):
+            st.session_state.page = "examinee"
+            st.rerun()
+        if st.button("결과 보기", type="primary"):
+            scores, unanswered = [], 0
+            for i in range(1, 10):
+                lab = st.session_state.answers.get(i)
+                if lab is None:
+                    unanswered += 1
+                    scores.append(0)
+                else:
+                    scores.append(LABEL2SCORE[lab])
+            total = sum(scores)
+            sev = phq_severity(total)
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+            st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
+            st.session_state.page = "result"
+            st.rerun()
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="app-wrap"></div>', unsafe_allow_html=True)
-        back_col, next_col = st.columns([1, 1], gap="medium")
-        with back_col:
-            if st.button("이전", use_container_width=True):
-                st.session_state.page = "examinee"
-                st.rerun()
-        with next_col:
-            if st.button("결과 보기", type="primary", use_container_width=True):
-                scores, unanswered = [], 0
-                for i in range(1, 10):
-                    lab = st.session_state.answers.get(i)
-                    if lab is None:
-                        unanswered += 1
-                        scores.append(0)
-                    else:
-                        scores.append(LABEL2SCORE[lab])
-                total = sum(scores)
-                sev = phq_severity(total)
-                ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-                st.session_state.summary = (total, sev, st.session_state.functional, scores, ts, unanswered)
-                st.session_state.page = "result"
-                st.rerun()
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_result_page() -> None:
@@ -1473,35 +971,33 @@ def render_result_page() -> None:
     gauge_percent = (max(0, min(total, 27)) / 27) * 100
     functional_value = functional if functional else "미응답"
 
+    st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
+
     st.markdown(
         dedent(
             f"""
-            <div class="app-wrap">
-              <div class="report-shell">
-                <div class="report-header">
-                  <div>
-                    <div class="section-heading">I. 종합 소견</div>
-                    <div class="small-muted">검사 일시: {ts}</div>
+            <div class="card">
+              <div class="card-header">
+                <div class="title-lg">I. 종합 소견</div>
+                <div class="text">검사 일시: {ts}</div>
+              </div>
+              <div class="summary-layout">
+                <div class="gauge-card">
+                  <div class="badge" style="margin: 0 auto;">총점</div>
+                  <div class="gauge-circle" style="background: conic-gradient({arc_color} {gauge_percent:.2f}%, rgba(226,232,240,0.9) {gauge_percent:.2f}%, rgba(226,232,240,0.9) 100%);">
+                    <div class="gauge-inner">
+                      <div class="gauge-number">{total}</div>
+                      <div class="gauge-denom">/ 27</div>
+                    </div>
                   </div>
+                  <div class="gauge-severity" style="color:{arc_color};">{sev}</div>
                 </div>
-                <div class="summary-layout">
-                  <div class="gauge-card">
-                    <div class="metric-label">총점</div>
-                    <div class="gauge-circle" style="background: conic-gradient({arc_color} {gauge_percent:.2f}%, rgba(226,232,240,0.9) {gauge_percent:.2f}%, rgba(226,232,240,0.9) 100%);">
-                      <div class="gauge-inner">
-                        <div class="gauge-number">{total}</div>
-                        <div class="gauge-denom">/ 27</div>
-                      </div>
-                    </div>
-                    <div class="gauge-severity" style="color:{arc_color};">{sev}</div>
-                  </div>
-                  <div class="narrative-card">
-                    <div class="narrative-title">주요 소견</div>
-                    <p>{narrative}</p>
-                    <div class="functional-highlight">
-                      <div class="functional-title">일상 기능 손상 (10번 문항)</div>
-                      <div class="functional-value"><strong>{functional_value}</strong></div>
-                    </div>
+                <div class="narrative-card">
+                  <div class="narrative-title">주요 소견</div>
+                  <div class="text">{narrative}</div>
+                  <div class="functional-highlight">
+                    <div class="functional-title">일상 기능 손상 (10번 문항)</div>
+                    <div class="functional-value"><strong>{functional_value}</strong></div>
                   </div>
                 </div>
               </div>
@@ -1513,18 +1009,19 @@ def render_result_page() -> None:
 
     if unanswered > 0:
         st.markdown(
-            f'<div class="app-wrap"><div class="warn">⚠️ 미응답 {unanswered}개 문항은 0점으로 계산되었습니다.</div></div>',
+            f'<div class="warn">⚠️ 미응답 {unanswered}개 문항은 0점으로 계산되었습니다.</div>',
             unsafe_allow_html=True,
         )
 
     domain_html = build_domain_profile_html(scores)
     domain_section_html = dedent(
         """
-        <div class="app-wrap">
-          <div class="report-shell">
-            <div class="section-heading" style="margin-bottom:12px;">II. 증상 영역별 프로파일</div>
-            {domain_panel}
+        <div class="card">
+          <div class="card-header">
+            <div class="title-lg">II. 증상 영역별 프로파일</div>
+            <div class="text">각 영역별 보고된 증상 강도를 확인할 수 있습니다.</div>
           </div>
+          {domain_panel}
         </div>
         """
     ).strip().format(domain_panel=domain_html)
@@ -1534,35 +1031,31 @@ def render_result_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="app-wrap">
-                  <div class="safety">
-                    <div class="section-heading">안전 안내 (문항 9 관련)</div>
-                    <div class="small-muted">자살·자해 생각이 있을 때 즉시 도움 받기</div>
-                    <div>한국: <b>1393 자살예방상담(24시간)</b>, <b>정신건강상담 1577-0199</b> · 긴급 시 <b>112/119</b>.</div>
+                <div class="card safety-card">
+                  <div class="card-header">
+                    <div class="title-lg">안전 안내 (문항 9 관련)</div>
+                    <div class="text">자살·자해 생각이 있을 때 즉시 도움 받기</div>
                   </div>
+                  <div>한국: <b>1393 자살예방상담(24시간)</b>, <b>정신건강상담 1577-0199</b> · 긴급 시 <b>112/119</b>.</div>
                 </div>
                 """
             ),
             unsafe_allow_html=True,
         )
 
-    button_zone = st.container()
-    with button_zone:
-        st.markdown('<div class="app-wrap button-anchor"></div>', unsafe_allow_html=True)
-        start_col, close_col = st.columns([1, 1], gap="medium")
-        with start_col:
-            if st.button("새 검사 시작", type="primary", use_container_width=True):
-                _reset_to_survey()
-                st.rerun()
-        with close_col:
-            if st.button("닫기", use_container_width=True):
-                components.html("<script>window.close();</script>", height=0)
-                st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
+    st.markdown('<div class="card compact"><div class="actions">', unsafe_allow_html=True)
+    if st.button("새 검사 시작", type="primary"):
+        _reset_to_survey()
+        st.rerun()
+    if st.button("닫기"):
+        components.html("<script>window.close();</script>", height=0)
+        st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     st.markdown(
         dedent(
             """
-            <div class="app-wrap">
+            <div class="card compact">
               <div class="footer-note">
                 PHQ-9는 공공 도메인(Pfizer 별도 허가 불필요).<br>
                 Kroenke, Spitzer, & Williams (2001) JGIM · Spitzer, Kroenke, & Williams (1999) JAMA.
@@ -1607,8 +1100,16 @@ def render_result_page() -> None:
         return exam_data
 
     with st.container():
-        st.markdown('<div class="app-wrap card-shell"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-heading">결과 저장</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="card">
+              <div class="card-header">
+                <div class="title-lg">결과 저장</div>
+                <div class="text">검사 결과를 안전하게 저장하거나 개발용 payload를 확인합니다.</div>
+              </div>
+            """,
+            unsafe_allow_html=True,
+        )
         payload = build_phq9_payload()
 
         with st.expander("저장 payload(개발용)", expanded=False):
@@ -1617,7 +1118,7 @@ def render_result_page() -> None:
         if os.getenv("ENABLE_DB_INSERT", "0") != "1":
             st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=0)")
         else:
-            if st.button("DB 저장", type="primary", use_container_width=True):
+            if st.button("DB 저장", type="primary"):
                 if not st.session_state.examinee.get("name"):
                     st.error("이름을 입력해 주세요.")
                 else:
@@ -1626,6 +1127,9 @@ def render_result_page() -> None:
                         st.success("저장 완료")
                     else:
                         st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 if st.session_state.page == "intro":
