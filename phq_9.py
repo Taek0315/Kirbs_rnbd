@@ -147,7 +147,7 @@ body, p, div, span, li, button, label, input, textarea {
 .stack { display:flex; flex-direction:column; gap:16px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 28px; }
 .card.compact { padding: 20px; border-radius: var(--radius-md); }
-.card-header { display:flex; flex-direction:column; gap:6px; }
+.card-header { display:flex; flex-direction:column; gap:10px; }
 .title-xl { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.4px; color: var(--ink); }
 .title-lg { font-size: 1.15rem; font-weight: 850; color: var(--ink); }
 .text { color: var(--muted); line-height: 1.7; font-size: 0.98rem; }
@@ -195,6 +195,30 @@ body, p, div, span, li, button, label, input, textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.section-card {
+  margin-bottom: 32px !important;
+}
+
+.question-card {
+  margin-bottom: 20px !important;
+}
+
+.section-to-question {
+  margin-bottom: 40px !important;
+}
+
+.result-card {
+  margin-bottom: 28px !important;
+}
+
+.result-danger {
+  margin-top: 36px !important;
+}
+
+.result-actions {
+  margin-top: 32px !important;
 }
 
 .summary-layout {
@@ -327,6 +351,11 @@ body, p, div, span, li, button, label, input, textarea {
 
 .footer-note { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
 
+.card p,
+.card li {
+  line-height: 1.75 !important;
+}
+
 [data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
 /* Inputs */
@@ -403,6 +432,21 @@ body, p, div, span, li, button, label, input, textarea {
   color: var(--ink) !important;
   opacity: 1 !important;
   white-space: nowrap !important;
+}
+
+[data-testid="stRadio"] label span {
+  color: var(--ink) !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+[data-testid="stRadio"] input:checked + div {
+  outline: 2px solid rgba(37,99,235,.35) !important;
+  border-radius: 999px !important;
+}
+
+[data-testid="stRadio"] div {
+  color: var(--ink) !important;
 }
 
 [data-testid="stRadio"] label:focus-within {
@@ -760,7 +804,7 @@ def render_functional_block() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card compact">
+                <div class="card compact question-card">
                   <div class="question-header">
                     <div class="badge">기능 손상</div>
                     <div class="question-text">이 문제들 때문에 일·집안일·대인관계에 얼마나 어려움이 있었습니까?</div>
@@ -788,7 +832,7 @@ def render_intro_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card">
+                <div class="card section-card">
                   <div class="card-header">
                     <div class="badge">PHQ-9</div>
                     <div class="title-xl">우울 증상 자기보고 검사</div>
@@ -803,7 +847,7 @@ def render_intro_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card">
+                <div class="card section-card">
                   <div class="card-header">
                     <div class="title-lg">PHQ-9 검사 안내</div>
                   </div>
@@ -822,7 +866,7 @@ def render_intro_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card">
+                <div class="card section-card">
                   <div class="card-header">
                     <div class="title-lg">개인정보 수집·이용 동의</div>
                   </div>
@@ -871,7 +915,7 @@ def render_examinee_page() -> None:
 
         st.markdown(
             """
-            <div class="card">
+            <div class="card result-card">
               <div class="card-header">
                 <div class="title-lg">응답자 정보</div>
                 <div class="text">검사 결과 제공을 위해 필수 정보를 입력해 주세요.</div>
@@ -919,7 +963,7 @@ def render_survey_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card">
+                <div class="card section-card">
                   <div class="card-header">
                     <div class="title-lg">지시문</div>
                   </div>
@@ -936,7 +980,7 @@ def render_survey_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card">
+                <div class="card section-card">
                   <div class="card-header">
                     <div class="title-lg">질문지 (지난 2주)</div>
                     <div class="text">표준 PHQ-9 · 모든 문항은 동일한 0–3점 척도를 사용합니다.</div>
@@ -946,6 +990,8 @@ def render_survey_page() -> None:
             ),
             unsafe_allow_html=True,
         )
+
+        st.markdown('<div class="section-to-question"></div>', unsafe_allow_html=True)
 
         for q in QUESTIONS:
             render_question_item(q)
@@ -998,7 +1044,7 @@ def render_result_page() -> None:
     st.markdown(
         dedent(
             f"""
-            <div class="card">
+            <div class="card result-card">
               <div class="card-header">
                 <div class="title-lg">I. 종합 소견</div>
                 <div class="text">검사 일시: {ts}</div>
@@ -1039,7 +1085,7 @@ def render_result_page() -> None:
     domain_html = build_domain_profile_html(scores)
     domain_section_html = dedent(
         """
-        <div class="card">
+        <div class="card result-card">
           <div class="card-header">
             <div class="title-lg">II. 증상 영역별 프로파일</div>
             <div class="text">각 영역별 보고된 증상 강도를 확인할 수 있습니다.</div>
@@ -1054,7 +1100,7 @@ def render_result_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card safety-card">
+                <div class="card safety-card result-card result-danger">
                   <div class="card-header">
                     <div class="title-lg">안전 안내 (문항 9 관련)</div>
                     <div class="text">자살·자해 생각이 있을 때 즉시 도움 받기</div>
@@ -1066,6 +1112,7 @@ def render_result_page() -> None:
             unsafe_allow_html=True,
         )
 
+    st.markdown('<div class="result-actions">', unsafe_allow_html=True)
     actions = st.columns([1, 1], gap="medium")
     with actions[0]:
         if st.button("닫기", use_container_width=True):
@@ -1075,11 +1122,12 @@ def render_result_page() -> None:
         if st.button("새 검사 시작", type="primary", use_container_width=True):
             _reset_to_survey()
             st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
         dedent(
             """
-            <div class="card compact">
+            <div class="card compact result-card">
               <div class="footer-note">
                 PHQ-9는 공공 도메인(Pfizer 별도 허가 불필요).<br>
                 Kroenke, Spitzer, & Williams (2001) JGIM · Spitzer, Kroenke, & Williams (1999) JAMA.
@@ -1126,7 +1174,7 @@ def render_result_page() -> None:
     with st.container():
         st.markdown(
             """
-            <div class="card">
+            <div class="card result-card">
               <div class="card-header">
                 <div class="title-lg">결과 저장</div>
                 <div class="text">검사 결과를 안전하게 저장하거나 개발용 payload를 확인합니다.</div>
