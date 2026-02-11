@@ -117,6 +117,9 @@ def init_state():
     if "close_attempted" not in st.session_state:
         st.session_state.close_attempted = False
 
+    if "last_q" not in st.session_state:
+        st.session_state.last_q = None
+
 
 def reset_all():
     st.session_state.page = "intro"
@@ -134,6 +137,12 @@ def reset_all():
         "email": "",
     }
     st.session_state.close_attempted = False
+    st.session_state.last_q = None
+
+
+def select_answer(q_key: str, score: int):
+    st.session_state.answers[q_key] = score
+    st.session_state.last_q = q_key
 
 
 def build_payload():
@@ -283,6 +292,11 @@ def render_stepper(current_page: str):
           .app-stepper .stepper-inner {{
             width: min(100%, 860px);
             margin: 0 auto;
+            padding: 0 20px;
+          }}
+
+          @media (max-width: 768px) {{
+            .app-stepper .stepper-inner {{ padding: 0 16px; }}
           }}
 
           @media (prefers-color-scheme: dark) {{
@@ -525,24 +539,22 @@ def render_stepper(current_page: str):
     components.html(component_html, height=116, scrolling=False)
 
 
-def render_answer_segments(q_key: str, selected_score: int | None) -> int | None:
+def render_answer_segments(q_key: str, selected_score: int | None):
     st.markdown(f"<div id='seg-{q_key}' class='answer-segments'>", unsafe_allow_html=True)
     cols = st.columns(4, gap="small")
 
     for idx, (label, score) in enumerate(zip(SCALE_TEXT_LABELS, SCALE_SCORES)):
         with cols[idx]:
-            clicked = st.button(
+            st.button(
                 label,
                 key=f"{q_key}_opt_{score}",
                 type="primary" if selected_score == score else "secondary",
                 use_container_width=True,
+                on_click=select_answer,
+                args=(q_key, score),
             )
-            if clicked:
-                selected_score = score
-                st.session_state.answers[q_key] = score
 
     st.markdown("</div>", unsafe_allow_html=True)
-    return selected_score
 
 
 def inject_css():
@@ -931,6 +943,7 @@ def page_survey(dev_mode: bool = False):
         current_answer = st.session_state.answers.get(key)
         current_value = current_answer if isinstance(current_answer, int) else score_from_label(current_answer)
 
+        st.markdown(f"<div id='q-anchor-{key}'></div>", unsafe_allow_html=True)
         st.markdown(
             f"""
             <section class="card">
@@ -943,6 +956,19 @@ def page_survey(dev_mode: bool = False):
         st.markdown("</section>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    last_q = st.session_state.get("last_q")
+    if last_q:
+        components.html(
+            f"""
+            <script>
+              const el = parent.document.getElementById("q-anchor-{last_q}");
+              if (el) el.scrollIntoView({{behavior: "auto", block: "center"}});
+            </script>
+            """,
+            height=0,
+            scrolling=False,
+        )
 
     payload, missing = build_payload()
     all_done = len(missing) == 0
