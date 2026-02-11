@@ -180,32 +180,39 @@ def get_level_key(level_text: str) -> str:
     return "severe"
 
 
-def stepper(current: str):
+def render_stepper(current_page: str):
     steps = [
         ("intro", "1", "안내/동의"),
         ("survey", "2", "문항 응답"),
         ("result", "3", "결과 확인"),
     ]
 
-    current_idx = 0
-    for idx, (key, _, _) in enumerate(steps):
-        if key == current:
-            current_idx = idx
-            break
+    status_by_page = {
+        "intro": ["active", "todo", "todo"],
+        "survey": ["completed", "active", "todo"],
+        "result": ["completed", "completed", "active"],
+    }
+    step_statuses = status_by_page.get(current_page, status_by_page["intro"])
 
-    items = []
-    for idx, (_, num, label) in enumerate(steps):
-        status = "done" if idx < current_idx else "active" if idx == current_idx else "todo"
-        items.append(
+    step_items_html = []
+    for index, (_, number, label) in enumerate(steps):
+        status = step_statuses[index]
+        dot_content = "✓" if status == "completed" else number
+        step_items_html.append(
             f"""
-            <div class=\"step-item {status}\">
-                <div class=\"step-dot\">{num}</div>
-                <div class=\"step-label\">{label}</div>
+            <div class="step-item {status}">
+                <div class="step-dot">{dot_content}</div>
+                <div class="step-label">{label}</div>
             </div>
             """
         )
 
-    st.markdown(f"<div class='stepper'>{''.join(items)}</div>", unsafe_allow_html=True)
+    stepper_html = f"""
+    <div class="gad7-stepper" role="group" aria-label="GAD-7 단계 진행">
+        {''.join(step_items_html)}
+    </div>
+    """
+    st.markdown(stepper_html, unsafe_allow_html=True)
 
 
 def inject_css():
@@ -303,37 +310,94 @@ def inject_css():
             margin: 0 6px 8px 0;
         }
 
-        .stepper {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            margin: 0 0 14px;
+        :root {
+            --color-active: var(--primary);
+            --color-completed: var(--success);
+            --color-todo: var(--muted);
+            --bg-card: var(--surface);
+            --border-color: var(--line);
         }
 
-        .step-item {
+        .gad7-stepper {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin: 0 0 14px;
+            width: 100%;
+        }
+
+        .gad7-stepper .step-item {
+            flex: 1;
             border-radius: 14px;
             padding: 10px 8px;
             text-align: center;
-            border: 1px solid var(--line);
-            background: var(--surface);
-            transition: all .2s ease;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+            min-height: 82px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .step-dot {
-            width: 30px; height: 30px; margin: 0 auto 6px;
+
+        .gad7-stepper .step-dot {
+            width: 30px;
+            height: 30px;
+            margin: 0 auto 6px;
             border-radius: 50%;
             display: grid;
             place-items: center;
             font-size: .86rem;
             font-weight: 700;
-            border: 1px solid var(--line);
-            color: var(--muted);
+            border: 1px solid var(--border-color);
+            color: var(--color-todo);
             background: var(--surface-2);
+            transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
         }
-        .step-label { font-size: .83rem; font-weight: 700; color: var(--muted); }
-        .step-item.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-sm); }
-        .step-item.active .step-dot { background: var(--primary); border-color: var(--primary); color: white; }
-        .step-item.active .step-label { color: var(--text); }
-        .step-item.done .step-dot { background: var(--success); border-color: var(--success); color: #fff; }
+
+        .gad7-stepper .step-label {
+            font-size: .83rem;
+            font-weight: 700;
+            color: var(--muted);
+            line-height: 1.3;
+        }
+
+        .gad7-stepper .step-item.active {
+            border-color: var(--color-active);
+            background: var(--primary-soft);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .gad7-stepper .step-item.active .step-dot {
+            background: var(--color-active);
+            border-color: var(--color-active);
+            color: #fff;
+            animation: gad7-dot-pulse 1.8s ease-in-out infinite;
+        }
+
+        .gad7-stepper .step-item.active .step-label {
+            color: var(--text);
+        }
+
+        .gad7-stepper .step-item.completed {
+            border-color: var(--color-completed);
+            background: var(--success-soft);
+        }
+
+        .gad7-stepper .step-item.completed .step-dot {
+            background: var(--color-completed);
+            border-color: var(--color-completed);
+            color: #fff;
+        }
+
+        .gad7-stepper .step-item.completed .step-label {
+            color: var(--text);
+        }
+
+        @keyframes gad7-dot-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
 
         .progress-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px; }
         .progress-label { font-size:.88rem; font-weight:700; color: var(--muted); }
@@ -457,7 +521,12 @@ def inject_css():
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
-            .step-label { font-size: .76rem; }
+            .gad7-stepper {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .gad7-stepper .step-item { min-height: 72px; }
+            .gad7-stepper .step-label { font-size: .76rem; }
             div[data-testid="stRadio"] > div[role="radiogroup"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
@@ -473,7 +542,7 @@ def inject_css():
 
 def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
-    stepper("intro")
+    render_stepper(st.session_state.page)
 
     st.markdown(
         """
@@ -530,7 +599,7 @@ def page_intro():
 
 def page_survey(dev_mode: bool = False):
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
-    stepper("survey")
+    render_stepper(st.session_state.page)
 
     payload, missing = build_payload()
     answered_count = 7 - len(missing)
@@ -611,7 +680,7 @@ def page_survey(dev_mode: bool = False):
 
 def page_result(dev_mode: bool = False):
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
-    stepper("result")
+    render_stepper(st.session_state.page)
 
     payload, _ = build_payload()
     total = payload["result"]["total"]
