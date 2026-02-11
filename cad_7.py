@@ -290,13 +290,10 @@ def render_stepper(current_page: str):
           }}
 
           .app-stepper .stepper-inner {{
-            width: min(100%, 860px);
+            width: 100%;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 0 20px;
-          }}
-
-          @media (max-width: 768px) {{
-            .app-stepper .stepper-inner {{ padding: 0 16px; }}
+            padding: 0;
           }}
 
           @media (prefers-color-scheme: dark) {{
@@ -562,6 +559,7 @@ def inject_css():
         """
         <style>
         :root {
+            --content-max-width: 860px;
             --bg: #f6f8fc;
             --surface: #ffffff;
             --surface-2: #f8fafc;
@@ -611,9 +609,32 @@ def inject_css():
         }
 
         .block-container {
-            max-width: 860px;
+            max-width: var(--content-max-width);
             padding-top: 1.6rem;
             padding-bottom: 3.2rem;
+        }
+
+        /* === Fix Streamlit components.html iframe alignment === */
+        div[data-testid="stHtml"] {
+            width: 100% !important;
+            max-width: var(--content-max-width) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        div[data-testid="stHtml"] > iframe,
+        div[data-testid="stHtml"] iframe {
+            display: block !important;
+            width: 100% !important;
+            max-width: var(--content-max-width) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding: 0 !important;
+            border: 0 !important;
+            left: auto !important;
+            right: auto !important;
         }
 
         .page-wrap {
@@ -656,7 +677,7 @@ def inject_css():
         .progress-label { font-size:.88rem; font-weight:700; color: var(--muted); }
 
         .survey-shell {
-            width: min(100%, 860px);
+            width: min(100%, var(--content-max-width));
             margin: 0 auto;
         }
 
