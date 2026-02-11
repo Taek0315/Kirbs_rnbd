@@ -3,6 +3,7 @@
 
 # -*- coding: utf-8 -*-
 import json
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -106,6 +107,16 @@ def init_state():
     if "answers" not in st.session_state:
         st.session_state.answers = {f"q{i}": None for i in range(1, 8)}
 
+    if "examinee" not in st.session_state:
+        st.session_state.examinee = {
+            "name": "",
+            "phone": "",
+            "email": "",
+        }
+
+    if "close_attempted" not in st.session_state:
+        st.session_state.close_attempted = False
+
 
 def reset_all():
     st.session_state.page = "intro"
@@ -117,6 +128,12 @@ def reset_all():
         "submitted_ts": None,
     }
     st.session_state.answers = {f"q{i}": None for i in range(1, 8)}
+    st.session_state.examinee = {
+        "name": "",
+        "phone": "",
+        "email": "",
+    }
+    st.session_state.close_attempted = False
 
 
 def build_payload():
@@ -145,6 +162,7 @@ def build_payload():
         "consent_ts": st.session_state.meta["consent_ts"],
         "started_ts": st.session_state.meta["started_ts"],
         "submitted_ts": st.session_state.meta["submitted_ts"],
+        "examinee": st.session_state.examinee,
         "items": {
             "scale": {
                 "0": "전혀 없음",
@@ -194,12 +212,18 @@ def get_level_key(level_text: str) -> str:
 
 def render_stepper(current_page: str):
     status_by_page = {
-        "intro": ["active", "todo", "todo"],
-        "survey": ["completed", "active", "todo"],
-        "result": ["completed", "completed", "active"],
+        "intro": ["active", "todo", "todo", "todo"],
+        "info": ["completed", "active", "todo", "todo"],
+        "survey": ["completed", "completed", "active", "todo"],
+        "result": ["completed", "completed", "completed", "active"],
     }
     step_statuses = status_by_page.get(current_page, status_by_page["intro"])
-    steps = [("1", "안내/동의"), ("2", "문항 응답"), ("3", "결과 확인")]
+    steps = [
+        ("1", "안내/동의"),
+        ("2", "개인정보 입력"),
+        ("3", "문항 응답"),
+        ("4", "결과 확인"),
+    ]
 
     step_items_html = []
     for idx, (num, label) in enumerate(steps):
@@ -765,7 +789,7 @@ def page_intro():
         """
         <section class="card soft">
             <h2 class="title-md">검사 진행 동의</h2>
-            <p class="text">검사 진행 및 결과 산출에 동의하시면 아래를 선택해 주세요.</p>
+            <p class="text">검사 진행, 결과 산출, 그리고 검사 기록/연락을 위한 이름·휴대폰번호·이메일 수집에 동의하시면 아래를 선택해 주세요.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -774,17 +798,83 @@ def page_intro():
     consent = st.checkbox("예, 위 안내를 확인하였고 검사 진행에 동의합니다.", value=st.session_state.meta["consent"])
     st.session_state.meta["consent"] = consent
 
-    c1, c2 = st.columns(2)
-    with c1:
+    c1, c2 = st.columns([3, 1])
+    with c2:
         if st.button("검사 시작", type="primary", disabled=not consent, use_container_width=True):
             now = datetime.now(KST).isoformat()
             st.session_state.meta["consent_ts"] = now
             st.session_state.meta["started_ts"] = now
-            st.session_state.page = "survey"
+            st.session_state.page = "info"
             st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def validate_name(name: str) -> str | None:
+    if not name.strip():
+        return "이름을 입력해 주세요."
+    return None
+
+
+def validate_phone(phone: str) -> str | None:
+    value = phone.strip()
+    if not value:
+        return "휴대폰번호를 입력해 주세요."
+    if not re.fullmatch(r"[0-9-]+", value):
+        return "휴대폰번호는 숫자와 하이픈(-)만 입력해 주세요."
+    return None
+
+
+def validate_email(email: str) -> str | None:
+    value = email.strip()
+    if not value:
+        return "이메일을 입력해 주세요."
+    if "@" not in value or "." not in value:
+        return "이메일 형식이 올바르지 않습니다. (@와 . 포함)"
+    return None
+
+
+def page_info():
+    st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
+    render_stepper(st.session_state.page)
+
+    st.markdown(
+        """
+        <section class="card">
+            <span class="badge">개인정보 입력</span>
+            <h1 class="title-lg">검사 대상자 정보</h1>
+            <p class="text">아래 정보를 입력해 주세요. 모든 항목은 필수입니다.</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+    phone = st.text_input("휴대폰번호", value=st.session_state.examinee.get("phone", ""))
+    email = st.text_input("이메일", value=st.session_state.examinee.get("email", ""))
+
+    st.session_state.examinee = {
+        "name": name.strip(),
+        "phone": phone.strip(),
+        "email": email.strip(),
+    }
+
+    name_error = validate_name(name)
+    phone_error = validate_phone(phone)
+    email_error = validate_email(email)
+
+    if name_error:
+        st.error(name_error)
+    if phone_error:
+        st.error(phone_error)
+    if email_error:
+        st.error(email_error)
+
+    all_valid = not any([name_error, phone_error, email_error])
+    c1, c2 = st.columns([3, 1])
     with c2:
-        if st.button("초기화", use_container_width=True):
-            reset_all()
+        if st.button("다음", type="primary", disabled=not all_valid, use_container_width=True):
+            st.session_state.page = "survey"
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -838,27 +928,16 @@ def page_survey(dev_mode: bool = False):
         missing_idx = ", ".join([str(int(m[1:])) for m in missing])
         st.info(f"아직 응답하지 않은 문항: {missing_idx}번 문항")
 
-    c1, c2, c3 = st.columns([1.2, 1, 1])
-    with c1:
+    c1, c2 = st.columns([3, 1])
+    with c2:
         if st.button("결과 보기", type="primary", disabled=not all_done, use_container_width=True):
             st.session_state.meta["submitted_ts"] = datetime.now(KST).isoformat()
             st.session_state.page = "result"
             st.rerun()
-    with c2:
-        if st.button("안내로 돌아가기", use_container_width=True):
-            st.session_state.page = "intro"
-            st.rerun()
-    with c3:
-        if st.button("초기화", use_container_width=True):
-            reset_all()
-            st.rerun()
 
     if dev_mode:
-        with st.expander("개발자 보기: payload/result", expanded=True):
-            st.json(payload, expanded=False)
-    else:
-        with st.expander("개발자 보기", expanded=False):
-            st.caption("URL에 ?dev=1 파라미터를 추가하면 상세 payload를 확인하실 수 있습니다.")
+        st.caption("개발 모드 payload")
+        st.json(payload, expanded=False)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -933,17 +1012,28 @@ def page_result(dev_mode: bool = False):
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("다시 검사", type="primary", use_container_width=True):
+        if st.button("검사 다시하기", type="primary", use_container_width=True):
             reset_all()
             st.rerun()
     with c2:
-        if st.button("문항으로 돌아가기", use_container_width=True):
-            st.session_state.page = "survey"
+        if st.button("닫기", use_container_width=True):
+            st.session_state.close_attempted = True
+            components.html(
+                """
+                <script>
+                    try { window.close(); } catch (e) {}
+                </script>
+                """,
+                height=0,
+            )
             st.rerun()
 
+    if st.session_state.close_attempted:
+        st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
+
     if dev_mode:
-        with st.expander("개발자 보기: payload JSON", expanded=True):
-            st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
+        st.caption("개발 모드 payload")
+        st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -959,10 +1049,20 @@ def main():
 
     if st.session_state.page == "intro":
         page_intro()
+    elif st.session_state.page == "info":
+        if not st.session_state.meta.get("consent"):
+            st.warning("동의 확인 후 검사를 시작해 주세요.")
+            st.session_state.page = "intro"
+            st.rerun()
+        page_info()
     elif st.session_state.page == "survey":
         if not st.session_state.meta.get("consent"):
             st.warning("동의 확인 후 검사를 시작해 주세요.")
             st.session_state.page = "intro"
+            st.rerun()
+        if not all(st.session_state.examinee.get(k, "").strip() for k in ["name", "phone", "email"]):
+            st.warning("개인정보 입력 후 문항에 응답해 주세요.")
+            st.session_state.page = "info"
             st.rerun()
         page_survey(dev_mode=dev_mode)
     elif st.session_state.page == "result":
