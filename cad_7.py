@@ -210,69 +210,6 @@ def build_payload():
     return payload, missing
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Data saving gate + DB integration
-def _is_db_insert_enabled() -> bool:
-    """
-    Policy:
-    - Only disable DB saving when ENABLE_DB_INSERT is 'false' (case-insensitive)
-    - Otherwise (unset/true/any other value) enable DB saving
-    """
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
-
-
-ENABLE_DB_INSERT = _is_db_insert_enabled()
-
-if ENABLE_DB_INSERT:
-    from utils.database import Database
-
-
-def safe_db_insert(payload: dict) -> bool:
-    """
-    dev PC: ENABLE_DB_INSERT=false -> do not call DB
-    prod/merge: ENABLE_DB_INSERT != false -> call Database().insert(payload)
-    """
-    if not ENABLE_DB_INSERT:
-        return False
-    try:
-        db = Database()
-        db.insert(payload)
-        return True
-    except Exception as e:
-        print(f"[DB INSERT ERROR] {e}")
-        return False
-
-
-def auto_db_insert(payload: dict) -> None:
-    """
-    Auto-save on result page.
-    - Dev (ENABLE_DB_INSERT=false): do not insert; show payload expander
-    - Enabled: validate required fields then insert once; lock only on success
-    """
-    if "db_insert_done" not in st.session_state:
-        st.session_state.db_insert_done = False
-    if st.session_state.db_insert_done:
-        return
-
-    if not ENABLE_DB_INSERT:
-        with st.expander("DB 저장 payload (개발용)", expanded=False):
-            st.json(payload)
-        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
-        return
-
-    if not st.session_state.examinee.get("name"):
-        st.error("이름을 입력해 주세요.")
-        return
-
-    ok = safe_db_insert(payload)
-    if ok:
-        st.session_state.db_insert_done = True
-        st.success("검사 완료")
-    else:
-        st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
-
-
 def get_level_key(level_text: str) -> str:
     if "최소/거의 없음" in level_text:
         return "minimal"
@@ -672,7 +609,7 @@ def inject_css():
             padding-bottom: 3.2rem;
         }
 
-        /* === Stepper iframe wrapper: force same width/margins as main content === */
+        /* === Stepper iframe wrapper: same width/margins as main content === */
         .stepper-wrap {
             width: min(100%, var(--content-max-width));
             margin-left: auto;
@@ -1232,6 +1169,71 @@ def main():
     else:
         st.session_state.page = "intro"
         st.rerun()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# 데이터 저장 분기 + DB 연동 전용 블록
+def _is_db_insert_enabled() -> bool:
+    """
+    정책:
+    - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
+    - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
+    """
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
+
+ENABLE_DB_INSERT = _is_db_insert_enabled()
+
+if ENABLE_DB_INSERT:
+    from utils.database import Database
+
+def safe_db_insert(payload: dict) -> bool:
+    """
+    dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
+    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(payload) 수행
+    """
+    if not ENABLE_DB_INSERT:
+        return False
+    try:
+        db = Database()
+        db.insert(payload)
+        return True
+    except Exception as e:
+        print(f"[DB INSERT ERROR] {e}")
+        return False
+
+def auto_db_insert(payload: dict) -> None:
+    """
+    결과 저장 자동 호출
+    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + payload expander로 노출
+    - 활성 환경: 이름 검증 후 DB 저장 1회 시도 (성공 시 중복 방지 플래그 ON)
+    """
+    # 중복 방지(성공 시에만 잠금)
+    if "db_insert_done" not in st.session_state:
+        st.session_state.db_insert_done = False
+    if st.session_state.db_insert_done:
+        return
+
+    if not ENABLE_DB_INSERT:
+        with st.expander("DB 저장 payload (개발용)", expanded=False):
+            st.json(payload)
+        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
+        return
+
+    if not st.session_state.examinee.get("name"):
+        st.error("이름을 입력해 주세요.")
+        return
+
+    ok = safe_db_insert(payload)
+    if ok:
+        st.session_state.db_insert_done = True
+        st.success("검사 완료")
+    else:
+        st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 끝
 
 
 if __name__ == "__main__":
