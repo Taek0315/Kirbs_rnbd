@@ -274,8 +274,15 @@ def render_stepper(current_page: str):
             margin: 0;
             padding: 0;
             background: var(--bg);
+            display: flex;
+            justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
             color: var(--text);
+          }}
+
+          .app-stepper .stepper-inner {{
+            width: min(100%, 860px);
+            margin: 0 auto;
           }}
 
           @media (prefers-color-scheme: dark) {{
@@ -505,8 +512,10 @@ def render_stepper(current_page: str):
       </head>
       <body>
         <div class="app-stepper" data-step="{current_page}" role="group" aria-label="GAD-7 단계 진행">
-          <div class="step-track">
-            {''.join(step_items_html)}
+          <div class="stepper-inner">
+            <div class="step-track">
+              {''.join(step_items_html)}
+            </div>
           </div>
         </div>
       </body>
@@ -531,6 +540,7 @@ def render_answer_segments(q_key: str, selected_score: int | None) -> int | None
             if clicked:
                 selected_score = score
                 st.session_state.answers[q_key] = score
+                st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     return selected_score
@@ -678,7 +688,7 @@ def inject_css():
         .answer-segments div[data-testid="stButton"] > button:focus-visible {
             outline: 2px solid color-mix(in srgb, var(--primary), transparent 35%);
             outline-offset: 1px;
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%);
+            box-shadow: none;
         }
 
         .answer-segments div[data-testid="stButton"] > button[kind="primary"] {
@@ -789,7 +799,7 @@ def page_intro():
         """
         <section class="card soft">
             <h2 class="title-md">검사 진행 동의</h2>
-            <p class="text">검사 진행, 결과 산출, 그리고 검사 기록/연락을 위한 이름·휴대폰번호·이메일 수집에 동의하시면 아래를 선택해 주세요.</p>
+            <p class="text">검사 진행과 결과 산출을 위해 이름을 수집하며, 휴대폰번호·이메일은 선택 입력 항목입니다. 아래를 확인 후 동의해 주세요.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -819,7 +829,7 @@ def validate_name(name: str) -> str | None:
 def validate_phone(phone: str) -> str | None:
     value = phone.strip()
     if not value:
-        return "휴대폰번호를 입력해 주세요."
+        return None
     if not re.fullmatch(r"[0-9-]+", value):
         return "휴대폰번호는 숫자와 하이픈(-)만 입력해 주세요."
     return None
@@ -828,10 +838,17 @@ def validate_phone(phone: str) -> str | None:
 def validate_email(email: str) -> str | None:
     value = email.strip()
     if not value:
-        return "이메일을 입력해 주세요."
+        return None
     if "@" not in value or "." not in value:
         return "이메일 형식이 올바르지 않습니다. (@와 . 포함)"
     return None
+
+
+def normalize_phone(phone: str) -> str:
+    value = phone.strip().replace(" ", "")
+    value = re.sub(r"[^0-9-]", "", value)
+    value = re.sub(r"-{2,}", "-", value)
+    return value
 
 
 def page_info():
@@ -843,24 +860,26 @@ def page_info():
         <section class="card">
             <span class="badge">개인정보 입력</span>
             <h1 class="title-lg">검사 대상자 정보</h1>
-            <p class="text">아래 정보를 입력해 주세요. 모든 항목은 필수입니다.</p>
+            <p class="text">이름은 필수이며, 휴대폰번호와 이메일은 선택 입력입니다.</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
     name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
-    phone = st.text_input("휴대폰번호", value=st.session_state.examinee.get("phone", ""))
-    email = st.text_input("이메일", value=st.session_state.examinee.get("email", ""))
+    phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
+    email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
+
+    normalized_phone = normalize_phone(phone_input)
 
     st.session_state.examinee = {
         "name": name.strip(),
-        "phone": phone.strip(),
+        "phone": normalized_phone,
         "email": email.strip(),
     }
 
     name_error = validate_name(name)
-    phone_error = validate_phone(phone)
+    phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
     if name_error:
@@ -924,9 +943,8 @@ def page_survey(dev_mode: bool = False):
     payload, missing = build_payload()
     all_done = len(missing) == 0
 
-    if missing:
-        missing_idx = ", ".join([str(int(m[1:])) for m in missing])
-        st.info(f"아직 응답하지 않은 문항: {missing_idx}번 문항")
+    if not all_done:
+        st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
 
     c1, c2 = st.columns([3, 1])
     with c2:
@@ -1060,7 +1078,7 @@ def main():
             st.warning("동의 확인 후 검사를 시작해 주세요.")
             st.session_state.page = "intro"
             st.rerun()
-        if not all(st.session_state.examinee.get(k, "").strip() for k in ["name", "phone", "email"]):
+        if not st.session_state.examinee.get("name", "").strip():
             st.warning("개인정보 입력 후 문항에 응답해 주세요.")
             st.session_state.page = "info"
             st.rerun()
