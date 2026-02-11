@@ -1184,7 +1184,7 @@ def render_result_page() -> None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DB 연동 전용 블록
-ENABLE_DB_INSERT = os.getenv("ENABLE_DB_INSERT", "false").lower() == "true"
+ENABLE_DB_INSERT = os.getenv("ENABLE_DB_INSERT", "true").lower() == "false"
 
 if ENABLE_DB_INSERT:
     from utils.database import Database
