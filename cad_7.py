@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="GAD-7 불안검사",
@@ -181,38 +182,303 @@ def get_level_key(level_text: str) -> str:
 
 
 def render_stepper(current_page: str):
-    steps = [
-        ("intro", "1", "안내/동의"),
-        ("survey", "2", "문항 응답"),
-        ("result", "3", "결과 확인"),
-    ]
-
     status_by_page = {
         "intro": ["active", "todo", "todo"],
         "survey": ["completed", "active", "todo"],
         "result": ["completed", "completed", "active"],
     }
     step_statuses = status_by_page.get(current_page, status_by_page["intro"])
+    steps = [("1", "안내/동의"), ("2", "문항 응답"), ("3", "결과 확인")]
 
     step_items_html = []
-    for index, (_, number, label) in enumerate(steps):
-        status = step_statuses[index]
-        dot_content = "✓" if status == "completed" else number
+    for idx, (num, label) in enumerate(steps):
+        state = step_statuses[idx]
+        aria_current = ' aria-current="step"' if state == "active" else ""
+        dot_content = "✓" if state == "completed" else num
+        connector = ""
+        if idx < len(steps) - 1:
+            connector_state = "filled" if step_statuses[idx] == "completed" else "todo"
+            connector = (
+                '<div class="step-connector" aria-hidden="true">'
+                f'<span class="connector-fill {connector_state}"></span>'
+                "</div>"
+            )
+
         step_items_html.append(
             f"""
-            <div class="step-item {status}">
-                <div class="step-dot">{dot_content}</div>
-                <div class="step-label">{label}</div>
+            <div class="step-item {state}"{aria_current}>
+                <div class="step-main">
+                    <div class="step-dot">{dot_content}</div>
+                    <div class="step-label">{label}</div>
+                </div>
+                {connector}
             </div>
             """
         )
 
-    stepper_html = f"""
-    <div class="gad7-stepper" role="group" aria-label="GAD-7 단계 진행">
-        {''.join(step_items_html)}
-    </div>
+    component_html = f"""
+    <!doctype html>
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+          .app-stepper,
+          .app-stepper * {{ box-sizing: border-box; }}
+
+          .app-stepper {{
+            --bg: transparent;
+            --card: rgba(255,255,255,0.84);
+            --border: rgba(148,163,184,0.35);
+            --text: #0f172a;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+            color: var(--text);
+          }}
+
+          @media (prefers-color-scheme: dark) {{
+            .app-stepper {{
+              --card: rgba(17,24,39,0.9);
+              --border: rgba(100,116,139,0.45);
+              --text: #e5e7eb;
+              --muted: #94a3b8;
+              --primary: #60a5fa;
+              --success: #4ade80;
+              --danger: #f87171;
+            }}
+          }}
+
+          .app-stepper .step-track {{
+            width: 100%;
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            overflow: hidden;
+          }}
+
+          .app-stepper .step-item {{
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }}
+
+          .app-stepper .step-main {{
+            flex: 0 1 auto;
+            min-width: 88px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--card);
+            padding: 9px 8px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color .24s ease, background-color .24s ease, box-shadow .24s ease;
+          }}
+
+          .app-stepper .step-main::after {{
+            content: "";
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 6px;
+            height: 2px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transform-origin: left center;
+            opacity: 0;
+            transition: transform .3s ease, opacity .3s ease;
+          }}
+
+          .app-stepper .step-dot {{
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            font-size: .84rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--muted);
+            background: rgba(255,255,255,0.6);
+            transition: transform .24s ease, background-color .24s ease, border-color .24s ease, color .24s ease, box-shadow .24s ease;
+          }}
+
+          .app-stepper .step-label {{
+            font-size: .79rem;
+            line-height: 1.25;
+            font-weight: 700;
+            text-align: center;
+            color: var(--muted);
+            transform: translateY(2px);
+            opacity: .82;
+            transition: color .24s ease, opacity .24s ease, transform .24s ease;
+            word-break: keep-all;
+          }}
+
+          .app-stepper .step-connector {{
+            flex: 1 1 auto;
+            min-width: 10px;
+            height: 2px;
+            border-radius: 999px;
+            background: rgba(148,163,184,0.2);
+            overflow: hidden;
+            align-self: center;
+          }}
+
+          .app-stepper .connector-fill {{
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            transform-origin: left center;
+            transition: transform .35s ease, opacity .3s ease;
+          }}
+
+          .app-stepper .connector-fill.filled {{
+            background: linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success), white 16%));
+            transform: scaleX(1);
+            opacity: .95;
+          }}
+
+          .app-stepper .connector-fill.todo {{
+            background: linear-gradient(90deg, color-mix(in srgb, var(--primary), transparent 55%), color-mix(in srgb, var(--primary), transparent 40%));
+            transform: scaleX(.18);
+            opacity: .35;
+          }}
+
+          .app-stepper .step-item.active .step-main {{
+            border-color: color-mix(in srgb, var(--primary), white 28%);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary), transparent 62%);
+          }}
+
+          .app-stepper .step-item.active .step-main::after {{
+            transform: scaleX(1);
+            opacity: .92;
+          }}
+
+          .app-stepper .step-item.active .step-dot {{
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            animation: app-stepper-dot-pulse 2s ease-in-out infinite;
+          }}
+
+          .app-stepper .step-item.active .step-label {{
+            color: var(--text);
+            opacity: 1;
+            transform: translateY(0);
+            animation: app-stepper-label-in .32s ease both;
+          }}
+
+          .app-stepper .step-item.completed .step-main {{
+            border-color: color-mix(in srgb, var(--success), white 30%);
+          }}
+
+          .app-stepper .step-item.completed .step-dot {{
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+            animation: app-stepper-check-pop .3s cubic-bezier(.2,.8,.2,1.3);
+          }}
+
+          .app-stepper .step-item.completed .step-label {{
+            color: var(--text);
+            opacity: .95;
+            transform: translateY(0);
+          }}
+
+          .app-stepper .step-item.todo .step-main {{
+            border-color: var(--border);
+          }}
+
+          @keyframes app-stepper-dot-pulse {{
+            0%, 100% {{ transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary), transparent 62%); }}
+            50% {{ transform: scale(1.06); box-shadow: 0 0 0 9px color-mix(in srgb, var(--primary), transparent 88%); }}
+          }}
+
+          @keyframes app-stepper-check-pop {{
+            0% {{ transform: scale(.74); }}
+            70% {{ transform: scale(1.15); }}
+            100% {{ transform: scale(1); }}
+          }}
+
+          @keyframes app-stepper-label-in {{
+            from {{ opacity: 0; transform: translateY(4px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+          }}
+
+          @media (max-width: 640px) {{
+            .app-stepper .step-track {{
+              flex-wrap: nowrap;
+              gap: 6px;
+            }}
+
+            .app-stepper .step-item {{
+              flex: 1 1 0;
+              gap: 6px;
+            }}
+
+            .app-stepper .step-main {{
+              width: 100%;
+              min-width: 0;
+              gap: 7px;
+              padding: 7px 5px;
+            }}
+
+            .app-stepper .step-dot {{
+              width: 24px;
+              height: 24px;
+              font-size: .76rem;
+            }}
+
+            .app-stepper .step-label {{
+              font-size: .72rem;
+              text-align: center;
+              white-space: normal;
+            }}
+          }}
+
+          @media (prefers-reduced-motion: reduce) {{
+            .app-stepper .step-main,
+            .app-stepper .step-main::after,
+            .app-stepper .step-dot,
+            .app-stepper .step-label,
+            .app-stepper .connector-fill {{
+              transition: none !important;
+            }}
+
+            .app-stepper .step-dot,
+            .app-stepper .step-label {{
+              animation: none !important;
+            }}
+          }}
+        </style>
+      </head>
+      <body>
+        <div class="app-stepper" data-step="{current_page}" role="group" aria-label="GAD-7 단계 진행">
+          <div class="step-track">
+            {''.join(step_items_html)}
+          </div>
+        </div>
+      </body>
+    </html>
     """
-    st.markdown(stepper_html, unsafe_allow_html=True)
+
+    components.html(component_html, height=116, scrolling=False)
 
 
 def inject_css():
@@ -308,95 +574,6 @@ def inject_css():
             border-radius: 999px;
             padding: 6px 10px;
             margin: 0 6px 8px 0;
-        }
-
-        :root {
-            --color-active: var(--primary);
-            --color-completed: var(--success);
-            --color-todo: var(--muted);
-            --bg-card: var(--surface);
-            --border-color: var(--line);
-        }
-
-        .gad7-stepper {
-            display: flex;
-            align-items: stretch;
-            gap: 10px;
-            margin: 0 0 14px;
-            width: 100%;
-        }
-
-        .gad7-stepper .step-item {
-            flex: 1;
-            border-radius: 14px;
-            padding: 10px 8px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
-            min-height: 82px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .gad7-stepper .step-dot {
-            width: 30px;
-            height: 30px;
-            margin: 0 auto 6px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            font-size: .86rem;
-            font-weight: 700;
-            border: 1px solid var(--border-color);
-            color: var(--color-todo);
-            background: var(--surface-2);
-            transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
-        }
-
-        .gad7-stepper .step-label {
-            font-size: .83rem;
-            font-weight: 700;
-            color: var(--muted);
-            line-height: 1.3;
-        }
-
-        .gad7-stepper .step-item.active {
-            border-color: var(--color-active);
-            background: var(--primary-soft);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .gad7-stepper .step-item.active .step-dot {
-            background: var(--color-active);
-            border-color: var(--color-active);
-            color: #fff;
-            animation: gad7-dot-pulse 1.8s ease-in-out infinite;
-        }
-
-        .gad7-stepper .step-item.active .step-label {
-            color: var(--text);
-        }
-
-        .gad7-stepper .step-item.completed {
-            border-color: var(--color-completed);
-            background: var(--success-soft);
-        }
-
-        .gad7-stepper .step-item.completed .step-dot {
-            background: var(--color-completed);
-            border-color: var(--color-completed);
-            color: #fff;
-        }
-
-        .gad7-stepper .step-item.completed .step-label {
-            color: var(--text);
-        }
-
-        @keyframes gad7-dot-pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.06); }
         }
 
         .progress-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px; }
@@ -521,12 +698,6 @@ def inject_css():
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
-            .gad7-stepper {
-                flex-direction: column;
-                gap: 8px;
-            }
-            .gad7-stepper .step-item { min-height: 72px; }
-            .gad7-stepper .step-label { font-size: .76rem; }
             div[data-testid="stRadio"] > div[role="radiogroup"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
