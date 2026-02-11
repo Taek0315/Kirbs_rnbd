@@ -540,7 +540,6 @@ def render_answer_segments(q_key: str, selected_score: int | None) -> int | None
             if clicked:
                 selected_score = score
                 st.session_state.answers[q_key] = score
-                st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     return selected_score
@@ -643,6 +642,11 @@ def inject_css():
 
         .progress-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px; }
         .progress-label { font-size:.88rem; font-weight:700; color: var(--muted); }
+
+        .survey-shell {
+            width: min(100%, 860px);
+            margin: 0 auto;
+        }
 
         .meter {
             width: 100%;
@@ -878,12 +882,10 @@ def page_info():
         "email": email.strip(),
     }
 
-    name_error = validate_name(name)
+    name_error = None if name.strip() else "required"
     phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
-    if name_error:
-        st.error(name_error)
     if phone_error:
         st.error(phone_error)
     if email_error:
@@ -907,6 +909,7 @@ def page_survey(dev_mode: bool = False):
     answered_count = 7 - len(missing)
     progress_pct = int((answered_count / 7) * 100)
 
+    st.markdown("<div class='survey-shell'>", unsafe_allow_html=True)
     st.markdown(
         f"""
         <section class="card">
@@ -936,9 +939,10 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        selected = render_answer_segments(q_key=key, selected_score=current_value)
-        st.session_state.answers[key] = selected
+        render_answer_segments(q_key=key, selected_score=current_value)
         st.markdown("</section>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     payload, missing = build_payload()
     all_done = len(missing) == 0
@@ -1079,7 +1083,6 @@ def main():
             st.session_state.page = "intro"
             st.rerun()
         if not st.session_state.examinee.get("name", "").strip():
-            st.warning("개인정보 입력 후 문항에 응답해 주세요.")
             st.session_state.page = "info"
             st.rerun()
         page_survey(dev_mode=dev_mode)
