@@ -271,14 +271,6 @@ def render_stepper(current_page: str):
           .app-stepper * {{ box-sizing: border-box; }}
 
           .app-stepper {{
-            --bg: transparent;
-            --card: rgba(255,255,255,0.84);
-            --border: rgba(148,163,184,0.35);
-            --text: #0f172a;
-            --muted: #64748b;
-            --primary: #2563eb;
-            --success: #16a34a;
-            --danger: #dc2626;
             width: 100%;
             margin: 0;
             padding: 0;
@@ -797,6 +789,23 @@ def inject_css():
                 min-height: 44px;
                 font-size: .93rem;
             }
+        }
+
+        /* === FORCE components.html iframe to match content width === */
+        div[data-testid="stHtml"], 
+        div[data-testid="stHtml"] > div,
+        div[data-testid="stHtml"] > div > iframe,
+        div[data-testid="stHtml"] iframe {
+          width: 100% !important;
+          max-width: var(--content-max-width) !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+          display: block !important;
+          padding: 0 !important;
+          border: 0 !important;
+          left: auto !important;
+          right: auto !important;
+          transform: none !important;
         }
         </style>
         """,
