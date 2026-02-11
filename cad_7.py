@@ -5,8 +5,6 @@
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from typing import Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -494,30 +492,24 @@ def render_stepper(current_page: str):
     components.html(component_html, height=116, scrolling=False)
 
 
-_SEGMENTED_COMPONENT = components.declare_component(
-    "gad7_segmented",
-    path=str(Path(__file__).parent / "components" / "gad7_segmented"),
-)
+def render_answer_segments(q_key: str, selected_score: int | None) -> int | None:
+    st.markdown(f"<div id='seg-{q_key}' class='answer-segments'>", unsafe_allow_html=True)
+    cols = st.columns(4, gap="small")
 
+    for idx, (label, score) in enumerate(zip(SCALE_TEXT_LABELS, SCALE_SCORES)):
+        with cols[idx]:
+            clicked = st.button(
+                label,
+                key=f"{q_key}_opt_{score}",
+                type="primary" if selected_score == score else "secondary",
+                use_container_width=True,
+            )
+            if clicked:
+                selected_score = score
+                st.session_state.answers[q_key] = score
 
-def render_choice_segment(
-    q_key: str,
-    current_value: Optional[int],
-    labels: list[str],
-    scores: list[int],
-) -> Optional[int]:
-    value = _SEGMENTED_COMPONENT(
-        q_key=q_key,
-        value=current_value,
-        labels=labels,
-        scores=scores,
-        key=f"seg_{q_key}",
-        default=current_value,
-    )
-
-    if isinstance(value, int) and value in scores:
-        return value
-    return current_value if current_value in scores else None
+    st.markdown("</div>", unsafe_allow_html=True)
+    return selected_score
 
 
 def inject_css():
@@ -630,8 +622,45 @@ def inject_css():
 
         .question-title { font-size: 1rem; font-weight: 750; color: var(--text); margin-bottom: .45rem; }
 
-        .gad7-seg-host {
-            margin-top: .28rem;
+        .answer-segments {
+            margin-top: .45rem;
+        }
+
+        .answer-segments div[data-testid="stHorizontalBlock"] {
+            gap: .5rem;
+            flex-wrap: nowrap;
+        }
+
+        .answer-segments div[data-testid="column"] {
+            min-width: 0;
+        }
+
+        .answer-segments div[data-testid="stButton"] > button {
+            border-radius: 12px;
+            min-height: 48px;
+            border: 1px solid var(--line);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            transition: all .18s ease;
+            white-space: normal;
+            line-height: 1.35;
+        }
+
+        .answer-segments div[data-testid="stButton"] > button:hover {
+            border-color: color-mix(in srgb, var(--primary), transparent 35%);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary), transparent 82%);
+        }
+
+        .answer-segments div[data-testid="stButton"] > button:focus-visible {
+            outline: 2px solid color-mix(in srgb, var(--primary), transparent 35%);
+            outline-offset: 1px;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%);
+        }
+
+        .answer-segments div[data-testid="stButton"] > button[kind="primary"] {
+            border-color: color-mix(in srgb, var(--primary), black 6%);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary), transparent 35%), 0 6px 14px color-mix(in srgb, var(--primary), transparent 78%);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--primary), white 8%), var(--primary));
         }
 
         .status-chip {
@@ -687,6 +716,16 @@ def inject_css():
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
+            .answer-segments div[data-testid="stHorizontalBlock"] {
+                flex-wrap: wrap;
+            }
+            .answer-segments div[data-testid="column"] {
+                flex: 1 1 calc(50% - .3rem);
+            }
+            .answer-segments div[data-testid="stButton"] > button {
+                min-height: 44px;
+                font-size: .93rem;
+            }
         }
         </style>
         """,
@@ -788,14 +827,7 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div class='gad7-seg-host'>", unsafe_allow_html=True)
-        selected = render_choice_segment(
-            q_key=key,
-            current_value=current_value,
-            labels=SCALE_TEXT_LABELS,
-            scores=SCALE_SCORES,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        selected = render_answer_segments(q_key=key, selected_score=current_value)
         st.session_state.answers[key] = selected
         st.markdown("</section>", unsafe_allow_html=True)
 
