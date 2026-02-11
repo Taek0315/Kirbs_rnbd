@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+        background: transparent;
+      }
+
+      .gad7-seg,
+      .gad7-seg * {
+        box-sizing: border-box;
+      }
+
+      .gad7-seg {
+        --seg-bg: #f8fafc;
+        --seg-border: #cbd5e1;
+        --seg-text: #0f172a;
+        --seg-muted: #64748b;
+        --seg-active-bg: #e0ecff;
+        --seg-active-border: #2563eb;
+        --seg-active-text: #1e3a8a;
+        --seg-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        --seg-focus: #2563eb;
+        width: 100%;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .gad7-seg {
+          --seg-bg: #172033;
+          --seg-border: #334155;
+          --seg-text: #e2e8f0;
+          --seg-muted: #94a3b8;
+          --seg-active-bg: rgba(96, 165, 250, 0.16);
+          --seg-active-border: #60a5fa;
+          --seg-active-text: #bfdbfe;
+          --seg-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+          --seg-focus: #93c5fd;
+        }
+      }
+
+      .gad7-seg-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .gad7-seg-option {
+        border: 1px solid var(--seg-border);
+        background: var(--seg-bg);
+        border-radius: 12px;
+        color: var(--seg-text);
+        min-height: 64px;
+        padding: 10px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 3px;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+      }
+
+      .gad7-seg-option:hover {
+        border-color: var(--seg-active-border);
+        transform: translateY(-1px);
+      }
+
+      .gad7-seg-option:active,
+      .gad7-seg-option.is-pressing {
+        transform: scale(0.98);
+      }
+
+      .gad7-seg-option[aria-checked="true"] {
+        background: var(--seg-active-bg);
+        border-color: var(--seg-active-border);
+        box-shadow: var(--seg-shadow);
+        color: var(--seg-active-text);
+      }
+
+      .gad7-seg-option:focus-visible {
+        outline: 2px solid var(--seg-focus);
+        outline-offset: 2px;
+      }
+
+      .gad7-seg-label {
+        font-size: 0.9rem;
+        line-height: 1.3;
+        font-weight: 700;
+        white-space: normal;
+        word-break: keep-all;
+      }
+
+      .gad7-seg-score {
+        font-size: 0.76rem;
+        line-height: 1.2;
+        color: var(--seg-muted);
+        font-weight: 600;
+      }
+
+      .gad7-seg-option[aria-checked="true"] .gad7-seg-score {
+        color: inherit;
+      }
+
+      @media (max-width: 768px) {
+        .gad7-seg-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 380px) {
+        .gad7-seg-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gad7-seg-option {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="gad7-seg"></div>
+
+    <script src="https://unpkg.com/streamlit-component-lib@2.0.0/dist/index.js"></script>
+    <script>
+      const root = document.getElementById("root");
+      let current = { value: null, labels: [], scores: [] };
+
+      function clampIndex(index) {
+        if (index < 0) return current.scores.length - 1;
+        if (index >= current.scores.length) return 0;
+        return index;
+      }
+
+      function selectedIndex() {
+        return current.scores.indexOf(current.value);
+      }
+
+      function setValue(nextValue) {
+        current.value = nextValue;
+        render();
+        Streamlit.setComponentValue(nextValue);
+      }
+
+      function onOptionKeydown(event) {
+        const index = Number(event.currentTarget.dataset.index);
+        if (Number.isNaN(index)) return;
+
+        if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) {
+          event.preventDefault();
+          const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+          const nextIndex = clampIndex(index + delta);
+          const nextValue = current.scores[nextIndex];
+          setValue(nextValue);
+          focusByIndex(nextIndex);
+          return;
+        }
+
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault();
+          setValue(current.scores[index]);
+        }
+      }
+
+      function focusByIndex(index) {
+        const target = root.querySelector(`[data-index="${index}"]`);
+        if (target) target.focus();
+      }
+
+      function render() {
+        const groupId = `gad7-seg-${current.qKey || "group"}`;
+        const selectedIdx = selectedIndex();
+
+        root.innerHTML = "";
+        const grid = document.createElement("div");
+        grid.className = "gad7-seg-grid";
+        grid.setAttribute("role", "radiogroup");
+        grid.setAttribute("aria-label", `${current.qKey || "문항"} 응답 선택`);
+        grid.id = groupId;
+
+        current.labels.forEach((label, i) => {
+          const score = current.scores[i];
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "gad7-seg-option";
+          btn.dataset.index = String(i);
+          btn.setAttribute("role", "radio");
+          btn.setAttribute("aria-checked", String(score === current.value));
+          btn.setAttribute("aria-label", `${label} ${score}점`);
+          btn.tabIndex = score === current.value ? 0 : selectedIdx === -1 && i === 0 ? 0 : -1;
+
+          btn.addEventListener("click", () => setValue(score));
+          btn.addEventListener("keydown", onOptionKeydown);
+          btn.addEventListener("pointerdown", () => btn.classList.add("is-pressing"));
+          btn.addEventListener("pointerup", () => btn.classList.remove("is-pressing"));
+          btn.addEventListener("pointerleave", () => btn.classList.remove("is-pressing"));
+
+          const labelEl = document.createElement("span");
+          labelEl.className = "gad7-seg-label";
+          labelEl.textContent = label;
+
+          const scoreEl = document.createElement("span");
+          scoreEl.className = "gad7-seg-score";
+          scoreEl.textContent = `${score}점`;
+
+          btn.appendChild(labelEl);
+          btn.appendChild(scoreEl);
+          grid.appendChild(btn);
+        });
+
+        root.appendChild(grid);
+        Streamlit.setFrameHeight();
+      }
+
+      function onRender(event) {
+        const args = event.detail.args || {};
+        const labels = Array.isArray(args.labels) ? args.labels : [];
+        const scores = Array.isArray(args.scores) ? args.scores : [];
+        const safeValue = scores.includes(args.value) ? args.value : null;
+
+        current = {
+          qKey: args.q_key || "",
+          labels,
+          scores,
+          value: safeValue,
+        };
+
+        render();
+        Streamlit.setFrameHeight();
+      }
+
+      Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+      Streamlit.setComponentReady();
+      Streamlit.setFrameHeight();
+    </script>
+  </body>
+</html>

@@ -5,6 +5,8 @@
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -30,6 +32,15 @@ SCALE_SHORT = {
     "일주일 이상 (2)": "일주일 이상",
     "거의 매일 (3)": "거의 매일",
 }
+
+SCALE_TEXT_LABELS = [
+    "전혀 없음",
+    "몇 일 동안",
+    "일주일 이상",
+    "거의 매일",
+]
+
+SCALE_SCORES = [0, 1, 2, 3]
 
 QUESTIONS = [
     "초조하거나 불안하거나 조마조마함을 느낌",
@@ -71,6 +82,8 @@ def gad7_level(total: int):
 
 
 def score_from_label(label: str):
+    if isinstance(label, int) and label in SCALE_SCORES:
+        return label
     if label is None:
         return None
     try:
@@ -481,6 +494,32 @@ def render_stepper(current_page: str):
     components.html(component_html, height=116, scrolling=False)
 
 
+_SEGMENTED_COMPONENT = components.declare_component(
+    "gad7_segmented",
+    path=str(Path(__file__).parent / "components" / "gad7_segmented"),
+)
+
+
+def render_choice_segment(
+    q_key: str,
+    current_value: Optional[int],
+    labels: list[str],
+    scores: list[int],
+) -> Optional[int]:
+    value = _SEGMENTED_COMPONENT(
+        q_key=q_key,
+        value=current_value,
+        labels=labels,
+        scores=scores,
+        key=f"seg_{q_key}",
+        default=current_value,
+    )
+
+    if isinstance(value, int) and value in scores:
+        return value
+    return current_value if current_value in scores else None
+
+
 def inject_css():
     st.markdown(
         """
@@ -591,58 +630,8 @@ def inject_css():
 
         .question-title { font-size: 1rem; font-weight: 750; color: var(--text); margin-bottom: .45rem; }
 
-        div[data-testid="stRadio"] {
-            margin-top: .2rem;
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-            margin: 0 !important;
-            border: 1px solid var(--line);
-            background: var(--surface-2);
-            border-radius: 12px;
-            min-height: 54px;
-            padding: 10px 8px;
-            transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease, background .14s ease;
-            cursor: pointer;
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-            transform: translateY(-1px);
-            border-color: var(--primary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:focus-visible) {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-            border-color: var(--primary);
-            background: var(--primary-soft);
-            box-shadow: inset 0 0 0 1px var(--primary);
-            transform: scale(1.01);
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label > div {
-            width: 100%;
-            margin: 0 !important;
-            justify-content: center;
-            text-align: center;
-            font-size: .9rem;
-            font-weight: 700;
-            color: var(--text);
-            line-height: 1.3;
-        }
-
-        div[data-testid="stRadio"] > div[role="radiogroup"] > label > div > div:first-child {
-            display: none;
+        .gad7-seg-host {
+            margin-top: .28rem;
         }
 
         .status-chip {
@@ -698,12 +687,6 @@ def inject_css():
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
-            div[data-testid="stRadio"] > div[role="radiogroup"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-
-        @media (max-width: 420px) {
-            div[data-testid="stRadio"] > div[role="radiogroup"] > label { min-height: 50px; padding: 8px 6px; }
-            div[data-testid="stRadio"] > div[role="radiogroup"] > label > div { font-size: .83rem; }
         }
         </style>
         """,
@@ -795,7 +778,7 @@ def page_survey(dev_mode: bool = False):
     for i, q in enumerate(QUESTIONS, start=1):
         key = f"q{i}"
         current_answer = st.session_state.answers.get(key)
-        index = SCALE_LABELS.index(current_answer) if current_answer in SCALE_LABELS else None
+        current_value = current_answer if isinstance(current_answer, int) else score_from_label(current_answer)
 
         st.markdown(
             f"""
@@ -805,15 +788,14 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        selected = st.radio(
-            label=f"문항 {i} 응답 선택",
-            options=SCALE_LABELS,
-            index=index,
-            key=f"radio_{key}",
-            horizontal=False,
-            label_visibility="collapsed",
-            format_func=lambda x: SCALE_SHORT.get(x, x),
+        st.markdown("<div class='gad7-seg-host'>", unsafe_allow_html=True)
+        selected = render_choice_segment(
+            q_key=key,
+            current_value=current_value,
+            labels=SCALE_TEXT_LABELS,
+            scores=SCALE_SCORES,
         )
+        st.markdown("</div>", unsafe_allow_html=True)
         st.session_state.answers[key] = selected
         st.markdown("</section>", unsafe_allow_html=True)
 
