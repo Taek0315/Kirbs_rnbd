@@ -1180,7 +1180,7 @@ def _is_db_insert_enabled() -> bool:
     - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
     - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
     """
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    raw = os.getenv("ENABLE_DB_INSERT", "false")
     return str(raw).strip().lower() != "false"
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
