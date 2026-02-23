@@ -165,11 +165,11 @@ def dict_to_kv_csv(d: dict) -> str:
         parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
     return ",".join(parts)
 
-def build_db_record_gad7(payload: dict) -> dict:
+def build_exam_data_gad7(payload: dict) -> dict:
     """
     PHQ-9와 동일한 5컬럼 형태로 통일
     """
-    exam_name = payload.get("instrument", "GAD-7")
+    exam_name = payload.get("instrument", "GAD_7")
 
     consent_meta = {
         "consent": payload.get("consent"),
@@ -227,7 +227,7 @@ def build_payload():
     level, interp = gad7_level(total)
 
     payload = {
-        "instrument": "GAD-7",
+        "instrument": "GAD_7",
         "version": "streamlit_1.0",
         "respondent_id": st.session_state.meta["respondent_id"],
         "consent": st.session_state.meta["consent"],
@@ -1104,21 +1104,21 @@ def page_result(dev_mode: bool = False):
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
-    payload, _ = build_payload()
-    db_record = build_db_record_gad7(payload)
-    total = payload["result"]["total"]
-    level = payload["result"]["level"]
-    interp = payload["result"]["interpretation"]
-    flags = payload["result"]["flags"]
+    internal_payload, _ = build_payload()
+    exam_data = build_exam_data_gad7(internal_payload)
+    total = internal_payload["result"]["total"]
+    level = internal_payload["result"]["level"]
+    interp = internal_payload["result"]["interpretation"]
+    flags = internal_payload["result"]["flags"]
 
-    auto_db_insert(db_record)
+    auto_db_insert(exam_data)
 
     if dev_mode:
         required_keys = ["exam_name", "consent_col", "examinee_col", "answers_col", "result_col"]
-        st.caption("dev=1 sanity check · standardized db_record")
-        st.json(db_record, expanded=False)
+        st.caption("dev=1 sanity check · standardized exam_data")
+        st.json(exam_data, expanded=False)
         st.code(
-            f"db_record_has_exact_5_keys={list(db_record.keys()) == required_keys} keys={list(db_record.keys())}",
+            f"exam_data_has_exact_5_keys={list(exam_data.keys()) == required_keys} keys={list(exam_data.keys())}",
             language="text",
         )
 
@@ -1201,7 +1201,7 @@ def page_result(dev_mode: bool = False):
 
     if dev_mode:
         st.caption("개발 모드 payload")
-        st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
+        st.code(json.dumps(internal_payload, ensure_ascii=False, indent=2), language="json")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1242,31 +1242,35 @@ def main():
 # ──────────────────────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
-raw = os.getenv("ENABLE_DB_INSERT", "true")
-ENABLE_DB_INSERT = str(raw).strip().lower() != "false"
+def _is_db_insert_enabled() -> bool:
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
+
+
+ENABLE_DB_INSERT = _is_db_insert_enabled()
 
 if ENABLE_DB_INSERT:
     from utils.database import Database
 
-def safe_db_insert(payload: dict) -> bool:
+def safe_db_insert(exam_data: dict) -> bool:
     """
     dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
-    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(payload) 수행
+    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(exam_data) 수행
     """
     if not ENABLE_DB_INSERT:
         return False
     try:
         db = Database()
-        db.insert(payload)
+        db.insert(exam_data)
         return True
     except Exception as e:
         print(f"[DB INSERT ERROR] {e}")
         return False
 
-def auto_db_insert(payload: dict) -> None:
+def auto_db_insert(exam_data: dict) -> None:
     """
     결과 저장 자동 호출
-    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + payload expander로 노출
+    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + exam_data expander로 노출
     - 활성 환경: 이름 검증 후 DB 저장 1회 시도 (성공 시 중복 방지 플래그 ON)
     """
     # 중복 방지(성공 시에만 잠금)
@@ -1276,16 +1280,16 @@ def auto_db_insert(payload: dict) -> None:
         return
 
     if not ENABLE_DB_INSERT:
-        with st.expander("DB 저장 payload (개발용)", expanded=False):
-            st.json(payload)
-        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
+        with st.expander("DB disabled debug payload", expanded=False):
+            st.json(exam_data)
+        st.caption("DB disabled (ENABLE_DB_INSERT=false)")
         return
 
     if not st.session_state.examinee.get("name"):
         st.error("이름을 입력해 주세요.")
         return
 
-    ok = safe_db_insert(payload)
+    ok = safe_db_insert(exam_data)
     if ok:
         st.session_state.db_insert_done = True
         st.success("검사 완료")
