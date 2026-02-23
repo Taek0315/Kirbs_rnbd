@@ -25,6 +25,7 @@ def _reset_to_survey():
     st.session_state.answers = {}
     st.session_state.functional = None
     st.session_state.summary = None
+    st.session_state.db_insert_done = False
     st.session_state.examinee = {
         "user_id": str(uuid.uuid4()),
         "name": "",
@@ -536,6 +537,70 @@ QUESTIONS = [
 ]
 LABELS = ["전혀 아님 (0)", "며칠 동안 (1)", "절반 이상 (2)", "거의 매일 (3)"]
 LABEL2SCORE = {LABELS[0]:0, LABELS[1]:1, LABELS[2]:2, LABELS[3]:3}
+
+
+def _sanitize_csv_value(v) -> str:
+    """콤마 구분 문자열에 안전하게 넣기 위해 값 내부 콤마/줄바꿈 제거."""
+    if v is None:
+        return ""
+    s = str(v)
+    s = s.replace("\n", " ").replace("\r", " ")
+    s = s.replace(",", " ")  # 값 내부 콤마는 공백으로 치환(요구사항: 콤마 구분)
+    return s.strip()
+
+def dict_to_kv_csv(d: dict) -> str:
+    """{"a":1,"b":2} -> "a=1,b=2" """
+    if not isinstance(d, dict):
+        return ""
+    parts = []
+    for k, v in d.items():
+        parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
+    return ",".join(parts)
+
+def build_db_record_phq9(payload: dict) -> dict:
+    """
+    DB 저장 레코드(5컬럼):
+    - exam_name
+    - consent_col
+    - examinee_col
+    - answers_col
+    - result_col
+    각 컬럼 값은 "k=v,k2=v2" 형태 문자열
+    """
+    exam_name = (payload.get("exam", {}) or {}).get("title", "PHQ_9")
+
+    consent_meta = {
+        "consent": (payload.get("meta", {}) or {}).get("consent"),
+        "consent_ts": (payload.get("meta", {}) or {}).get("consent_ts"),
+        "submitted_at": (payload.get("meta", {}) or {}).get("submitted_at"),
+        "client_reported_ts": (payload.get("meta", {}) or {}).get("client_reported_ts"),
+        "version": (payload.get("exam", {}) or {}).get("version"),
+        "user_id": (payload.get("examinee", {}) or {}).get("user_id"),
+    }
+
+    examinee = payload.get("examinee", {}) or {}
+
+    answers = payload.get("answers", {}) or {}
+    # answers: q1..q9, functional_impact 등
+
+    result = payload.get("result", {}) or {}
+    # result: total, severity, domain_scores, unanswered 등
+
+    # ⚠️ domain_scores가 dict이므로 문자열로 한번 정리해서 넣기
+    domain_scores = result.get("domain_scores", {}) or {}
+    result_flat = dict(result)
+    if isinstance(domain_scores, dict):
+        # "domain_scores=somatic:3|cog_aff:5" 같은 식으로 단일 key로 저장
+        ds = "|".join([f"{_sanitize_csv_value(k)}:{_sanitize_csv_value(v)}" for k, v in domain_scores.items()])
+        result_flat["domain_scores"] = ds
+
+    return {
+        "exam_name": _sanitize_csv_value(exam_name),
+        "consent_col": dict_to_kv_csv(consent_meta),
+        "examinee_col": dict_to_kv_csv(examinee),
+        "answers_col": dict_to_kv_csv(answers),
+        "result_col": dict_to_kv_csv(result_flat),
+    }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 유틸: 중증도 라벨
@@ -1151,40 +1216,30 @@ def render_result_page() -> None:
         return exam_data
 
     with st.container():
-        st.markdown(
-            """
-            <div class="card result-card">
-              <div class="card-header">
-                <div class="title-lg">결과 저장</div>
-                <div class="text">검사 결과를 안전하게 저장하거나 개발용 payload를 확인합니다.</div>
-              </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        
         payload = build_phq9_payload()
+        db_record = build_db_record_phq9(payload)
+        auto_db_insert(db_record)
 
-        if not ENABLE_DB_INSERT:
-            with st.expander("DB 저장 payload (개발용)", expanded=False):
-                st.json(payload)
-            st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
-        else:
-            if st.button("DB 저장", type="primary"):
-                if not st.session_state.examinee.get("name"):
-                    st.error("이름을 입력해 주세요.")
-                else:
-                    ok = safe_db_insert(payload)
-                    if ok:
-                        st.success("저장 완료")
-                    else:
-                        st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# DB 연동 전용 블록
-ENABLE_DB_INSERT = os.getenv("ENABLE_DB_INSERT", "true").lower() == "false"
+# ──────────────────────────────────────────────────────────────────────────────
+# 데이터 저장 분기 + DB 연동 전용 블록 
+def _is_db_insert_enabled() -> bool:
+    """
+    정책:
+    - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
+    - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
+    """
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
+
+
+ENABLE_DB_INSERT = _is_db_insert_enabled()
 
 if ENABLE_DB_INSERT:
     from utils.database import Database
@@ -1192,19 +1247,50 @@ if ENABLE_DB_INSERT:
 
 def safe_db_insert(payload: dict) -> bool:
     """
-    dev 단계: ENABLE_DB_INSERT=false (기본) → 저장 호출 안 함
-    운영 탑재: ENABLE_DB_INSERT=true → utils.database.Database().insert(payload) 수행
+    dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
+    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(payload) 수행
     """
-    if ENABLE_DB_INSERT:
-        try:
-            db = Database()
-            db.insert(payload)
-            return True
-        except Exception as e:
-            # 운영 환경 로그용
-            print(f"[DB INSERT ERROR] {e}")
-            return False
-    return False
+    if not ENABLE_DB_INSERT:
+        return False
+
+    try:
+        db = Database()
+        db.insert(payload)
+        return True
+    except Exception as e:
+        print(f"[DB INSERT ERROR] {e}")
+        return False
+
+
+def auto_db_insert(payload: dict) -> None:
+    """
+    결과 저장 자동 호출
+    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + payload expander로 노출
+    - 활성 환경: 이름 검증 후 DB 저장 1회 시도 (성공 시 중복 방지 플래그 ON)
+    """
+    # 중복 방지(성공 시에만 잠금)
+    if "db_insert_done" not in st.session_state:
+        st.session_state.db_insert_done = False
+    if st.session_state.db_insert_done:
+        return
+
+    if not ENABLE_DB_INSERT:
+        with st.expander("DB 저장 payload (개발용)", expanded=False):
+            st.json(payload)
+        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
+        return
+
+    if not st.session_state.examinee.get("name"):
+        st.error("이름을 입력해 주세요.")
+        return
+
+    ok = safe_db_insert(payload)
+    if ok:
+        st.session_state.db_insert_done = True
+        st.success("검사 완료")
+    else:
+        st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
+
 
 
 if st.session_state.page == "intro":

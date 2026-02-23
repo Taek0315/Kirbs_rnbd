@@ -149,6 +149,64 @@ def select_answer(q_key: str, score: int):
     st.session_state.answers[q_key] = score
     st.session_state.last_q = q_key
 
+def _sanitize_csv_value(v) -> str:
+    if v is None:
+        return ""
+    s = str(v)
+    s = s.replace("\n", " ").replace("\r", " ")
+    s = s.replace(",", " ")
+    return s.strip()
+
+def dict_to_kv_csv(d: dict) -> str:
+    if not isinstance(d, dict):
+        return ""
+    parts = []
+    for k, v in d.items():
+        parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
+    return ",".join(parts)
+
+def build_db_record_gad7(payload: dict) -> dict:
+    """
+    PHQ-9와 동일한 5컬럼 형태로 통일
+    """
+    exam_name = payload.get("instrument", "GAD-7")
+
+    consent_meta = {
+        "consent": payload.get("consent"),
+        "consent_ts": payload.get("consent_ts"),
+        "started_ts": payload.get("started_ts"),
+        "submitted_ts": payload.get("submitted_ts"),
+        "version": payload.get("version"),
+        "respondent_id": payload.get("respondent_id"),
+    }
+
+    examinee = payload.get("examinee", {}) or {}
+
+    # ✅ 응답 데이터는 "점수" 기준으로 통일 권장
+    # payload["items"]["scores"]는 {"q1":0..3 ...}
+    items = payload.get("items", {}) or {}
+    scores = (items.get("scores", {}) or {})
+    answers = dict(scores)  # q1..q7
+
+    result_raw = payload.get("result", {}) or {}
+    # PHQ-9와 키 이름까지 최대한 정합화: severity 사용
+    result_flat = {
+        "total": result_raw.get("total"),
+        "severity": result_raw.get("level"),  # ← level을 severity로 저장
+        "interpretation": result_raw.get("interpretation"),
+        "rule_of_thumb_ge10": ((result_raw.get("rule_of_thumb", {}) or {}).get(">=10")),
+        "rule_of_thumb_ge15": ((result_raw.get("rule_of_thumb", {}) or {}).get(">=15")),
+        "flag_recommend_counseling": ((result_raw.get("flags", {}) or {}).get("recommend_counseling")),
+        "flag_recommend_clinic": ((result_raw.get("flags", {}) or {}).get("recommend_clinic")),
+    }
+
+    return {
+        "exam_name": _sanitize_csv_value(exam_name),
+        "consent_col": dict_to_kv_csv(consent_meta),
+        "examinee_col": dict_to_kv_csv(examinee),
+        "answers_col": dict_to_kv_csv(answers),
+        "result_col": dict_to_kv_csv(result_flat),
+    }
 
 def build_payload():
     item_scores = {}
@@ -1047,12 +1105,13 @@ def page_result(dev_mode: bool = False):
     render_stepper(st.session_state.page)
 
     payload, _ = build_payload()
+    db_record = build_db_record_gad7(payload)
     total = payload["result"]["total"]
     level = payload["result"]["level"]
     interp = payload["result"]["interpretation"]
     flags = payload["result"]["flags"]
 
-    auto_db_insert(payload)
+    auto_db_insert(db_record)
 
     ratio = max(0, min(total / 21, 1))
     level_key = get_level_key(level)
@@ -1180,7 +1239,7 @@ def _is_db_insert_enabled() -> bool:
     - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
     - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
     """
-    raw = os.getenv("ENABLE_DB_INSERT", "false")
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
     return str(raw).strip().lower() != "false"
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
