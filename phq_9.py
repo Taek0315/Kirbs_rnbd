@@ -562,7 +562,7 @@ def dict_to_kv_csv(d: dict) -> str:
         parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
     return ",".join(parts)
 
-def build_db_record_phq9(payload: dict) -> dict:
+def build_exam_data_phq9(payload: dict) -> dict:
     """
     DB 저장 레코드(5컬럼):
     - exam_name
@@ -591,11 +591,9 @@ def build_db_record_phq9(payload: dict) -> dict:
     result = payload.get("result", {}) or {}
     # result: total, severity, domain_scores, unanswered 등
 
-    # ⚠️ domain_scores가 dict이므로 문자열로 한번 정리해서 넣기
     domain_scores = result.get("domain_scores", {}) or {}
     result_flat = dict(result)
     if isinstance(domain_scores, dict):
-        # "domain_scores=somatic:3|cog_aff:5" 같은 식으로 단일 key로 저장
         ds = "|".join([f"{_sanitize_csv_value(k)}:{_sanitize_csv_value(v)}" for k, v in domain_scores.items()])
         result_flat["domain_scores"] = ds
 
@@ -1222,16 +1220,16 @@ def render_result_page(dev_mode: bool = False) -> None:
 
     with st.container():
         
-        payload = build_phq9_payload()
-        db_record = build_db_record_phq9(payload)
-        auto_db_insert(db_record)
+        internal_payload = build_phq9_payload()
+        exam_data = build_exam_data_phq9(internal_payload)
+        auto_db_insert(exam_data)
 
         if dev_mode:
             required_keys = ["exam_name", "consent_col", "examinee_col", "answers_col", "result_col"]
-            st.caption("dev=1 sanity check · standardized db_record")
-            st.json(db_record, expanded=False)
+            st.caption("dev=1 sanity check · standardized exam_data")
+            st.json(exam_data, expanded=False)
             st.code(
-                f"db_record_has_exact_5_keys={list(db_record.keys()) == required_keys} keys={list(db_record.keys())}",
+                f"exam_data_has_exact_5_keys={list(exam_data.keys()) == required_keys} keys={list(exam_data.keys())}",
                 language="text",
             )
 
@@ -1243,34 +1241,38 @@ def render_result_page(dev_mode: bool = False) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록 
-raw = os.getenv("ENABLE_DB_INSERT", "true")
-ENABLE_DB_INSERT = str(raw).strip().lower() != "false"
+def _is_db_insert_enabled() -> bool:
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
+
+
+ENABLE_DB_INSERT = _is_db_insert_enabled()
 
 if ENABLE_DB_INSERT:
     from utils.database import Database
 
 
-def safe_db_insert(payload: dict) -> bool:
+def safe_db_insert(exam_data: dict) -> bool:
     """
     dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
-    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(payload) 수행
+    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(exam_data) 수행
     """
     if not ENABLE_DB_INSERT:
         return False
 
     try:
         db = Database()
-        db.insert(payload)
+        db.insert(exam_data)
         return True
     except Exception as e:
         print(f"[DB INSERT ERROR] {e}")
         return False
 
 
-def auto_db_insert(payload: dict) -> None:
+def auto_db_insert(exam_data: dict) -> None:
     """
     결과 저장 자동 호출
-    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + payload expander로 노출
+    - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + exam_data expander로 노출
     - 활성 환경: 이름 검증 후 DB 저장 1회 시도 (성공 시 중복 방지 플래그 ON)
     """
     # 중복 방지(성공 시에만 잠금)
@@ -1280,16 +1282,16 @@ def auto_db_insert(payload: dict) -> None:
         return
 
     if not ENABLE_DB_INSERT:
-        with st.expander("DB 저장 payload (개발용)", expanded=False):
-            st.json(payload)
-        st.caption("개발 환경에서는 DB 저장이 비활성화되어 있습니다. (ENABLE_DB_INSERT=false)")
+        with st.expander("DB disabled debug payload", expanded=False):
+            st.json(exam_data)
+        st.caption("DB disabled (ENABLE_DB_INSERT=false)")
         return
 
     if not st.session_state.examinee.get("name"):
         st.error("이름을 입력해 주세요.")
         return
 
-    ok = safe_db_insert(payload)
+    ok = safe_db_insert(exam_data)
     if ok:
         st.session_state.db_insert_done = True
         st.success("검사 완료")
