@@ -1113,6 +1113,15 @@ def page_result(dev_mode: bool = False):
 
     auto_db_insert(db_record)
 
+    if dev_mode:
+        required_keys = ["exam_name", "consent_col", "examinee_col", "answers_col", "result_col"]
+        st.caption("dev=1 sanity check · standardized db_record")
+        st.json(db_record, expanded=False)
+        st.code(
+            f"db_record_has_exact_5_keys={list(db_record.keys()) == required_keys} keys={list(db_record.keys())}",
+            language="text",
+        )
+
     ratio = max(0, min(total / 21, 1))
     level_key = get_level_key(level)
 
@@ -1233,16 +1242,8 @@ def main():
 # ──────────────────────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
-def _is_db_insert_enabled() -> bool:
-    """
-    정책:
-    - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
-    - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
-    """
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
-
-ENABLE_DB_INSERT = _is_db_insert_enabled()
+raw = os.getenv("ENABLE_DB_INSERT", "true")
+ENABLE_DB_INSERT = str(raw).strip().lower() != "false"
 
 if ENABLE_DB_INSERT:
     from utils.database import Database

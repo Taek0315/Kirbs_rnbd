@@ -73,7 +73,8 @@ ACCENT  = "#DC2626"   # keep as-is (danger)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 전역 스타일
-st.markdown(
+def inject_css() -> None:
+    st.markdown(
     """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
@@ -497,30 +498,34 @@ body, p, div, span, li, button, label, input, textarea {
 }
 </style>
 """,
-    unsafe_allow_html=True,
-)
+        unsafe_allow_html=True,
+    )
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 상태 관리
-if "page" not in st.session_state:
-    st.session_state.page = "intro"   # 'intro' | 'examinee' | 'survey' | 'result'
-if "consent" not in st.session_state:
-    st.session_state.consent = False
-if "consent_ts" not in st.session_state:
-    st.session_state.consent_ts = None
-if "answers" not in st.session_state:
-    st.session_state.answers: Dict[int, str] = {}
-if "functional" not in st.session_state:
-    st.session_state.functional = None
-if "summary" not in st.session_state:
-    st.session_state.summary = None  # (total, sev, functional, scores, ts, unanswered)
-if "examinee" not in st.session_state:
-    st.session_state.examinee = {
-        "user_id": str(uuid.uuid4()),
-        "name": "",
-        "email": "",
-        "phone": "",
-    }
+def init_state() -> None:
+    if "page" not in st.session_state:
+        st.session_state.page = "intro"   # 'intro' | 'examinee' | 'survey' | 'result'
+    if "consent" not in st.session_state:
+        st.session_state.consent = False
+    if "consent_ts" not in st.session_state:
+        st.session_state.consent_ts = None
+    if "answers" not in st.session_state:
+        st.session_state.answers: Dict[int, str] = {}
+    if "functional" not in st.session_state:
+        st.session_state.functional = None
+    if "summary" not in st.session_state:
+        st.session_state.summary = None  # (total, sev, functional, scores, ts, unanswered)
+    if "db_insert_done" not in st.session_state:
+        st.session_state.db_insert_done = False
+    if "examinee" not in st.session_state:
+        st.session_state.examinee = {
+            "user_id": str(uuid.uuid4()),
+            "name": "",
+            "email": "",
+            "phone": "",
+        }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 문항/선택지
@@ -569,16 +574,16 @@ def build_db_record_phq9(payload: dict) -> dict:
     """
     exam_name = (payload.get("exam", {}) or {}).get("title", "PHQ_9")
 
-    consent_meta = {
-        "consent": (payload.get("meta", {}) or {}).get("consent"),
-        "consent_ts": (payload.get("meta", {}) or {}).get("consent_ts"),
-        "submitted_at": (payload.get("meta", {}) or {}).get("submitted_at"),
-        "client_reported_ts": (payload.get("meta", {}) or {}).get("client_reported_ts"),
-        "version": (payload.get("exam", {}) or {}).get("version"),
-        "user_id": (payload.get("examinee", {}) or {}).get("user_id"),
-    }
-
+    meta = payload.get("meta", {}) or {}
     examinee = payload.get("examinee", {}) or {}
+    consent_meta = {
+        "consent": meta.get("consent"),
+        "consent_ts": meta.get("consent_ts"),
+        "started_ts": meta.get("started_ts") or meta.get("consent_ts") or "",
+        "submitted_ts": meta.get("submitted_ts"),
+        "version": (payload.get("exam", {}) or {}).get("version"),
+        "respondent_id": examinee.get("user_id"),
+    }
 
     answers = payload.get("answers", {}) or {}
     # answers: q1..q9, functional_impact 등
@@ -1067,7 +1072,7 @@ def render_survey_page() -> None:
         st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def render_result_page() -> None:
+def render_result_page(dev_mode: bool = False) -> None:
     if not st.session_state.summary:
         st.warning("먼저 설문을 완료해 주세요.")
         st.stop()
@@ -1188,7 +1193,7 @@ def render_result_page() -> None:
         somatic_score = sum(scores_[i - 1] for i in SOMATIC)
         cog_aff_score = sum(scores_[i - 1] for i in COG_AFF)
 
-        submitted_at = kst_iso_now()
+        submitted_ts = kst_iso_now()
 
         exam_data = {
             "exam": {"title": "PHQ_9", "version": "v1"},
@@ -1207,8 +1212,8 @@ def render_result_page() -> None:
                 "unanswered": unanswered_,
             },
             "meta": {
-                "submitted_at": submitted_at,
-                "client_reported_ts": ts_,
+                "started_ts": st.session_state.consent_ts or "",
+                "submitted_ts": submitted_ts,
                 "consent": st.session_state.consent,
                 "consent_ts": st.session_state.consent_ts,
             },
@@ -1221,6 +1226,15 @@ def render_result_page() -> None:
         db_record = build_db_record_phq9(payload)
         auto_db_insert(db_record)
 
+        if dev_mode:
+            required_keys = ["exam_name", "consent_col", "examinee_col", "answers_col", "result_col"]
+            st.caption("dev=1 sanity check · standardized db_record")
+            st.json(db_record, expanded=False)
+            st.code(
+                f"db_record_has_exact_5_keys={list(db_record.keys()) == required_keys} keys={list(db_record.keys())}",
+                language="text",
+            )
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div></div>", unsafe_allow_html=True)
@@ -1229,17 +1243,8 @@ def render_result_page() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록 
-def _is_db_insert_enabled() -> bool:
-    """
-    정책:
-    - ENABLE_DB_INSERT가 'false'(대소문자 무시)일 때만 DB 저장 비활성화
-    - 그 외(미설정/true/기타 값)는 전부 DB 저장 활성화
-    """
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
-
-
-ENABLE_DB_INSERT = _is_db_insert_enabled()
+raw = os.getenv("ENABLE_DB_INSERT", "true")
+ENABLE_DB_INSERT = str(raw).strip().lower() != "false"
 
 if ENABLE_DB_INSERT:
     from utils.database import Database
@@ -1293,14 +1298,38 @@ def auto_db_insert(payload: dict) -> None:
 
 
 
-if st.session_state.page == "intro":
-    render_intro_page()
-elif st.session_state.page == "examinee":
-    render_examinee_page()
-elif st.session_state.page == "survey":
-    render_survey_page()
-elif st.session_state.page == "result":
-    render_result_page()
+def main() -> None:
+    inject_css()
+    init_state()
+
+    params = st.query_params
+    dev_mode = str(params.get("dev", "0")) == "1"
+
+    if st.session_state.page == "intro":
+        render_intro_page()
+    elif st.session_state.page == "examinee":
+        if not st.session_state.consent:
+            st.warning("동의 확인 후 검사를 시작해 주세요.")
+            st.session_state.page = "intro"
+            st.rerun()
+        render_examinee_page()
+    elif st.session_state.page == "survey":
+        if not st.session_state.consent:
+            st.warning("동의 확인 후 검사를 시작해 주세요.")
+            st.session_state.page = "intro"
+            st.rerun()
+        if not st.session_state.examinee.get("name", "").strip():
+            st.session_state.page = "examinee"
+            st.rerun()
+        render_survey_page()
+    elif st.session_state.page == "result":
+        render_result_page(dev_mode=dev_mode)
+    else:
+        st.session_state.page = "intro"
+        st.rerun()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 끝
+
+if __name__ == "__main__":
+    main()
