@@ -362,22 +362,23 @@ def render_stepper(current_page: str):
           .app-stepper .step-track {{
             width: 100%;
             display: flex;
-            align-items: stretch;
-            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
             overflow: hidden;
           }}
 
           .app-stepper .step-item {{
-            flex: 1 1 0;
+            flex: 0 0 auto;
             min-width: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
           }}
 
           .app-stepper .step-main {{
             flex: 0 1 auto;
-            min-width: 88px;
+            min-width: 100px;
             border: 1px solid var(--border);
             border-radius: 14px;
             background: var(--card);
@@ -435,7 +436,7 @@ def render_stepper(current_page: str):
 
           .app-stepper .step-connector {{
             flex: 1 1 auto;
-            min-width: 10px;
+            min-width: 70px;
             height: 2px;
             border-radius: 999px;
             background: rgba(148,163,184,0.2);
@@ -585,7 +586,7 @@ def render_stepper(current_page: str):
     """
 
     st.markdown('<div class="stepper-wrap">', unsafe_allow_html=True)
-    components.html(component_html, height=116, scrolling=False)
+    components.html(component_html, height=80, scrolling=False)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -670,8 +671,8 @@ def inject_css():
         /* === Stepper iframe wrapper: same width/margins as main content === */
         .stepper-wrap {
             width: min(100%, var(--content-max-width));
-            margin-left: auto;
-            margin-right: auto;
+            margin: 0 auto 6px;
+            padding: 0 1.25rem;
         }
         .stepper-wrap > div[data-testid="stHtml"] {
             width: 100%;
