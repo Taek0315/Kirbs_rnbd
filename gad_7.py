@@ -729,7 +729,7 @@ def inject_css():
 
         .card.soft { background: var(--surface-2); }
 
-        .title-lg { font-size: clamp(22px, 2.8vw, 29px); font-weight: 800; line-height: 1.3; color: var(--text); outline: 3px solid red !important; }
+        .title-lg { font-size: clamp(22px, 2.8vw, 29px) !important; font-weight: 800; line-height: 1.3; color: var(--text); }
         .title-md { font-size: clamp(17px, 2.2vw, 19px); font-weight: 750; line-height: 1.35; color: var(--text); }
         .text     { font-size: clamp(15px, 1.9vw, 16px); line-height: 1.72; color: var(--muted); }
         .muted    { font-size: 14px; line-height: 1.6; color: var(--muted); }
