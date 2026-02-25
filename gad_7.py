@@ -1244,7 +1244,7 @@ def main():
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "false")
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
     return str(raw).strip().lower() != "false"
 
 
