@@ -637,62 +637,75 @@ def inject_css():
             color: #6b7280;
             line-height: 1.7;
         }
+        div[data-testid="stRadio"] {
+            margin-top: 12px;
+        }
         div[data-testid="stRadio"] > label {
-            margin-bottom: 10px;
+            margin-bottom: 0;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0;
+            width: 100%;
+            min-width: 0;
+            border: 1px solid rgba(148, 163, 184, 0.55);
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.04);
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label {
-            margin: 0;
-            min-width: 44px;
+        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            margin: 0 !important;
+            min-width: 0;
+            width: 100%;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label > div {
-            border: 1px solid #d1d5db;
-            border-radius: 12px;
-            padding: 10px 14px;
-            background: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            transition: all 0.15s ease;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] label:hover > div {
-            border-color: #93c5fd;
-            background: #f8fafc;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] input:checked + div {
-            border-color: #1d4ed8;
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-        .likert-scale {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label > div {
+            width: 100%;
+            min-height: 48px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-top: 12px;
-            flex-wrap: wrap;
+            justify-content: center;
+            border: 0;
+            border-right: 1px solid rgba(148, 163, 184, 0.45);
+            border-radius: 0;
+            padding: 0;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+            color: inherit;
+            transition: background-color 0.15s ease, color 0.15s ease;
         }
-        .likert-scale .edge-label {
-            flex: 1 1 150px;
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:last-child > div {
+            border-right: 0;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover > div {
+            background: rgba(59, 130, 246, 0.08);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-baseweb="radio"] input:checked + div {
+            background: rgba(59, 130, 246, 0.18);
+            color: #60a5fa;
+            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
+        }
+        .likert-edge-label {
+            margin-top: 12px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
             font-size: 13px;
             font-weight: 600;
             color: #6b7280;
+            white-space: nowrap;
         }
-        .likert-scale .edge-label.right {
+        .likert-edge-label.right {
+            justify-content: flex-end;
             text-align: right;
         }
         @media (max-width: 640px) {
-            .likert-scale {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .likert-scale .edge-label,
-            .likert-scale .edge-label.right {
+            .likert-edge-label,
+            .likert-edge-label.right {
+                justify-content: center;
                 text-align: center;
+                min-height: auto;
             }
         }
         </style>
@@ -896,9 +909,9 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        likert_left, likert_center, likert_right = st.columns([1.6, 3.4, 1.6])
+        likert_left, likert_center, likert_right = st.columns([1.9, 4.2, 1.9], vertical_alignment="center")
         with likert_left:
-            st.markdown("<div class='likert-scale'><span class='edge-label'>전혀 그렇지 않다</span></div>", unsafe_allow_html=True)
+            st.markdown("<div class='likert-edge-label'>전혀 그렇지 않다</div>", unsafe_allow_html=True)
         with likert_center:
             selected = st.radio(
                 label=f"{i}번 문항 응답",
@@ -910,7 +923,7 @@ def page_survey(dev_mode: bool = False):
                 horizontal=True,
             )
         with likert_right:
-            st.markdown("<div class='likert-scale'><span class='edge-label right'>매우 그렇다</span></div>", unsafe_allow_html=True)
+            st.markdown("<div class='likert-edge-label right'>매우 그렇다</div>", unsafe_allow_html=True)
         st.session_state.answers[key] = selected
         st.markdown("</section>", unsafe_allow_html=True)
 
