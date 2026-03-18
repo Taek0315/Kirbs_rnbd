@@ -263,6 +263,34 @@ def dict_to_kv_csv(d: dict) -> str:
     return ",".join(parts)
 
 
+def serialize_answers_payload(answers: dict[str, int] | None = None) -> str:
+    source = answers if answers is not None else st.session_state.answers
+    normalized = {}
+    for i in range(1, len(QUESTIONS) + 1):
+        key = f"q{i}"
+        value = source.get(key) if isinstance(source, dict) else None
+        if value in SCALE_SCORES:
+            normalized[key] = int(value)
+    return json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+
+
+def normalize_answers_dict(raw_answers: dict | None) -> dict[str, int]:
+    normalized_answers = {}
+    source = raw_answers if isinstance(raw_answers, dict) else {}
+    for i in range(1, len(QUESTIONS) + 1):
+        key = f"q{i}"
+        value = source.get(key)
+        if value is None:
+            continue
+        try:
+            value_int = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value_int in SCALE_SCORES:
+            normalized_answers[key] = value_int
+    return normalized_answers
+
+
 def build_payload():
     total_score = 0
     missing = []
@@ -394,40 +422,6 @@ def render_stepper(current_page: str):
             html.append(f"<div class='step-line {line_state}'></div>")
     html.append("</div>")
     st.markdown("".join(html), unsafe_allow_html=True)
-
-
-def inject_likert_button_script():
-    components.html(
-        """
-        <script>
-            const doc = window.parent.document;
-            const scriptId = "likert-answer-button-style";
-            if (!doc.getElementById(scriptId)) {
-                const marker = doc.createElement("div");
-                marker.id = scriptId;
-                marker.style.display = "none";
-                doc.body.appendChild(marker);
-            }
-
-            const labels = [
-                "전혀 그렇지 않다",
-                "그렇지 않은 편이다",
-                "보통이다",
-                "그런 편이다",
-                "매우 그렇다",
-            ];
-
-            doc.querySelectorAll('div[data-testid="stButton"] button').forEach((button) => {
-                const label = button.innerText.trim();
-                if (labels.includes(label)) {
-                    button.classList.add("likert-answer-btn");
-                }
-            });
-        </script>
-        """,
-        height=0,
-        scrolling=False,
-    )
 
 
 def inject_css():
@@ -593,53 +587,11 @@ def inject_css():
             color: #6b7280;
             line-height: 1.7;
         }
-        .likert-button-grid {
-            margin-top: 18px;
+        .survey-payload-bridge {
+            display: none;
         }
-        .likert-button-grid [data-testid="stHorizontalBlock"] {
-            align-items: stretch;
-            gap: 0.75rem;
-        }
-        .likert-button-grid [data-testid="column"] {
-            display: flex;
-        }
-        .likert-button-grid div[data-testid="stButton"] {
-            width: 100%;
-        }
-        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn {
-            width: 100%;
-            min-height: 88px;
-            padding: 0.95rem 0.8rem;
-            border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            background: rgba(148, 163, 184, 0.08);
-            color: inherit;
-            font-size: 0.96rem;
-            font-weight: 700;
-            line-height: 1.45;
-            white-space: normal;
-            box-shadow: none;
-            transition: all 0.16s ease;
-        }
-        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn[kind="primary"] {
-            border: 1px solid rgba(59, 130, 246, 0.92);
-            background: rgba(59, 130, 246, 0.18);
-            color: #dbeafe;
-            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
-        }
-        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn:hover {
-            border-color: rgba(96, 165, 250, 0.8);
-            background: rgba(96, 165, 250, 0.14);
-            transform: translateY(-1px);
-        }
-        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn[kind="primary"]:hover {
-            background: rgba(59, 130, 246, 0.24);
-        }
-        @media (max-width: 900px) {
-            .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn {
-                min-height: 76px;
-                font-size: 0.9rem;
-            }
+        div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
+            display: none;
         }
         </style>
         """,
@@ -810,8 +762,8 @@ def page_survey(dev_mode: bool = False):
     render_stepper(st.session_state.page)
 
     payload, missing = build_payload()
-    answered_count = 10 - len(missing)
-    progress_pct = int((answered_count / 10) * 100)
+    answered_count = len(st.session_state.answers)
+    progress_pct = int((answered_count / len(QUESTIONS)) * 100)
 
     st.markdown(
         f"""
@@ -820,7 +772,7 @@ def page_survey(dev_mode: bool = False):
             <h1 class="title-lg">문항 응답</h1>
             <p class="text">현재 자신의 모습에 가장 가까운 응답을 선택해 주세요.</p>
             <div class="progress-row">
-                <span class="progress-label">진행률 {answered_count}/10</span>
+                <span class="progress-label">저장된 진행률 {answered_count}/10</span>
                 <span class="progress-label">{progress_pct}%</span>
             </div>
             <div class="meter"><span style="width:{progress_pct}%;"></span></div>
@@ -829,71 +781,183 @@ def page_survey(dev_mode: bool = False):
         unsafe_allow_html=True,
     )
 
-    for i, q in enumerate(QUESTIONS, start=1):
-        key = f"q{i}"
-        current_value = st.session_state.answers.get(key)
+    initial_answers_json = serialize_answers_payload()
+    questions_json = json.dumps(QUESTIONS, ensure_ascii=False)
+    labels_json = json.dumps(SCALE_TEXT_LABELS, ensure_ascii=False)
 
-        st.markdown(f"<div id='q-anchor-{key}'></div>", unsafe_allow_html=True)
-        st.markdown(
-            f"""
-            <section class="card">
-                <div class="question-title">{i}. {q}</div>
-            """,
-            unsafe_allow_html=True,
+    with st.form("survey_form", clear_on_submit=False):
+        st.text_area(
+            "survey_payload_bridge",
+            value=initial_answers_json,
+            key="survey_payload_bridge",
+            height=1,
+            label_visibility="collapsed",
         )
 
-        st.markdown("<div class='likert-button-grid'>", unsafe_allow_html=True)
-        button_cols = st.columns(5, gap="small")
-        selected = current_value
-        for score, label, button_col in zip(SCALE_SCORES, SCALE_TEXT_LABELS, button_cols):
-            with button_col:
-                if st.button(
-                    label,
-                    key=f"likert_{key}_{score}",
-                    type="primary" if current_value == score else "secondary",
-                    use_container_width=True,
-                ):
-                    selected = score
-                    st.session_state.answers[key] = score
-                    st.session_state.last_q = key
-                    st.rerun()
-        st.session_state.answers[key] = selected
-        st.markdown("</div></section>", unsafe_allow_html=True)
-
-    last_q = st.session_state.get("last_q")
-    if last_q:
-        components.html(
-            f"""
+        component_html = f"""
+        <!DOCTYPE html>
+        <html lang="ko">
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: transparent; }}
+              .survey-root {{ display: grid; gap: 16px; }}
+              .survey-card {{
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 20px;
+                padding: 22px;
+                box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+              }}
+              .survey-progress {{ display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; color: #475569; font-weight: 600; }}
+              .survey-meter {{ width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-bottom: 4px; }}
+              .survey-meter > span {{ display: block; height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.18s ease; }}
+              .question-title {{ font-size: 18px; font-weight: 700; line-height: 1.55; color: #111827; margin-bottom: 18px; }}
+              .choice-grid {{ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }}
+              .choice-btn {{
+                width: 100%; min-height: 88px; padding: 0.95rem 0.8rem; border-radius: 14px;
+                border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08);
+                color: #334155; font-size: 0.96rem; font-weight: 700; line-height: 1.45; white-space: normal;
+                box-shadow: none; transition: all 0.16s ease; cursor: pointer;
+              }}
+              .choice-btn:hover {{ border-color: rgba(96, 165, 250, 0.8); background: rgba(96, 165, 250, 0.14); transform: translateY(-1px); }}
+              .choice-btn.selected {{ border-color: rgba(59, 130, 246, 0.92); background: rgba(59, 130, 246, 0.16); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }}
+              @media (max-width: 900px) {{
+                .choice-grid {{ grid-template-columns: 1fr; }}
+                .choice-btn {{ min-height: 68px; font-size: 0.92rem; }}
+              }}
+            </style>
+          </head>
+          <body>
+            <div class="survey-root">
+              <section class="survey-card">
+                <div class="survey-progress">
+                  <span id="progress-text"></span>
+                  <span id="progress-percent"></span>
+                </div>
+                <div class="survey-meter"><span id="progress-bar"></span></div>
+              </section>
+              <div id="questions"></div>
+            </div>
             <script>
-              const el = parent.document.getElementById("q-anchor-{last_q}");
-              if (el) el.scrollIntoView({{behavior: "auto", block: "center"}});
+              const questions = {questions_json};
+              const labels = {labels_json};
+              const scores = [1, 2, 3, 4, 5];
+              const state = {initial_answers_json};
+
+              const root = document.getElementById('questions');
+              const progressText = document.getElementById('progress-text');
+              const progressPercent = document.getElementById('progress-percent');
+              const progressBar = document.getElementById('progress-bar');
+
+              function syncToStreamlit() {{
+                const parentDoc = window.parent.document;
+                const payloadField = parentDoc.querySelector('textarea[aria-label="survey_payload_bridge"]');
+                if (!payloadField) return;
+                const payload = JSON.stringify(state);
+                if (payloadField.value === payload) return;
+                const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value')?.set;
+                if (nativeSetter) {{
+                  nativeSetter.call(payloadField, payload);
+                }} else {{
+                  payloadField.value = payload;
+                }}
+                payloadField.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                payloadField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+              }}
+
+              function updateProgress() {{
+                const answered = Object.keys(state).length;
+                const total = questions.length;
+                const pct = Math.round((answered / total) * 100);
+                progressText.textContent = `현재 선택 ${answered}/${{total}}`;
+                progressPercent.textContent = `${{pct}}%`;
+                progressBar.style.width = `${{pct}}%`;
+              }}
+
+              function render() {{
+                root.innerHTML = '';
+                questions.forEach((question, index) => {{
+                  const key = `q${{index + 1}}`;
+                  const card = document.createElement('section');
+                  card.className = 'survey-card';
+
+                  const title = document.createElement('div');
+                  title.className = 'question-title';
+                  title.textContent = `${{index + 1}}. ${{question}}`;
+                  card.appendChild(title);
+
+                  const grid = document.createElement('div');
+                  grid.className = 'choice-grid';
+
+                  labels.forEach((label, labelIndex) => {{
+                    const score = scores[labelIndex];
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'choice-btn';
+                    if (state[key] === score) button.classList.add('selected');
+                    button.textContent = label;
+                    button.addEventListener('click', () => {{
+                      state[key] = score;
+                      render();
+                      updateProgress();
+                      syncToStreamlit();
+                    }});
+                    grid.appendChild(button);
+                  }});
+
+                  card.appendChild(grid);
+                  root.appendChild(card);
+                }});
+              }}
+
+              render();
+              updateProgress();
+              syncToStreamlit();
             </script>
-            """,
-            height=0,
-            scrolling=False,
-        )
+          </body>
+        </html>
+        """
+        components.html(component_html, height=1380, scrolling=False)
 
-    inject_likert_button_script()
+        if len(missing) != 0:
+            st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
 
-    payload, missing = build_payload()
-    all_done = len(missing) == 0
+        c1, c2 = st.columns([1, 1])
+        prev_clicked = c1.form_submit_button("이전", use_container_width=True)
+        submit_clicked = c2.form_submit_button("결과 보기", type="primary", use_container_width=True)
 
-    if not all_done:
-        st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
+    if prev_clicked:
+        payload_text = st.session_state.get("survey_payload_bridge", initial_answers_json)
+        try:
+            parsed_answers = json.loads(payload_text or "{}")
+        except json.JSONDecodeError:
+            parsed_answers = {}
+        st.session_state.answers = normalize_answers_dict(parsed_answers)
+        st.session_state.page = "info"
+        st.rerun()
 
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        if st.button("이전", use_container_width=True):
-            st.session_state.page = "info"
-            st.rerun()
-    with c2:
-        if st.button("결과 보기", type="primary", disabled=not all_done, use_container_width=True):
+    if submit_clicked:
+        payload_text = st.session_state.get("survey_payload_bridge", initial_answers_json)
+        try:
+            parsed_answers = json.loads(payload_text or "{}")
+        except json.JSONDecodeError:
+            parsed_answers = {}
+
+        st.session_state.answers = normalize_answers_dict(parsed_answers)
+        payload, missing = build_payload()
+        all_done = len(missing) == 0
+
+        if all_done:
             st.session_state.meta["submitted_ts"] = now_iso()
             payload, missing = build_payload()
             st.session_state.result_payload = payload
             st.session_state.page = "result"
             st.rerun()
+        else:
+            st.error("모든 문항에 응답해 주세요.")
 
+    payload, missing = build_payload()
     if dev_mode:
         st.caption("개발 모드 payload")
         st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
