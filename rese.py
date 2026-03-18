@@ -637,6 +637,64 @@ def inject_css():
             color: #6b7280;
             line-height: 1.7;
         }
+        div[data-testid="stRadio"] > label {
+            margin-bottom: 10px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label {
+            margin: 0;
+            min-width: 44px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label > div {
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 10px 14px;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            transition: all 0.15s ease;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label:hover > div {
+            border-color: #93c5fd;
+            background: #f8fafc;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] input:checked + div {
+            border-color: #1d4ed8;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .likert-scale {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .likert-scale .edge-label {
+            flex: 1 1 150px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .likert-scale .edge-label.right {
+            text-align: right;
+        }
+        @media (max-width: 640px) {
+            .likert-scale {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .likert-scale .edge-label,
+            .likert-scale .edge-label.right {
+                text-align: center;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -719,18 +777,26 @@ def page_info():
         unsafe_allow_html=True,
     )
 
-    name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
-    gender = st.selectbox(
-        "성별",
-        options=[""] + GENDER_OPTIONS,
-        index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", "")) if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS) else 0,
-    )
-    age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
-    region = st.selectbox(
-        "거주지역",
-        options=[""] + REGION_OPTIONS,
-        index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", "")) if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS) else 0,
-    )
+    info_row_1_col_1, info_row_1_col_2 = st.columns(2)
+    with info_row_1_col_1:
+        name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+    with info_row_1_col_2:
+        gender = st.selectbox(
+            "성별",
+            options=[""] + GENDER_OPTIONS,
+            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", "")) if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS) else 0,
+        )
+
+    info_row_2_col_1, info_row_2_col_2 = st.columns(2)
+    with info_row_2_col_1:
+        age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
+    with info_row_2_col_2:
+        region = st.selectbox(
+            "거주지역",
+            options=[""] + REGION_OPTIONS,
+            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", "")) if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS) else 0,
+        )
+
     phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
     email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
 
@@ -830,14 +896,21 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        selected = st.radio(
-            label=f"{i}번 문항 응답",
-            options=SCALE_SCORES,
-            format_func=lambda x: SCALE_LABELS[x - 1],
-            index=SCALE_SCORES.index(current_value) if current_value in SCALE_SCORES else None,
-            key=f"radio_{key}",
-            label_visibility="collapsed",
-        )
+        likert_left, likert_center, likert_right = st.columns([1.6, 3.4, 1.6])
+        with likert_left:
+            st.markdown("<div class='likert-scale'><span class='edge-label'>전혀 그렇지 않다</span></div>", unsafe_allow_html=True)
+        with likert_center:
+            selected = st.radio(
+                label=f"{i}번 문항 응답",
+                options=SCALE_SCORES,
+                format_func=lambda x: str(x),
+                index=SCALE_SCORES.index(current_value) if current_value in SCALE_SCORES else None,
+                key=f"radio_{key}",
+                label_visibility="collapsed",
+                horizontal=True,
+            )
+        with likert_right:
+            st.markdown("<div class='likert-scale'><span class='edge-label right'>매우 그렇다</span></div>", unsafe_allow_html=True)
         st.session_state.answers[key] = selected
         st.markdown("</section>", unsafe_allow_html=True)
 
