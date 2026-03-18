@@ -800,42 +800,61 @@ def page_survey(dev_mode: bool = False):
         <meta charset="utf-8" />
         <style>
           body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: transparent; }
-          .survey-root { display: grid; gap: 16px; }
+          .survey-root { display: grid; gap: 10px; }
           .survey-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            border-radius: 20px;
-            padding: 22px;
+            border-radius: 18px;
+            padding: 14px 16px;
             box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            margin-bottom: 10px;
           }
-          .survey-progress { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; color: #475569; font-weight: 600; }
-          .survey-meter { width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-bottom: 4px; }
-          .survey-meter > span { display: block; height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.18s ease; }
-          .question-title { font-size: 18px; font-weight: 700; line-height: 1.55; color: #111827; margin-bottom: 18px; }
-          .choice-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+          .question-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.45;
+            color: #111827;
+            margin-bottom: 10px;
+          }
+          .choice-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+            align-items: stretch;
+          }
           .choice-btn {
-            width: 100%; min-height: 88px; padding: 0.95rem 0.8rem; border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08);
-            color: #334155; font-size: 0.96rem; font-weight: 700; line-height: 1.45; white-space: normal;
-            box-shadow: none; transition: all 0.16s ease; cursor: pointer;
+            width: 100%;
+            min-height: 56px;
+            height: 100%;
+            padding: 10px 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(148, 163, 184, 0.08);
+            color: #334155;
+            font-size: 0.84rem;
+            font-weight: 700;
+            line-height: 1.3;
+            white-space: normal;
+            word-break: keep-all;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            transition: all 0.16s ease;
+            cursor: pointer;
           }
           .choice-btn:hover { border-color: rgba(96, 165, 250, 0.8); background: rgba(96, 165, 250, 0.14); transform: translateY(-1px); }
           .choice-btn.selected { border-color: rgba(59, 130, 246, 0.92); background: rgba(59, 130, 246, 0.16); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }
           @media (max-width: 900px) {
-            .choice-grid { grid-template-columns: 1fr; }
-            .choice-btn { min-height: 68px; font-size: 0.92rem; }
+            .survey-card { padding: 12px 14px; }
+            .choice-grid { gap: 6px; }
+            .choice-btn { min-height: 52px; padding: 8px 6px; font-size: 0.78rem; }
           }
         </style>
       </head>
       <body>
         <div class="survey-root">
-          <section class="survey-card">
-            <div class="survey-progress">
-              <span id="progress-text"></span>
-              <span id="progress-percent"></span>
-            </div>
-            <div class="survey-meter"><span id="progress-bar"></span></div>
-          </section>
           <div id="questions"></div>
         </div>
         <script>
@@ -845,10 +864,6 @@ def page_survey(dev_mode: bool = False):
           const state = __INITIAL_ANSWERS_JSON__;
 
           const root = document.getElementById('questions');
-          const progressText = document.getElementById('progress-text');
-          const progressPercent = document.getElementById('progress-percent');
-          const progressBar = document.getElementById('progress-bar');
-
           function syncToStreamlit() {
             const parentDoc = window.parent.document;
             const payloadField = parentDoc.querySelector('textarea[aria-label="survey_payload_bridge"]');
@@ -868,10 +883,8 @@ def page_survey(dev_mode: bool = False):
           function updateProgress() {
             const answered = Object.keys(state).length;
             const total = questions.length;
-            const pct = Math.round((answered / total) * 100);
-            progressText.textContent = `현재 선택 ${answered}/${total}`;
-            progressPercent.textContent = `${pct}%`;
-            progressBar.style.width = `${pct}%`;
+            void answered;
+            void total;
           }
 
           function render() {
@@ -923,7 +936,7 @@ def page_survey(dev_mode: bool = False):
         .replace("__LABELS_JSON__", labels_json)
         .replace("__INITIAL_ANSWERS_JSON__", initial_answers_json)
     )
-    components.html(component_html, height=1380, scrolling=False)
+    components.html(component_html, height=980, scrolling=False)
 
     if len(missing) != 0:
         st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
