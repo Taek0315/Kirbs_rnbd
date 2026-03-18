@@ -401,60 +401,26 @@ def inject_likert_button_script():
         """
         <script>
             const doc = window.parent.document;
-            const styleId = "likert-segment-button-style";
-            if (!doc.getElementById(styleId)) {
-                const style = doc.createElement("style");
-                style.id = styleId;
-                style.textContent = `
-                    div[data-testid="stButton"] button.likert-segment-btn {
-                        width: 100%;
-                        min-height: 48px;
-                        border-radius: 0.35rem;
-                        margin: 0;
-                        padding: 0.65rem 0;
-                        font-size: 0.98rem;
-                        font-weight: 700;
-                        box-shadow: none;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn[kind="secondary"] {
-                        background: rgba(15, 23, 42, 0.04);
-                        border: 1px solid rgba(148, 163, 184, 0.7);
-                        color: inherit;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn[kind="primary"] {
-                        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-                        border: 1px solid #2563eb;
-                        color: #ffffff;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="first"] {
-                        border-top-right-radius: 0;
-                        border-bottom-right-radius: 0;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="middle"] {
-                        border-radius: 0;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="last"] {
-                        border-top-left-radius: 0;
-                        border-bottom-left-radius: 0;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn:not([data-segment-position="last"]) {
-                        border-right-width: 0;
-                    }
-                    div[data-testid="stButton"] button.likert-segment-btn:hover {
-                        position: relative;
-                        z-index: 1;
-                    }
-                `;
-                doc.head.appendChild(style);
+            const scriptId = "likert-answer-button-style";
+            if (!doc.getElementById(scriptId)) {
+                const marker = doc.createElement("div");
+                marker.id = scriptId;
+                marker.style.display = "none";
+                doc.body.appendChild(marker);
             }
 
-            const labels = ["1", "2", "3", "4", "5"];
-            const positionMap = {"1": "first", "2": "middle", "3": "middle", "4": "middle", "5": "last"};
+            const labels = [
+                "전혀 그렇지 않다",
+                "그렇지 않은 편이다",
+                "보통이다",
+                "그런 편이다",
+                "매우 그렇다",
+            ];
+
             doc.querySelectorAll('div[data-testid="stButton"] button').forEach((button) => {
                 const label = button.innerText.trim();
                 if (labels.includes(label)) {
-                    button.classList.add("likert-segment-btn");
-                    button.dataset.segmentPosition = positionMap[label];
+                    button.classList.add("likert-answer-btn");
                 }
             });
         </script>
@@ -627,32 +593,52 @@ def inject_css():
             color: #6b7280;
             line-height: 1.7;
         }
-        .likert-segment-row {
-            margin-top: 12px;
+        .likert-button-grid {
+            margin-top: 18px;
         }
-        .likert-segment-row [data-testid="column"] {
-            gap: 0;
+        .likert-button-grid [data-testid="stHorizontalBlock"] {
+            align-items: stretch;
+            gap: 0.75rem;
         }
-        .likert-edge-label {
-            margin-top: 12px;
-            min-height: 48px;
+        .likert-button-grid [data-testid="column"] {
             display: flex;
-            align-items: center;
-            font-size: 13px;
-            font-weight: 600;
-            color: #6b7280;
-            white-space: nowrap;
         }
-        .likert-edge-label.right {
-            justify-content: flex-end;
-            text-align: right;
+        .likert-button-grid div[data-testid="stButton"] {
+            width: 100%;
         }
-        @media (max-width: 640px) {
-            .likert-edge-label,
-            .likert-edge-label.right {
-                justify-content: center;
-                text-align: center;
-                min-height: auto;
+        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn {
+            width: 100%;
+            min-height: 88px;
+            padding: 0.95rem 0.8rem;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(148, 163, 184, 0.08);
+            color: inherit;
+            font-size: 0.96rem;
+            font-weight: 700;
+            line-height: 1.45;
+            white-space: normal;
+            box-shadow: none;
+            transition: all 0.16s ease;
+        }
+        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn[kind="primary"] {
+            border: 1px solid rgba(59, 130, 246, 0.92);
+            background: rgba(59, 130, 246, 0.18);
+            color: #dbeafe;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+        }
+        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn:hover {
+            border-color: rgba(96, 165, 250, 0.8);
+            background: rgba(96, 165, 250, 0.14);
+            transform: translateY(-1px);
+        }
+        .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn[kind="primary"]:hover {
+            background: rgba(59, 130, 246, 0.24);
+        }
+        @media (max-width: 900px) {
+            .likert-button-grid div[data-testid="stButton"] > button.likert-answer-btn {
+                min-height: 76px;
+                font-size: 0.9rem;
             }
         }
         </style>
@@ -856,27 +842,21 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div class='likert-segment-row'>", unsafe_allow_html=True)
-        likert_left, likert_center, likert_right = st.columns([1.9, 4.2, 1.9], vertical_alignment="center")
-        with likert_left:
-            st.markdown("<div class='likert-edge-label'>전혀 그렇지 않다</div>", unsafe_allow_html=True)
-        with likert_center:
-            button_cols = st.columns(5, gap="small")
-            selected = current_value
-            for score, button_col in zip(SCALE_SCORES, button_cols):
-                with button_col:
-                    if st.button(
-                        str(score),
-                        key=f"likert_{key}_{score}",
-                        type="primary" if current_value == score else "secondary",
-                        use_container_width=True,
-                    ):
-                        selected = score
-                        st.session_state.answers[key] = score
-                        st.session_state.last_q = key
-                        st.rerun()
-        with likert_right:
-            st.markdown("<div class='likert-edge-label right'>매우 그렇다</div>", unsafe_allow_html=True)
+        st.markdown("<div class='likert-button-grid'>", unsafe_allow_html=True)
+        button_cols = st.columns(5, gap="small")
+        selected = current_value
+        for score, label, button_col in zip(SCALE_SCORES, SCALE_TEXT_LABELS, button_cols):
+            with button_col:
+                if st.button(
+                    label,
+                    key=f"likert_{key}_{score}",
+                    type="primary" if current_value == score else "secondary",
+                    use_container_width=True,
+                ):
+                    selected = score
+                    st.session_state.answers[key] = score
+                    st.session_state.last_q = key
+                    st.rerun()
         st.session_state.answers[key] = selected
         st.markdown("</div></section>", unsafe_allow_html=True)
 
