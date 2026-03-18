@@ -785,147 +785,152 @@ def page_survey(dev_mode: bool = False):
     questions_json = json.dumps(QUESTIONS, ensure_ascii=False)
     labels_json = json.dumps(SCALE_TEXT_LABELS, ensure_ascii=False)
 
-    with st.form("survey_form", clear_on_submit=False):
-        st.text_area(
-            "survey_payload_bridge",
-            value=initial_answers_json,
-            key="survey_payload_bridge",
-            height=1,
-            label_visibility="collapsed",
-        )
+    st.text_area(
+        "survey_payload_bridge",
+        value=initial_answers_json,
+        key="survey_payload_bridge",
+        height=1,
+        label_visibility="collapsed",
+    )
 
-        component_html = f"""
-        <!DOCTYPE html>
-        <html lang="ko">
-          <head>
-            <meta charset="utf-8" />
-            <style>
-              body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: transparent; }}
-              .survey-root {{ display: grid; gap: 16px; }}
-              .survey-card {{
-                background: #ffffff;
-                border: 1px solid #e5e7eb;
-                border-radius: 20px;
-                padding: 22px;
-                box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-              }}
-              .survey-progress {{ display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; color: #475569; font-weight: 600; }}
-              .survey-meter {{ width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-bottom: 4px; }}
-              .survey-meter > span {{ display: block; height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.18s ease; }}
-              .question-title {{ font-size: 18px; font-weight: 700; line-height: 1.55; color: #111827; margin-bottom: 18px; }}
-              .choice-grid {{ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }}
-              .choice-btn {{
-                width: 100%; min-height: 88px; padding: 0.95rem 0.8rem; border-radius: 14px;
-                border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08);
-                color: #334155; font-size: 0.96rem; font-weight: 700; line-height: 1.45; white-space: normal;
-                box-shadow: none; transition: all 0.16s ease; cursor: pointer;
-              }}
-              .choice-btn:hover {{ border-color: rgba(96, 165, 250, 0.8); background: rgba(96, 165, 250, 0.14); transform: translateY(-1px); }}
-              .choice-btn.selected {{ border-color: rgba(59, 130, 246, 0.92); background: rgba(59, 130, 246, 0.16); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }}
-              @media (max-width: 900px) {{
-                .choice-grid {{ grid-template-columns: 1fr; }}
-                .choice-btn {{ min-height: 68px; font-size: 0.92rem; }}
-              }}
-            </style>
-          </head>
-          <body>
-            <div class="survey-root">
-              <section class="survey-card">
-                <div class="survey-progress">
-                  <span id="progress-text"></span>
-                  <span id="progress-percent"></span>
-                </div>
-                <div class="survey-meter"><span id="progress-bar"></span></div>
-              </section>
-              <div id="questions"></div>
+    component_html = """
+    <!DOCTYPE html>
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: transparent; }
+          .survey-root { display: grid; gap: 16px; }
+          .survey-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+          }
+          .survey-progress { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; color: #475569; font-weight: 600; }
+          .survey-meter { width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-bottom: 4px; }
+          .survey-meter > span { display: block; height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.18s ease; }
+          .question-title { font-size: 18px; font-weight: 700; line-height: 1.55; color: #111827; margin-bottom: 18px; }
+          .choice-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+          .choice-btn {
+            width: 100%; min-height: 88px; padding: 0.95rem 0.8rem; border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08);
+            color: #334155; font-size: 0.96rem; font-weight: 700; line-height: 1.45; white-space: normal;
+            box-shadow: none; transition: all 0.16s ease; cursor: pointer;
+          }
+          .choice-btn:hover { border-color: rgba(96, 165, 250, 0.8); background: rgba(96, 165, 250, 0.14); transform: translateY(-1px); }
+          .choice-btn.selected { border-color: rgba(59, 130, 246, 0.92); background: rgba(59, 130, 246, 0.16); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }
+          @media (max-width: 900px) {
+            .choice-grid { grid-template-columns: 1fr; }
+            .choice-btn { min-height: 68px; font-size: 0.92rem; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="survey-root">
+          <section class="survey-card">
+            <div class="survey-progress">
+              <span id="progress-text"></span>
+              <span id="progress-percent"></span>
             </div>
-            <script>
-              const questions = {questions_json};
-              const labels = {labels_json};
-              const scores = [1, 2, 3, 4, 5];
-              const state = {initial_answers_json};
+            <div class="survey-meter"><span id="progress-bar"></span></div>
+          </section>
+          <div id="questions"></div>
+        </div>
+        <script>
+          const questions = __QUESTIONS_JSON__;
+          const labels = __LABELS_JSON__;
+          const scores = [1, 2, 3, 4, 5];
+          const state = __INITIAL_ANSWERS_JSON__;
 
-              const root = document.getElementById('questions');
-              const progressText = document.getElementById('progress-text');
-              const progressPercent = document.getElementById('progress-percent');
-              const progressBar = document.getElementById('progress-bar');
+          const root = document.getElementById('questions');
+          const progressText = document.getElementById('progress-text');
+          const progressPercent = document.getElementById('progress-percent');
+          const progressBar = document.getElementById('progress-bar');
 
-              function syncToStreamlit() {{
-                const parentDoc = window.parent.document;
-                const payloadField = parentDoc.querySelector('textarea[aria-label="survey_payload_bridge"]');
-                if (!payloadField) return;
-                const payload = JSON.stringify(state);
-                if (payloadField.value === payload) return;
-                const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value')?.set;
-                if (nativeSetter) {{
-                  nativeSetter.call(payloadField, payload);
-                }} else {{
-                  payloadField.value = payload;
-                }}
-                payloadField.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                payloadField.dispatchEvent(new Event('change', {{ bubbles: true }}));
-              }}
+          function syncToStreamlit() {
+            const parentDoc = window.parent.document;
+            const payloadField = parentDoc.querySelector('textarea[aria-label="survey_payload_bridge"]');
+            if (!payloadField) return;
+            const payload = JSON.stringify(state);
+            if (payloadField.value === payload) return;
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value')?.set;
+            if (nativeSetter) {
+              nativeSetter.call(payloadField, payload);
+            } else {
+              payloadField.value = payload;
+            }
+            payloadField.dispatchEvent(new Event('input', { bubbles: true }));
+            payloadField.dispatchEvent(new Event('change', { bubbles: true }));
+          }
 
-              function updateProgress() {{
-                const answered = Object.keys(state).length;
-                const total = questions.length;
-                const pct = Math.round((answered / total) * 100);
-                progressText.textContent = `현재 선택 ${answered}/${{total}}`;
-                progressPercent.textContent = `${{pct}}%`;
-                progressBar.style.width = `${{pct}}%`;
-              }}
+          function updateProgress() {
+            const answered = Object.keys(state).length;
+            const total = questions.length;
+            const pct = Math.round((answered / total) * 100);
+            progressText.textContent = `현재 선택 ${answered}/${total}`;
+            progressPercent.textContent = `${pct}%`;
+            progressBar.style.width = `${pct}%`;
+          }
 
-              function render() {{
-                root.innerHTML = '';
-                questions.forEach((question, index) => {{
-                  const key = `q${{index + 1}}`;
-                  const card = document.createElement('section');
-                  card.className = 'survey-card';
+          function render() {
+            root.innerHTML = '';
+            questions.forEach((question, index) => {
+              const key = `q${index + 1}`;
+              const card = document.createElement('section');
+              card.className = 'survey-card';
 
-                  const title = document.createElement('div');
-                  title.className = 'question-title';
-                  title.textContent = `${{index + 1}}. ${{question}}`;
-                  card.appendChild(title);
+              const title = document.createElement('div');
+              title.className = 'question-title';
+              title.textContent = `${index + 1}. ${question}`;
+              card.appendChild(title);
 
-                  const grid = document.createElement('div');
-                  grid.className = 'choice-grid';
+              const grid = document.createElement('div');
+              grid.className = 'choice-grid';
 
-                  labels.forEach((label, labelIndex) => {{
-                    const score = scores[labelIndex];
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'choice-btn';
-                    if (state[key] === score) button.classList.add('selected');
-                    button.textContent = label;
-                    button.addEventListener('click', () => {{
-                      state[key] = score;
-                      render();
-                      updateProgress();
-                      syncToStreamlit();
-                    }});
-                    grid.appendChild(button);
-                  }});
+              labels.forEach((label, labelIndex) => {
+                const score = scores[labelIndex];
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'choice-btn';
+                if (state[key] === score) button.classList.add('selected');
+                button.textContent = label;
+                button.addEventListener('click', () => {
+                  state[key] = score;
+                  render();
+                  updateProgress();
+                  syncToStreamlit();
+                });
+                grid.appendChild(button);
+              });
 
-                  card.appendChild(grid);
-                  root.appendChild(card);
-                }});
-              }}
+              card.appendChild(grid);
+              root.appendChild(card);
+            });
+          }
 
-              render();
-              updateProgress();
-              syncToStreamlit();
-            </script>
-          </body>
-        </html>
-        """
-        components.html(component_html, height=1380, scrolling=False)
+          render();
+          updateProgress();
+          syncToStreamlit();
+        </script>
+      </body>
+    </html>
+    """
+    component_html = (
+        component_html
+        .replace("__QUESTIONS_JSON__", questions_json)
+        .replace("__LABELS_JSON__", labels_json)
+        .replace("__INITIAL_ANSWERS_JSON__", initial_answers_json)
+    )
+    components.html(component_html, height=1380, scrolling=False)
 
-        if len(missing) != 0:
-            st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
+    if len(missing) != 0:
+        st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
 
-        c1, c2 = st.columns([1, 1])
-        prev_clicked = c1.form_submit_button("이전", use_container_width=True)
-        submit_clicked = c2.form_submit_button("결과 보기", type="primary", use_container_width=True)
+    c1, c2 = st.columns([1, 1])
+    prev_clicked = c1.button("이전", use_container_width=True)
+    submit_clicked = c2.button("결과 보기", type="primary", use_container_width=True)
 
     if prev_clicked:
         payload_text = st.session_state.get("survey_payload_bridge", initial_answers_json)
