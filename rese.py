@@ -396,80 +396,70 @@ def render_stepper(current_page: str):
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
-def render_answer_segments(q_key: str, selected_score: int | None):
-    options_html = ["<div class='segmented'>"]
-    for score, label in zip(SCALE_SCORES, SCALE_TEXT_LABELS):
-        checked = "checked" if selected_score == score else ""
-        options_html.append(
-            f"""
-            <label class="seg-option">
-                <input type="radio" name="{q_key}" value="{score}" {checked}>
-                <span>{label}</span>
-            </label>
-            """
-        )
-    options_html.append("</div>")
-
+def inject_likert_button_script():
     components.html(
-        f"""
-        <html>
-        <head>
-        <style>
-            body {{
-                margin: 0;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            }}
-            .segmented {{
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 8px;
-                margin-top: 12px;
-            }}
-            .seg-option {{
-                display: block;
-                cursor: pointer;
-            }}
-            .seg-option input {{
-                display: none;
-            }}
-            .seg-option span {{
-                display: block;
-                border: 1px solid #d1d5db;
-                border-radius: 12px;
-                padding: 12px 14px;
-                background: #fff;
-                font-size: 14px;
-                line-height: 1.4;
-            }}
-            .seg-option input:checked + span {{
-                border-color: #1d4ed8;
-                background: #eff6ff;
-                font-weight: 600;
-            }}
-            .seg-option span:hover {{
-                border-color: #93c5fd;
-            }}
-        </style>
-        </head>
-        <body>
-            {''.join(options_html)}
-            <script>
-                const radios = document.querySelectorAll('input[type="radio"]');
-                radios.forEach((radio) => {{
-                    radio.addEventListener('change', function() {{
-                        const value = this.value;
-                        window.parent.postMessage({{
-                            isStreamlitMessage: true,
-                            type: "streamlit:setComponentValue",
-                            value: value
-                        }}, "*");
-                    }});
-                }});
-            </script>
-        </body>
-        </html>
+        """
+        <script>
+            const doc = window.parent.document;
+            const styleId = "likert-segment-button-style";
+            if (!doc.getElementById(styleId)) {
+                const style = doc.createElement("style");
+                style.id = styleId;
+                style.textContent = `
+                    div[data-testid="stButton"] button.likert-segment-btn {
+                        width: 100%;
+                        min-height: 48px;
+                        border-radius: 0.35rem;
+                        margin: 0;
+                        padding: 0.65rem 0;
+                        font-size: 0.98rem;
+                        font-weight: 700;
+                        box-shadow: none;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn[kind="secondary"] {
+                        background: rgba(15, 23, 42, 0.04);
+                        border: 1px solid rgba(148, 163, 184, 0.7);
+                        color: inherit;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn[kind="primary"] {
+                        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+                        border: 1px solid #2563eb;
+                        color: #ffffff;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="first"] {
+                        border-top-right-radius: 0;
+                        border-bottom-right-radius: 0;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="middle"] {
+                        border-radius: 0;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn[data-segment-position="last"] {
+                        border-top-left-radius: 0;
+                        border-bottom-left-radius: 0;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn:not([data-segment-position="last"]) {
+                        border-right-width: 0;
+                    }
+                    div[data-testid="stButton"] button.likert-segment-btn:hover {
+                        position: relative;
+                        z-index: 1;
+                    }
+                `;
+                doc.head.appendChild(style);
+            }
+
+            const labels = ["1", "2", "3", "4", "5"];
+            const positionMap = {"1": "first", "2": "middle", "3": "middle", "4": "middle", "5": "last"};
+            doc.querySelectorAll('div[data-testid="stButton"] button').forEach((button) => {
+                const label = button.innerText.trim();
+                if (labels.includes(label)) {
+                    button.classList.add("likert-segment-btn");
+                    button.dataset.segmentPosition = positionMap[label];
+                }
+            });
+        </script>
         """,
-        height=260,
+        height=0,
         scrolling=False,
     )
 
@@ -637,54 +627,11 @@ def inject_css():
             color: #6b7280;
             line-height: 1.7;
         }
-        div[data-testid="stRadio"] {
+        .likert-segment-row {
             margin-top: 12px;
         }
-        div[data-testid="stRadio"] > label {
-            margin-bottom: 0;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+        .likert-segment-row [data-testid="column"] {
             gap: 0;
-            width: 100%;
-            min-width: 0;
-            border: 1px solid rgba(148, 163, 184, 0.55);
-            border-radius: 10px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.04);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label {
-            margin: 0 !important;
-            min-width: 0;
-            width: 100%;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label > div {
-            width: 100%;
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 0;
-            border-right: 1px solid rgba(148, 163, 184, 0.45);
-            border-radius: 0;
-            padding: 0;
-            background: transparent;
-            font-size: 15px;
-            font-weight: 600;
-            color: inherit;
-            transition: background-color 0.15s ease, color 0.15s ease;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:last-child > div {
-            border-right: 0;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover > div {
-            background: rgba(59, 130, 246, 0.08);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-baseweb="radio"] input:checked + div {
-            background: rgba(59, 130, 246, 0.18);
-            color: #60a5fa;
-            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
         }
         .likert-edge-label {
             margin-top: 12px;
@@ -909,23 +856,29 @@ def page_survey(dev_mode: bool = False):
             unsafe_allow_html=True,
         )
 
+        st.markdown("<div class='likert-segment-row'>", unsafe_allow_html=True)
         likert_left, likert_center, likert_right = st.columns([1.9, 4.2, 1.9], vertical_alignment="center")
         with likert_left:
             st.markdown("<div class='likert-edge-label'>전혀 그렇지 않다</div>", unsafe_allow_html=True)
         with likert_center:
-            selected = st.radio(
-                label=f"{i}번 문항 응답",
-                options=SCALE_SCORES,
-                format_func=lambda x: str(x),
-                index=SCALE_SCORES.index(current_value) if current_value in SCALE_SCORES else None,
-                key=f"radio_{key}",
-                label_visibility="collapsed",
-                horizontal=True,
-            )
+            button_cols = st.columns(5, gap="small")
+            selected = current_value
+            for score, button_col in zip(SCALE_SCORES, button_cols):
+                with button_col:
+                    if st.button(
+                        str(score),
+                        key=f"likert_{key}_{score}",
+                        type="primary" if current_value == score else "secondary",
+                        use_container_width=True,
+                    ):
+                        selected = score
+                        st.session_state.answers[key] = score
+                        st.session_state.last_q = key
+                        st.rerun()
         with likert_right:
             st.markdown("<div class='likert-edge-label right'>매우 그렇다</div>", unsafe_allow_html=True)
         st.session_state.answers[key] = selected
-        st.markdown("</section>", unsafe_allow_html=True)
+        st.markdown("</div></section>", unsafe_allow_html=True)
 
     last_q = st.session_state.get("last_q")
     if last_q:
@@ -939,6 +892,8 @@ def page_survey(dev_mode: bool = False):
             height=0,
             scrolling=False,
         )
+
+    inject_likert_button_script()
 
     payload, missing = build_payload()
     all_done = len(missing) == 0
