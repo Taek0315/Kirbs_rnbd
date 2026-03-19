@@ -342,7 +342,7 @@ body, p, div, span, li, button, label, input, textarea {
 
 [data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
-/* Inputs */
+/* Form controls: rebuilt text input + selectbox system */
 [data-testid="stTextInput"] label,
 [data-testid="stSelectbox"] label {
   color: var(--muted-2) !important;
@@ -351,21 +351,19 @@ body, p, div, span, li, button, label, input, textarea {
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 0 14px !important;
   background: #FFFFFF !important;
   color: var(--ink) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
-  min-height: 46px !important;
-  height: 46px !important;
-  padding: 0 14px !important;
   box-shadow: none !important;
   outline: none !important;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child {
-  display: flex !important;
-  align-items: center !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
@@ -375,21 +373,21 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  min-height: 44px !important;
-  height: 44px !important;
-  margin: 0 !important;
-  padding: 0 !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
   justify-content: space-between !important;
   gap: 8px !important;
 }
@@ -406,15 +404,15 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
   appearance: none !important;
   -webkit-appearance: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
   background: transparent !important;
   background-image: none !important;
   color: var(--ink) !important;
   fill: var(--ink) !important;
   border: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
   outline: none !important;
-  margin: 0 !important;
+  box-shadow: none !important;
   text-decoration: none !important;
 }
 
@@ -425,7 +423,7 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:active,
 [data-testid="stTextInput"] input:invalid,
 [data-testid="stTextInput"] input:user-invalid {
-  padding: 0 !important;
+  width: 100% !important;
   min-height: 44px !important;
   height: 44px !important;
   line-height: 44px !important;
@@ -440,10 +438,9 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] [aria-invalid="true"]::before,
 [data-testid="stTextInput"] [aria-invalid="true"]::after {
   content: none !important;
-  border: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
   background: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-testid="stTextInput"] [aria-invalid="true"],
@@ -457,10 +454,8 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:user-invalid),
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:invalid) {
   border: none !important;
-  border-bottom: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
   outline: none !important;
+  box-shadow: none !important;
   background-image: none !important;
 }
 
@@ -476,16 +471,11 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:-internal-autofill-selected {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
   background: transparent !important;
-  background-image: none !important;
   border: none !important;
-  border-bottom: none !important;
+  outline: none !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-  outline: none !important;
-  text-decoration: none !important;
   transition: background-color 99999s ease-out 0s !important;
 }
 
