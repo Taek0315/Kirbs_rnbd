@@ -773,9 +773,11 @@ def inject_css():
         .result-stack {
             display: flex;
             flex-direction: column;
-            gap: 24px;
         }
         .result-section {
+            margin-bottom: 24px;
+        }
+        .result-stack > .result-section:last-child {
             margin-bottom: 0;
         }
         .result-card {
@@ -865,7 +867,7 @@ def inject_css():
             margin: 0;
         }
         .result-highlight-line {
-            margin-top: 14px;
+            margin: 24px 0 0;
             padding-left: 14px;
             border-left: 4px solid rgba(46, 139, 87, 0.65);
             color: #245f49;
@@ -874,7 +876,7 @@ def inject_css():
             font-weight: 700;
         }
         .bullet-graph-card {
-            margin: 6px 0 8px;
+            margin: 24px 0 0;
             padding: 18px 18px 14px;
             border-radius: 22px;
             background: linear-gradient(180deg, rgba(242, 248, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
@@ -1065,12 +1067,6 @@ def inject_css():
             border-radius: 22px;
             padding: 20px 16px 16px;
             box-shadow: 0 12px 24px rgba(8, 32, 58, 0.1);
-            margin-top: 0;
-        }
-        .button-panel-note {
-            color: var(--muted);
-            font-size: 13px;
-            margin: 0 0 16px;
         }
         @keyframes bulletGrow {
             from { width: 0; }
@@ -1494,7 +1490,7 @@ def page_result(dev_mode: bool = False):
     st.markdown(
         "<div class='result-stack'>"
         f"{result_section_html}"
-        "<div class='button-panel result-section'><p class='button-panel-note'>원하시면 다시 응답해 현재 상태를 새롭게 확인하실 수 있습니다.</p>",
+        "<div class='button-panel result-section'>",
         unsafe_allow_html=True,
     )
 
