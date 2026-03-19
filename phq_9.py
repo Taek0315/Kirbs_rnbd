@@ -362,6 +362,33 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
 }
 
+[data-testid="stSelectbox"] label {
+  color: var(--muted-2) !important;
+  font-weight: 700 !important;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  background: #fff !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  min-height: 44px !important;
+  padding: 2px 10px !important;
+  box-shadow: none !important;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] span,
+[data-testid="stSelectbox"] [data-baseweb="select"] input,
+[data-testid="stSelectbox"] [data-baseweb="select"] svg {
+  color: var(--ink) !important;
+  fill: var(--ink) !important;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+}
+
 /* Checkbox */
 [data-testid="stCheckbox"] label,
 [data-testid="stCheckbox"] p,
@@ -1114,9 +1141,30 @@ def render_examinee_page() -> None:
         phone_error = validate_phone(normalized_phone)
         email_error = validate_email(email)
 
-        required_errors = [error for error in [name_error, gender_error, age_error, region_error] if error]
-        if required_errors:
-            st.warning("필수 정보를 모두 올바르게 입력해 주세요: " + " / ".join(required_errors), icon="⚠️")
+        missing_fields = []
+        if not name.strip():
+            missing_fields.append("이름")
+        if not gender.strip():
+            missing_fields.append("성별")
+        if not age.strip():
+            missing_fields.append("연령")
+        if not region.strip():
+            missing_fields.append("거주지역")
+
+        required_errors = []
+        if name_error and name.strip():
+            required_errors.append(name_error)
+        if gender_error and gender.strip():
+            required_errors.append(gender_error)
+        if age_error and age.strip():
+            required_errors.append(age_error)
+        if region_error and region.strip():
+            required_errors.append(region_error)
+
+        if missing_fields:
+            st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
+        for error in required_errors:
+            st.warning(error, icon="⚠️")
         if phone_error:
             st.warning(phone_error, icon="⚠️")
         if email_error:

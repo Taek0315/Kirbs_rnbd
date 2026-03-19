@@ -879,6 +879,41 @@ def inject_css():
             padding: 12px;
         }
 
+        [data-testid="stTextInput"] label,
+        [data-testid="stSelectbox"] label {
+            color: var(--muted) !important;
+            font-weight: 700 !important;
+        }
+
+        [data-testid="stTextInput"] input,
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            background: var(--surface) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 12px !important;
+            min-height: 44px !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stTextInput"] input {
+            padding: 12px 14px !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            padding: 2px 10px !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] span,
+        [data-testid="stSelectbox"] [data-baseweb="select"] input {
+            color: var(--text) !important;
+        }
+
+        [data-testid="stTextInput"] input:focus,
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%) !important;
+        }
+
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
@@ -1088,9 +1123,30 @@ def page_info():
     phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
-    required_errors = [error for error in [name_error, gender_error, age_error, region_error] if error]
-    if required_errors:
-        st.error("필수 정보를 모두 올바르게 입력해 주세요: " + " / ".join(required_errors))
+    missing_fields = []
+    if not name.strip():
+        missing_fields.append("이름")
+    if not gender.strip():
+        missing_fields.append("성별")
+    if not age.strip():
+        missing_fields.append("연령")
+    if not region.strip():
+        missing_fields.append("거주지역")
+
+    required_errors = []
+    if name_error and name.strip():
+        required_errors.append(name_error)
+    if gender_error and gender.strip():
+        required_errors.append(gender_error)
+    if age_error and age.strip():
+        required_errors.append(age_error)
+    if region_error and region.strip():
+        required_errors.append(region_error)
+
+    if missing_fields:
+        st.error(f"{', '.join(missing_fields)}을 입력해주세요.")
+    for error in required_errors:
+        st.error(error)
     if phone_error:
         st.error(phone_error)
     if email_error:
