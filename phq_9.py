@@ -320,7 +320,7 @@ body, p, div, span, li, button, label, input, textarea {
   display: flex !important;
   align-items: center !important;
   background: var(--surface) !important;
-  border: 1px solid var(--border-strong) !important;
+  border: 1.5px solid var(--border-strong) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: none !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
@@ -378,9 +378,9 @@ body, p, div, span, li, button, label, input, textarea {
   appearance: none !important;
   -webkit-appearance: none !important;
   width: 100% !important;
-  min-height: calc(var(--control-height) - 2px) !important;
-  height: calc(var(--control-height) - 2px) !important;
-  line-height: calc(var(--control-height) - 2px) !important;
+  min-height: calc(var(--control-height) - 3px) !important;
+  height: calc(var(--control-height) - 3px) !important;
+  line-height: calc(var(--control-height) - 3px) !important;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
@@ -392,21 +392,58 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: none !important;
 }
 
+[data-testid="stTextInput"] input::placeholder,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] span,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input::placeholder,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input[readonly],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected] {
+[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected],
+[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"] * {
   color: var(--ink) !important;
   opacity: 1 !important;
 }
 
-[data-baseweb="popover"] [role="listbox"],
-[data-baseweb="popover"] [role="option"],
-[data-baseweb="popover"] [role="option"] * {
+[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
+  width: 18px !important;
+  min-width: 18px !important;
+  color: var(--muted) !important;
+  fill: var(--muted) !important;
+}
+
+[data-baseweb="popover"] [role="listbox"] {
+  background: var(--surface) !important;
+  border: 1.5px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  padding: 6px !important;
+}
+
+[data-baseweb="popover"] [role="option"] {
+  background: var(--surface) !important;
+  border-radius: calc(var(--radius-md) - 4px) !important;
   color: var(--ink) !important;
+  opacity: 1 !important;
+}
+
+[data-baseweb="popover"] [role="option"] *,
+[data-baseweb="popover"] [role="option"] [data-testid="stMarkdownContainer"],
+[data-baseweb="popover"] [role="option"] [data-testid="stMarkdownContainer"] * {
+  color: var(--ink) !important;
+  opacity: 1 !important;
+}
+
+[data-baseweb="popover"] [role="option"][aria-selected="true"] {
+  background: #E8F0FE !important;
+}
+
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [role="option"]:focus-visible,
+[data-baseweb="popover"] [role="option"][data-highlighted],
+[data-baseweb="popover"] [role="option"]:has(:hover) {
+  background: var(--surface-3) !important;
 }
 
 [data-testid="stTextInput"] input::before,
