@@ -30,19 +30,11 @@ EXAM_SUBTITLE = "Rosenberg Self-Esteem Scale 기반"
 EXAM_VERSION = "streamlit_1.0"
 
 REGION_OPTIONS = [
-    "서울",
-    "인천",
-    "광주",
-    "대전",
-    "부산",
-    "울산",
-    "경기도",
-    "충청도",
-    "경상도",
-    "전라도",
-    "강원도",
-    "제주도",
-    "기타",
+    "수도권",
+    "중부권(충청, 강원 등)",
+    "호남권",
+    "영남권",
+    "제주도",  
 ]
 
 GENDER_OPTIONS = [
