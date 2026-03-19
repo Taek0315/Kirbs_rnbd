@@ -378,6 +378,15 @@ body, p, div, span, li, button, label, input, textarea {
   align-items: center !important;
 }
 
+[data-testid="stTextInput"] div[data-baseweb="input"] > div > div,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div > span,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div > div:focus-within {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 [data-testid="stTextInput"] input {
   appearance: none !important;
   -webkit-appearance: none !important;
@@ -401,6 +410,8 @@ body, p, div, span, li, button, label, input, textarea {
   border: 0 !important;
   box-shadow: none !important;
   outline: none !important;
+  -webkit-box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
