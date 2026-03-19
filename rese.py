@@ -151,7 +151,7 @@ def result_display_content(level: str, total: int) -> dict[str, str]:
 def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50) -> str:
     score_span = max_score - min_score
     normalized_pct = ((total - min_score) / score_span) * 100 if score_span else 0
-    fill_pct = max(0, min(100, normalized_pct))
+    fill_pct = max(0.0, min(100.0, normalized_pct))
 
     segments = [
         ("낮음", min_score, 29, "band band-low"),
@@ -159,8 +159,8 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         ("높음", 40, max_score, "band band-high"),
     ]
 
-    band_html = []
-    scale_html = []
+    band_html: list[str] = []
+    scale_html: list[str] = []
     for label, start, end, band_class in segments:
         width_pct = ((end - start) / score_span) * 100 if score_span else 0
         left_pct = ((start - min_score) / score_span) * 100 if score_span else 0
@@ -172,43 +172,96 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
             f"<span class='bullet-scale-label' style='left:{center_pct:.2f}%;'>{label}</span>"
         )
 
-    ticks = []
-    for tick in [10, 20, 30, 40, 50]:
+    tick_values = [10, 20, 30, 40, 50]
+    ticks: list[str] = []
+    for tick in tick_values:
         tick_left = ((tick - min_score) / score_span) * 100 if score_span else 0
         ticks.append(
-            f"""
-            <span class='bullet-tick' style='left:{tick_left:.2f}%;'>
-                <span class='bullet-tick-line'></span>
-                <span class='bullet-tick-text'>{tick}</span>
-            </span>
-            """
+            "\n".join(
+                [
+                    f"<span class='bullet-tick' style='left:{tick_left:.2f}%;'>",
+                    "    <span class='bullet-tick-line'></span>",
+                    f"    <span class='bullet-tick-text'>{tick}</span>",
+                    "</span>",
+                ]
+            )
         )
 
+    graph_html = [
+        '<div class="bullet-graph-card">',
+        '    <div class="bullet-graph-head">',
+        '        <div>',
+        '            <div class="bullet-graph-title">점수 흐름</div>',
+        '            <div class="bullet-graph-caption">전체 범위 안에서 현재 위치를 차분하게 보여드립니다</div>',
+        '        </div>',
+        f'        <div class="bullet-graph-chip">총점 {total} / {max_score}</div>',
+        '    </div>',
+        '    <div class="bullet-scale">',
+        f"        {''.join(scale_html)}",
+        '    </div>',
+        '    <div class="bullet-track-wrap">',
+        '        <div class="bullet-track">',
+        f"            {''.join(band_html)}",
+        f'            <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>',
+        f'            <div class="bullet-marker" style="left:{fill_pct:.2f}%;">',
+        '                <span class="bullet-marker-dot"></span>',
+        f'                <span class="bullet-marker-pill">{total}점</span>',
+        '            </div>',
+        '        </div>',
+        '        <div class="bullet-ticks">',
+        f"            {''.join(ticks)}",
+        '        </div>',
+        '    </div>',
+        '</div>',
+    ]
+    return "\n".join(graph_html)
+
+def build_result_section_html(
+    level: str,
+    total: int,
+    subtitle: str,
+    summary: str,
+    interpretation: str,
+    guidance: str,
+    bullet_graph_html: str,
+) -> str:
     return f"""
-    <div class="bullet-graph-card">
-        <div class="bullet-graph-head">
-            <div>
-                <div class="bullet-graph-title">점수 흐름</div>
-                <div class="bullet-graph-caption">전체 범위 안에서 현재 위치를 차분하게 보여드립니다</div>
+    <div class="result-shell">
+        <section class="result-card">
+            <div class="result-topline">
+                <div>
+                    <span class="badge">검사 완료</span>
+                    <h1 class="title-lg">검사 결과</h1>
+                    <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
+                </div>
+                <div class="result-label-chip">✓ {level}</div>
             </div>
-            <div class="bullet-graph-chip">총점 {total} / {max_score}</div>
-        </div>
-        <div class="bullet-scale">
-            {''.join(scale_html)}
-        </div>
-        <div class="bullet-track-wrap">
-            <div class="bullet-track">
-                {''.join(band_html)}
-                <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>
-                <div class="bullet-marker" style="left:{fill_pct:.2f}%;">
-                    <span class="bullet-marker-dot"></span>
-                    <span class="bullet-marker-pill">{total}점</span>
+            <div class="score-hero">
+                <div class="score-stack">
+                    <div class="score-kicker">현재 총점</div>
+                    <p class="score-big">{total}<span class="score-unit">점</span></p>
+                </div>
+                <p class="result-summary">{subtitle}</p>
+            </div>
+            <p class="result-highlight-line">{summary}</p>
+            {bullet_graph_html}
+            <div class="note-box" style="margin-top:16px;">
+                <h2 class="title-md" style="margin-bottom:8px;">결과 해석</h2>
+                <p class="text" style="margin:0;">{interpretation}</p>
+            </div>
+        </section>
+        <section class="support-card">
+            <div class="support-card-head">
+                <div class="support-icon">☘</div>
+                <div>
+                    <h2 class="support-title">차분히 참고해 주세요</h2>
                 </div>
             </div>
-            <div class="bullet-ticks">
-                {''.join(ticks)}
-            </div>
-        </div>
+            <p class="support-copy">{guidance}</p>
+            <p class="support-copy" style="margin-top:10px;">
+                본 결과는 현재 시점의 자기보고를 바탕으로 한 참고 정보이며, 개인의 상태를 종합적으로 판단하는 전문적 평가나 진단을 대신하지 않습니다.
+            </p>
+        </section>
     </div>
     """
 
@@ -1407,52 +1460,23 @@ def page_result(dev_mode: bool = False):
     total = result["total"]
     level = result["level"]
     display_content = result_display_content(level, total)
+    subtitle = display_content["subtitle"]
+    summary = display_content["summary"]
+    interpretation = display_content["interpretation"]
+    guidance = display_content["guidance"]
     score_min = result.get("score_range", {}).get("min", 10)
     score_max = result.get("score_range", {}).get("max", 50)
     bullet_graph_html = build_bullet_graph_html(total, min_score=score_min, max_score=score_max)
-
-    st.markdown(
-        f"""
-        <div class="result-shell">
-            <section class="result-card">
-                <div class="result-topline">
-                    <div>
-                        <span class="badge">검사 완료</span>
-                        <h1 class="title-lg">검사 결과</h1>
-                        <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
-                    </div>
-                    <div class="result-label-chip">✓ {level}</div>
-                </div>
-                <div class="score-hero">
-                    <div class="score-stack">
-                        <div class="score-kicker">현재 총점</div>
-                        <p class="score-big">{total}<span class="score-unit">점</span></p>
-                    </div>
-                    <p class="result-summary">{display_content["subtitle"]}</p>
-                </div>
-                <p class="result-highlight-line">{display_content["summary"]}</p>
-                {bullet_graph_html}
-                <div class="note-box" style="margin-top:16px;">
-                    <h2 class="title-md" style="margin-bottom:8px;">결과 해석</h2>
-                    <p class="text" style="margin:0;">{display_content["interpretation"]}</p>
-                </div>
-            </section>
-            <section class="support-card">
-                <div class="support-card-head">
-                    <div class="support-icon">☘</div>
-                    <div>
-                        <h2 class="support-title">차분히 참고해 주세요</h2>
-                    </div>
-                </div>
-                <p class="support-copy">{display_content["guidance"]}</p>
-                <p class="support-copy" style="margin-top:10px;">
-                    본 결과는 현재 시점의 자기보고를 바탕으로 한 참고 정보이며, 개인의 상태를 종합적으로 판단하는 전문적 평가나 진단을 대신하지 않습니다.
-                </p>
-            </section>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    result_section_html = build_result_section_html(
+        level=level,
+        total=total,
+        subtitle=subtitle,
+        summary=summary,
+        interpretation=interpretation,
+        guidance=guidance,
+        bullet_graph_html=bullet_graph_html,
     )
+    st.markdown(result_section_html, unsafe_allow_html=True)
 
     st.markdown("<div class='button-panel'><p class='button-panel-note'>원하시면 다시 응답해 현재 상태를 새롭게 확인하실 수 있습니다.</p>", unsafe_allow_html=True)
 
