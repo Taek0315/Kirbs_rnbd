@@ -1528,8 +1528,7 @@ def main():
     params = st.query_params
     dev_mode = str(params.get("dev", "0")) == "1"
 
-    st.caption("RSES 기반 자아존중감 자기평가 검사 · Streamlit 웹 인터페이스")
-
+    
     if st.session_state.page == "intro":
         page_intro()
     elif st.session_state.page == "info":
