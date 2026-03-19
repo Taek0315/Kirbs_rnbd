@@ -353,28 +353,60 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
   background: #fff !important;
   color: var(--ink) !important;
-  border: 1.5px solid #2B2F3A !important;
+  border: 2px solid #2F3542 !important;
   border-radius: 12px !important;
+  min-height: 46px !important;
+  height: 46px !important;
   box-shadow: none !important;
+  outline: none !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
-[data-testid="stTextInput"] input {
+[data-testid="stTextInput"] div[data-baseweb="input"],
+[data-testid="stSelectbox"] div[data-baseweb="select"],
+[data-testid="stTextInput"] div[data-baseweb="input"] *,
+[data-testid="stSelectbox"] div[data-baseweb="select"] * {
+  box-shadow: none !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] input {
   background: transparent !important;
   color: var(--ink) !important;
   box-shadow: none !important;
-  padding: 12px 14px !important;
-  height: 44px !important;
+  outline: none !important;
+  border: 0 !important;
+  padding: 0 14px !important;
+  height: 42px !important;
+  min-height: 42px !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-  min-height: 44px !important;
-  padding: 2px 10px !important;
+  padding: 0 14px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div > div {
+  min-height: 42px !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
+  min-height: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
-  border-color: #2B2F3A !important;
+  border-color: #2F3542 !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
@@ -385,7 +417,9 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus),
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus-visible) {
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+  border-width: 2px !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 [data-testid="stSelectbox"] [data-baseweb="select"] span,
