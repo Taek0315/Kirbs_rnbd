@@ -923,7 +923,7 @@ def inject_css():
             position: relative;
             height: 20px;
             border-radius: 999px;
-            background: #e4edf5;
+            background: linear-gradient(90deg, rgba(198, 220, 239, 0.88) 0%, rgba(207, 227, 244, 0.96) 50%, rgba(184, 230, 206, 0.98) 100%);
             overflow: visible;
             box-shadow: inset 0 1px 2px rgba(15, 39, 71, 0.08);
         }
@@ -932,16 +932,13 @@ def inject_css():
             top: 0;
             bottom: 0;
             border-radius: 999px;
-            opacity: 0.95;
+            background: transparent;
+            pointer-events: none;
         }
-        .band-low {
-            background: linear-gradient(90deg, rgba(198, 220, 239, 0.88) 0%, rgba(190, 214, 235, 0.9) 100%);
-        }
-        .band-mid {
-            background: linear-gradient(90deg, rgba(207, 227, 244, 0.96) 0%, rgba(198, 229, 218, 0.92) 100%);
-        }
+        .band-low,
+        .band-mid,
         .band-high {
-            background: linear-gradient(90deg, rgba(198, 234, 215, 0.96) 0%, rgba(184, 230, 206, 0.98) 100%);
+            background: transparent;
         }
         .bullet-fill {
             position: absolute;
@@ -1070,19 +1067,6 @@ def inject_css():
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
             }
-        }
-        .instruction-card {
-            background: rgba(248, 251, 255, 0.96);
-            border: 1px solid rgba(214, 226, 236, 0.95);
-            border-radius: 20px;
-            padding: 18px 20px;
-            margin: 10px 0 18px;
-        }
-        .instruction-card p {
-            margin: 0;
-            color: var(--muted);
-            line-height: 1.7;
-            font-size: 14px;
         }
         .question-card {
             background: var(--card);
@@ -1397,14 +1381,6 @@ def page_survey(dev_mode: bool = False):
     payload, missing = build_payload()
     answered_count = len(st.session_state.answers)
 
-    st.markdown(
-        """
-        <section class="instruction-card">
-            <p>모든 문항을 응답하면 아래에서 결과 보기를 선택할 수 있습니다. 마지막 문항과 버튼 영역이 가려지지 않도록 설문은 일반 문서 흐름으로 배치했습니다.</p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
 
     if len(missing) != 0:
         st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
