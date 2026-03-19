@@ -407,11 +407,65 @@ body, p, div, span, li, button, label, input, textarea {
   margin: 0 !important;
 }
 
-[data-testid="stTextInput"] input {
+[data-testid="stTextInput"] input,
+[data-testid="stTextInput"] input:hover,
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextInput"] input:focus-visible,
+[data-testid="stTextInput"] input:active,
+[data-testid="stTextInput"] div[data-baseweb="input"] input,
+[data-testid="stTextInput"] div[data-baseweb="input"] input:hover,
+[data-testid="stTextInput"] div[data-baseweb="input"] input:focus,
+[data-testid="stTextInput"] div[data-baseweb="input"] input:focus-visible,
+[data-testid="stTextInput"] div[data-baseweb="input"] input:active {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: var(--ink) !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  text-decoration: none !important;
   padding: 0 !important;
   min-height: 42px !important;
   height: 42px !important;
   line-height: 42px !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-webkit-autofill),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-internal-autofill-selected) {
+  background: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+[data-testid="stTextInput"] input:-webkit-autofill,
+[data-testid="stTextInput"] input:-webkit-autofill:hover,
+[data-testid="stTextInput"] input:-webkit-autofill:focus,
+[data-testid="stTextInput"] input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--ink) !important;
+  caret-color: var(--ink) !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  outline: none !important;
+  transition: background-color 9999s ease-out 0s !important;
+}
+
+[data-testid="stTextInput"] input:-internal-autofill-selected {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: var(--ink) !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  outline: none !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
