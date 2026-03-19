@@ -428,57 +428,86 @@ def inject_css():
     st.markdown(
         """
         <style>
-        .page-wrap { max-width: 840px; margin: 0 auto; padding-bottom: 48px; }
+        :root {
+            --navy: #0F2747;
+            --blue: #1E4E79;
+            --surface: #F5FAFF;
+            --surface-soft: #F8FBFF;
+            --card: #FFFFFF;
+            --border: #D6E2EC;
+            --text: #16324F;
+            --muted: #4F6B85;
+            --green: #2E8B57;
+            --green-soft: #EAF7F0;
+        }
+        .stApp {
+            background: linear-gradient(180deg, #0b1f38 0%, var(--navy) 22%, #163b63 100%);
+        }
+        .stApp [data-testid="stAppViewContainer"] {
+            background: transparent;
+        }
+        .stApp [data-testid="stMainBlockContainer"] {
+            max-width: 980px;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+        }
+        .page-wrap {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 0 0 88px;
+        }
         .card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 20px;
-            padding: 22px 22px;
-            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-            margin-bottom: 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 18px 42px rgba(8, 32, 58, 0.18);
+            margin-bottom: 18px;
         }
         .card.soft {
-            background: #f8fafc;
+            background: var(--surface-soft);
         }
         .badge {
             display: inline-block;
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 999px;
-            background: #eef2ff;
-            color: #3730a3;
+            background: rgba(30, 78, 121, 0.1);
+            color: var(--blue);
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 800;
             margin-right: 8px;
             margin-bottom: 8px;
+            border: 1px solid rgba(30, 78, 121, 0.18);
+        }
+        .title-lg, .title-md, .question-title, .result-score {
+            color: var(--text);
         }
         .title-lg {
             font-size: 28px;
             font-weight: 800;
             line-height: 1.3;
             margin: 6px 0 0;
-            color: #111827;
         }
         .title-md {
             font-size: 20px;
             font-weight: 700;
             line-height: 1.35;
             margin: 0 0 8px;
-            color: #111827;
         }
         .text {
             font-size: 15px;
             line-height: 1.7;
-            color: #374151;
+            color: var(--text);
         }
-        .muted {
+        .muted, .footer-note, .progress-label {
             font-size: 13px;
-            line-height: 1.6;
-            color: #6b7280;
+            line-height: 1.7;
+            color: var(--muted);
         }
         .note-box {
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-radius: 16px;
+            background: var(--green-soft);
+            border: 1px solid rgba(46, 139, 87, 0.2);
+            border-radius: 18px;
             padding: 14px 16px;
         }
         .stepper {
@@ -504,45 +533,46 @@ def inject_css():
             justify-content: center;
             font-weight: 700;
             font-size: 14px;
-            border: 1px solid #cbd5e1;
-            background: #fff;
-            color: #64748b;
+            border: 1px solid rgba(214, 226, 236, 0.55);
+            background: rgba(255,255,255,0.1);
+            color: #d8e7f5;
+            backdrop-filter: blur(6px);
         }
         .step-item.active .step-circle {
-            background: #2563eb;
-            border-color: #2563eb;
-            color: #fff;
+            background: #ffffff;
+            border-color: #ffffff;
+            color: var(--blue);
         }
         .step-item.done .step-circle {
-            background: #1e40af;
-            border-color: #1e40af;
+            background: var(--green);
+            border-color: var(--green);
             color: #fff;
         }
         .step-label {
             margin-top: 6px;
             font-size: 12px;
-            color: #64748b;
-            font-weight: 600;
+            color: #d8e7f5;
+            font-weight: 700;
             text-align: center;
         }
         .step-item.active .step-label,
         .step-item.done .step-label {
-            color: #1f2937;
+            color: #ffffff;
         }
         .step-line {
             width: 42px;
             height: 2px;
-            background: #cbd5e1;
+            background: rgba(214, 226, 236, 0.45);
             border-radius: 999px;
         }
         .step-line.done {
-            background: #1e40af;
+            background: var(--green);
         }
         .question-title {
             font-size: 18px;
             font-weight: 700;
             line-height: 1.55;
-            color: #111827;
+            margin-bottom: 12px;
         }
         .progress-row {
             display: flex;
@@ -551,47 +581,130 @@ def inject_css():
             margin-top: 12px;
             margin-bottom: 8px;
         }
-        .progress-label {
-            font-size: 13px;
-            color: #475569;
-            font-weight: 600;
-        }
         .meter {
             width: 100%;
             height: 10px;
-            background: #e5e7eb;
+            background: #dbe8f4;
             border-radius: 999px;
             overflow: hidden;
         }
         .meter > span {
             display: block;
             height: 100%;
-            background: #2563eb;
+            background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
             border-radius: 999px;
-        }
-        .result-score {
-            font-size: 38px;
-            font-weight: 800;
-            line-height: 1.1;
-            color: #111827;
-            margin: 0;
         }
         .result-level {
             font-size: 18px;
             font-weight: 700;
-            color: #1d4ed8;
+            color: var(--green);
             margin: 6px 0 0;
         }
-        .footer-note {
-            font-size: 13px;
-            color: #6b7280;
+        .instruction-card {
+            background: rgba(248, 251, 255, 0.96);
+            border: 1px solid rgba(214, 226, 236, 0.95);
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin: 10px 0 18px;
+        }
+        .instruction-card p {
+            margin: 0;
+            color: var(--muted);
             line-height: 1.7;
+            font-size: 14px;
+        }
+        .question-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 22px 22px 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
+        }
+        .survey-actions {
+            padding-top: 8px;
+            margin-top: 8px;
+            margin-bottom: 18px;
         }
         .survey-payload-bridge {
             display: none;
         }
         div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
             display: none;
+        }
+        div[data-testid="stRadio"] > label {
+            display: none;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            margin: 0;
+            min-height: 68px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--surface);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+            border-color: rgba(30, 78, 121, 0.65);
+            background: #eef6ff;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 39, 71, 0.08);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
+            border-color: rgba(46, 139, 87, 0.72);
+            background: var(--green-soft);
+            box-shadow: 0 0 0 1px rgba(46, 139, 87, 0.16);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label p {
+            color: var(--text);
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        div[data-testid="stRadio"] input[type="radio"] {
+            accent-color: var(--green);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p {
+            color: var(--green);
+        }
+        div[data-testid="stButton"] > button {
+            border-radius: 14px;
+            min-height: 46px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: var(--text);
+            font-weight: 700;
+        }
+        div[data-testid="stButton"] > button[kind="primary"] {
+            background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 14px 24px rgba(30, 78, 121, 0.2);
+        }
+        div[data-testid="stButton"] > button:hover {
+            border-color: rgba(30, 78, 121, 0.6);
+            color: var(--blue);
+        }
+        div[data-testid="stButton"] > button[kind="primary"]:hover {
+            color: #ffffff;
+            filter: brightness(1.03);
+        }
+        @media (max-width: 900px) {
+            div[data-testid="stRadio"] div[role="radiogroup"] {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .page-wrap {
+                padding-bottom: 96px;
+            }
         }
         </style>
         """,
@@ -781,188 +894,57 @@ def page_survey(dev_mode: bool = False):
         unsafe_allow_html=True,
     )
 
-    initial_answers_json = serialize_answers_payload()
-    questions_json = json.dumps(QUESTIONS, ensure_ascii=False)
-    labels_json = json.dumps(SCALE_TEXT_LABELS, ensure_ascii=False)
+    for i, question in enumerate(QUESTIONS, start=1):
+        key = f"q{i}"
+        selected_score = st.session_state.answers.get(key)
+        radio_key = f"{key}_radio"
 
-    st.text_area(
-        "survey_payload_bridge",
-        value=initial_answers_json,
-        key="survey_payload_bridge",
-        height=1,
-        label_visibility="collapsed",
+        if radio_key not in st.session_state:
+            st.session_state[radio_key] = label_from_score(selected_score)
+
+        st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div>", unsafe_allow_html=True)
+        selected_label = st.radio(
+            f"{i}. {question}",
+            options=SCALE_LABELS,
+            index=(selected_score - 1) if selected_score in SCALE_SCORES else None,
+            key=radio_key,
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+        st.markdown("</section>", unsafe_allow_html=True)
+
+        score = score_from_label(selected_label)
+        if score is None:
+            st.session_state.answers.pop(key, None)
+        else:
+            st.session_state.answers[key] = score
+
+    payload, missing = build_payload()
+    answered_count = len(st.session_state.answers)
+
+    st.markdown(
+        """
+        <section class="instruction-card">
+            <p>모든 문항을 응답하면 아래에서 결과 보기를 선택할 수 있습니다. 마지막 문항과 버튼 영역이 가려지지 않도록 설문은 일반 문서 흐름으로 배치했습니다.</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
     )
-
-    component_html = """
-    <!DOCTYPE html>
-    <html lang="ko">
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: transparent; }
-          .survey-root { display: grid; gap: 10px; }
-          .survey-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 14px 16px;
-            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-            margin-bottom: 10px;
-          }
-          .question-title {
-            font-size: 16px;
-            font-weight: 700;
-            line-height: 1.45;
-            color: #111827;
-            margin-bottom: 10px;
-          }
-          .choice-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 8px;
-            align-items: stretch;
-          }
-          .choice-btn {
-            width: 100%;
-            min-height: 56px;
-            height: 100%;
-            padding: 10px 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            background: rgba(148, 163, 184, 0.08);
-            color: #334155;
-            font-size: 0.84rem;
-            font-weight: 700;
-            line-height: 1.3;
-            white-space: normal;
-            word-break: keep-all;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: none;
-            transition: all 0.16s ease;
-            cursor: pointer;
-          }
-          .choice-btn:hover { border-color: rgba(96, 165, 250, 0.8); background: rgba(96, 165, 250, 0.14); transform: translateY(-1px); }
-          .choice-btn.selected { border-color: rgba(59, 130, 246, 0.92); background: rgba(59, 130, 246, 0.16); color: #1d4ed8; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }
-          @media (max-width: 900px) {
-            .survey-card { padding: 12px 14px; }
-            .choice-grid { gap: 6px; }
-            .choice-btn { min-height: 52px; padding: 8px 6px; font-size: 0.78rem; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="survey-root">
-          <div id="questions"></div>
-        </div>
-        <script>
-          const questions = __QUESTIONS_JSON__;
-          const labels = __LABELS_JSON__;
-          const scores = [1, 2, 3, 4, 5];
-          const state = __INITIAL_ANSWERS_JSON__;
-
-          const root = document.getElementById('questions');
-          function syncToStreamlit() {
-            const parentDoc = window.parent.document;
-            const payloadField = parentDoc.querySelector('textarea[aria-label="survey_payload_bridge"]');
-            if (!payloadField) return;
-            const payload = JSON.stringify(state);
-            if (payloadField.value === payload) return;
-            const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value')?.set;
-            if (nativeSetter) {
-              nativeSetter.call(payloadField, payload);
-            } else {
-              payloadField.value = payload;
-            }
-            payloadField.dispatchEvent(new Event('input', { bubbles: true }));
-            payloadField.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-
-          function updateProgress() {
-            const answered = Object.keys(state).length;
-            const total = questions.length;
-            void answered;
-            void total;
-          }
-
-          function render() {
-            root.innerHTML = '';
-            questions.forEach((question, index) => {
-              const key = `q${index + 1}`;
-              const card = document.createElement('section');
-              card.className = 'survey-card';
-
-              const title = document.createElement('div');
-              title.className = 'question-title';
-              title.textContent = `${index + 1}. ${question}`;
-              card.appendChild(title);
-
-              const grid = document.createElement('div');
-              grid.className = 'choice-grid';
-
-              labels.forEach((label, labelIndex) => {
-                const score = scores[labelIndex];
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'choice-btn';
-                if (state[key] === score) button.classList.add('selected');
-                button.textContent = label;
-                button.addEventListener('click', () => {
-                  state[key] = score;
-                  render();
-                  updateProgress();
-                  syncToStreamlit();
-                });
-                grid.appendChild(button);
-              });
-
-              card.appendChild(grid);
-              root.appendChild(card);
-            });
-          }
-
-          render();
-          updateProgress();
-          syncToStreamlit();
-        </script>
-      </body>
-    </html>
-    """
-    component_html = (
-        component_html
-        .replace("__QUESTIONS_JSON__", questions_json)
-        .replace("__LABELS_JSON__", labels_json)
-        .replace("__INITIAL_ANSWERS_JSON__", initial_answers_json)
-    )
-    components.html(component_html, height=980, scrolling=False)
 
     if len(missing) != 0:
         st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
 
+    st.markdown("<div class='survey-actions'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
     prev_clicked = c1.button("이전", use_container_width=True)
     submit_clicked = c2.button("결과 보기", type="primary", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if prev_clicked:
-        payload_text = st.session_state.get("survey_payload_bridge", initial_answers_json)
-        try:
-            parsed_answers = json.loads(payload_text or "{}")
-        except json.JSONDecodeError:
-            parsed_answers = {}
-        st.session_state.answers = normalize_answers_dict(parsed_answers)
         st.session_state.page = "info"
         st.rerun()
 
     if submit_clicked:
-        payload_text = st.session_state.get("survey_payload_bridge", initial_answers_json)
-        try:
-            parsed_answers = json.loads(payload_text or "{}")
-        except json.JSONDecodeError:
-            parsed_answers = {}
-
-        st.session_state.answers = normalize_answers_dict(parsed_answers)
         payload, missing = build_payload()
         all_done = len(missing) == 0
 
