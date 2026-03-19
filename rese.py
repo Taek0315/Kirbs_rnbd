@@ -161,12 +161,7 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
             f"<span class='{band_class}' style='left:{left_pct:.2f}%; width:{width_pct:.2f}%;'></span>"
         )
         scale_html.append(
-            (
-                "<div class='bullet-scale-point' style='left:{center_pct:.2f}%;'>"
-                "<span class='bullet-scale-label'>{label}</span>"
-                "<span class='bullet-scale-range'>{start}–{end}점</span>"
-                "</div>"
-            ).format(center_pct=center_pct, label=label, start=start, end=end)
+            f"<span class='bullet-scale-label' style='left:{center_pct:.2f}%;'>{label}</span>"
         )
 
     tick_values = [10, 20, 30, 40, 50]
@@ -184,13 +179,12 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
             )
         )
 
-
     graph_html = [
         '<div class="bullet-graph-card">',
         '    <div class="bullet-graph-head">',
         '        <div>',
-        '            <div class="bullet-graph-title">점수 분포 위치</div>',
-        '            <div class="bullet-graph-caption">전체 범위 안에서 현재 점수가 어느 구간에 놓여 있는지 차분하게 보여드립니다.</div>',
+        '            <div class="bullet-graph-title">점수 흐름</div>',
+        '            <div class="bullet-graph-caption">전체 범위 안에서 현재 위치를 차분하게 보여드립니다</div>',
         '        </div>',
         f'        <div class="bullet-graph-chip">총점 {total} / {max_score}</div>',
         '    </div>',
@@ -198,29 +192,21 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         f"        {''.join(scale_html)}",
         '    </div>',
         '    <div class="bullet-track-wrap">',
-        '        <div class="bullet-track-shell">',
-        '            <div class="bullet-track">',
-        f"                {''.join(band_html)}",
-        f'                <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>',
-        f'                <div class="bullet-marker" style="left:{fill_pct:.2f}%">',
-        '                    <span class="bullet-marker-dot"></span>',
-        f'                    <span class="bullet-marker-pill">{total}점</span>',
-        '                </div>',
+        '        <div class="bullet-track">',
+        f"            {''.join(band_html)}",
+        f'            <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>',
+        f'            <div class="bullet-marker" style="left:{fill_pct:.2f}%;">',
+        '                <span class="bullet-marker-dot"></span>',
+        f'                <span class="bullet-marker-pill">{total}점</span>',
         '            </div>',
         '        </div>',
         '        <div class="bullet-ticks">',
         f"            {''.join(ticks)}",
         '        </div>',
         '    </div>',
-        '    <div class="bullet-graph-legend">',
-        '        <span><em class="legend-dot legend-low"></em>낮은 범위</span>',
-        '        <span><em class="legend-dot legend-mid"></em>보통 범위</span>',
-        '        <span><em class="legend-dot legend-high"></em>높은 범위</span>',
-        '    </div>',
         '</div>',
     ]
     return "\n".join(graph_html)
-
 
 def build_result_section_html(
     level: str,
@@ -233,48 +219,33 @@ def build_result_section_html(
 ) -> str:
     return f"""
     <section class="result-card result-section">
-        <div class="result-shell">
-            <div class="result-topline">
-                <div>
-                    <span class="badge badge-strong">검사 완료</span>
-                    <h1 class="title-lg">검사 결과</h1>
-                    <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
-                </div>
-                <div class="result-label-chip">✓ {level}</div>
+        <div class="result-topline">
+            <div>
+                <span class="badge">검사 완료</span>
+                <h1 class="title-lg">검사 결과</h1>
+                <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
             </div>
-            <div class="score-hero">
-                <div class="score-stack">
-                    <div class="score-kicker">현재 총점</div>
-                    <p class="score-big">{total}<span class="score-unit">점</span></p>
-                    <p class="score-caption">10점부터 50점 사이 범위 안에서 산출된 결과입니다.</p>
-                </div>
-                <div class="result-summary-panel">
-                    <p class="result-summary">{subtitle}</p>
-                    <p class="result-summary-support">지금의 결과는 현재 시점의 자기보고를 바탕으로 해석한 참고용 안내입니다.</p>
-                </div>
+            <div class="result-label-chip">✓ {level}</div>
+        </div>
+        <div class="score-hero">
+            <div class="score-stack">
+                <div class="score-kicker">현재 총점</div>
+                <p class="score-big">{total}<span class="score-unit">점</span></p>
             </div>
-            <p class="result-highlight-line">{summary}</p>
-            {bullet_graph_html}
-            <div class="result-info-grid">
-                <div class="info-panel info-panel-accent">
-                    <div class="panel-kicker">결과 해석</div>
-                    <h2 class="title-md result-detail-title">현재 자기 인식을 이렇게 읽을 수 있어요</h2>
-                    <p class="text result-detail-copy">{interpretation}</p>
-                </div>
-                <div class="info-panel info-panel-soft">
-                    <div class="panel-kicker">안내</div>
-                    <h2 class="title-md result-detail-title">점수는 상태를 단정하지 않습니다</h2>
-                    <p class="text result-detail-copy">검사 결과는 현재의 경향을 이해하기 위한 참고 자료이며, 삶의 맥락과 최근 경험에 따라 다르게 느껴질 수 있습니다.</p>
-                </div>
-            </div>
+            <p class="result-summary">{subtitle}</p>
+        </div>
+        <p class="result-highlight-line">{summary}</p>
+        {bullet_graph_html}
+        <div class="note-box result-detail-box">
+            <h2 class="title-md result-detail-title">결과 해석</h2>
+            <p class="text result-detail-copy">{interpretation}</p>
         </div>
     </section>
     <section class="support-card result-section">
         <div class="support-card-head">
             <div class="support-icon">☘</div>
             <div>
-                <div class="panel-kicker">차분한 지원 안내</div>
-                <h2 class="support-title">지금의 마음을 돌보는 데 참고해 주세요</h2>
+                <h2 class="support-title">차분히 참고해 주세요</h2>
             </div>
         </div>
         <p class="support-copy">{guidance}</p>
@@ -611,498 +582,609 @@ def inject_css():
         """
         <style>
         :root {
-            --navy-900: #0d2440;
-            --navy-800: #143253;
-            --blue-700: #1f4f7b;
-            --blue-600: #2d628f;
-            --blue-100: #edf4fb;
-            --surface: #f7fbff;
-            --surface-soft: #f2f7fc;
-            --card: rgba(255, 255, 255, 0.96);
-            --card-strong: #ffffff;
-            --border: rgba(207, 221, 234, 0.92);
-            --border-strong: rgba(166, 191, 214, 0.85);
-            --text: #16324f;
-            --muted: #58718a;
-            --green-700: #2c8657;
-            --green-100: #ebf6ef;
-            --green-050: #f5fbf7;
-            --shadow-soft: 0 18px 44px rgba(9, 33, 60, 0.14);
-            --shadow-card: 0 24px 58px rgba(7, 28, 50, 0.18);
-            --radius-lg: 28px;
-            --radius-md: 22px;
-            --radius-sm: 18px;
-            --space-1: 8px;
-            --space-2: 12px;
-            --space-3: 16px;
-            --space-4: 24px;
-            --space-5: 28px;
+            --navy: #0F2747;
+            --blue: #1E4E79;
+            --surface: #F5FAFF;
+            --surface-soft: #F8FBFF;
+            --card: #FFFFFF;
+            --border: #D6E2EC;
+            --text: #16324F;
+            --muted: #4F6B85;
+            --green: #2E8B57;
+            --green-soft: #EAF7F0;
         }
         .stApp {
-            background:
-                radial-gradient(circle at top, rgba(72, 125, 178, 0.18), transparent 28%),
-                linear-gradient(180deg, #091a2f 0%, var(--navy-900) 18%, var(--navy-800) 52%, #183d62 100%);
-            color: var(--text);
+            background: linear-gradient(180deg, #0b1f38 0%, var(--navy) 22%, #163b63 100%);
         }
-        .stApp [data-testid="stAppViewContainer"],
-        .stApp [data-testid="stHeader"] {
+        .stApp [data-testid="stAppViewContainer"] {
             background: transparent;
         }
         .stApp [data-testid="stMainBlockContainer"] {
-            max-width: 1020px;
-            padding-top: 2.2rem;
-            padding-bottom: 3.5rem;
+            max-width: 980px;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
         }
         .page-wrap {
-            max-width: 940px;
+            max-width: 920px;
             margin: 0 auto;
-            padding: 0 0 96px;
+            padding: 0 0 88px;
         }
-        .section-stack {
-            display: grid;
-            gap: var(--space-4);
-            margin-top: var(--space-4);
-        }
-        .hero-card,
-        .card,
-        .question-card,
-        .result-card,
-        .support-card,
-        .instruction-card,
-        .form-card,
-        .progress-card {
-            position: relative;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
+        .card {
             background: var(--card);
-            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 18px 42px rgba(8, 32, 58, 0.18);
+            margin-bottom: 18px;
         }
-        .hero-card,
-        .card,
-        .result-card,
-        .support-card,
-        .form-card,
-        .progress-card {
-            padding: 26px 28px;
-        }
-        .card.soft,
-        .instruction-card,
-        .progress-card,
-        .support-card,
-        .info-panel-soft {
-            background: linear-gradient(180deg, rgba(243, 248, 253, 0.96) 0%, rgba(255, 255, 255, 0.96) 100%);
-        }
-        .hero-card {
-            overflow: hidden;
-            background:
-                radial-gradient(circle at top right, rgba(46, 134, 87, 0.12), transparent 26%),
-                linear-gradient(180deg, rgba(246, 251, 255, 0.98) 0%, rgba(255, 255, 255, 1) 42%, rgba(244, 249, 255, 1) 100%);
-            box-shadow: var(--shadow-card);
-        }
-        .hero-card::after,
-        .result-card::after {
-            content: "";
-            position: absolute;
-            inset: auto -40px -70px auto;
-            width: 240px;
-            height: 240px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(31, 79, 123, 0.11), transparent 68%);
-            pointer-events: none;
+        .card.soft {
+            background: var(--surface-soft);
         }
         .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            min-height: 32px;
-            padding: 0 12px;
-            margin: 0 8px 8px 0;
+            display: inline-block;
+            padding: 6px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(31, 79, 123, 0.16);
-            background: rgba(237, 244, 251, 0.92);
-            color: var(--blue-700);
+            background: rgba(30, 78, 121, 0.1);
+            color: var(--blue);
             font-size: 12px;
             font-weight: 800;
-            letter-spacing: 0.01em;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(30, 78, 121, 0.18);
         }
-        .badge-strong {
-            background: rgba(31, 79, 123, 0.08);
-            color: var(--navy-900);
-        }
-        .eyebrow,
-        .panel-kicker,
-        .score-kicker,
-        .field-group-title,
-        .result-microcopy {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            color: var(--green-700);
-        }
-        .title-lg,
-        .title-md,
-        .question-title,
-        .support-title {
+        .title-lg, .title-md, .question-title, .result-score {
             color: var(--text);
-            margin: 0;
         }
         .title-lg {
-            font-size: clamp(30px, 5vw, 38px);
-            line-height: 1.22;
+            font-size: 28px;
             font-weight: 800;
-            letter-spacing: -0.025em;
-            margin-top: 8px;
+            line-height: 1.3;
+            margin: 6px 0 0;
         }
         .title-md {
-            font-size: 21px;
+            font-size: 20px;
+            font-weight: 700;
             line-height: 1.35;
-            font-weight: 750;
+            margin: 0 0 8px;
         }
-        .text,
-        .support-copy,
-        .result-subcopy,
-        .result-summary,
-        .score-caption {
+        .text {
             font-size: 15px;
-            line-height: 1.78;
+            line-height: 1.7;
             color: var(--text);
         }
-        .muted,
-        .footer-note,
-        .progress-label,
-        .helper-text,
-        .bullet-graph-caption,
-        .result-summary-support {
+        .muted, .footer-note, .progress-label {
             font-size: 13px;
             line-height: 1.7;
             color: var(--muted);
         }
-        .hero-grid,
-        .consent-grid,
-        .survey-top-grid,
-        .result-info-grid {
-            display: grid;
-            gap: var(--space-4);
+        .note-box {
+            background: var(--green-soft);
+            border: 1px solid rgba(46, 139, 87, 0.2);
+            border-radius: 18px;
+            padding: 14px 16px;
         }
-        .hero-grid {
-            grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.95fr);
-            align-items: start;
-            margin-top: 14px;
+        .result-detail-box {
+            margin-top: 24px;
         }
-        .hero-copy { display: grid; gap: var(--space-3); }
-        .hero-aside,
-        .consent-panel,
-        .info-panel,
-        .progress-stat,
-        .field-group,
-        .question-meta {
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            background: linear-gradient(180deg, rgba(247, 251, 255, 0.96) 0%, rgba(255,255,255,0.98) 100%);
-            padding: 18px 20px;
+        .result-detail-title {
+            margin-bottom: 8px;
         }
-        .hero-aside { display: grid; gap: 14px; }
-        .hero-stat { display: grid; gap: 4px; }
-        .hero-stat strong { font-size: 18px; color: var(--navy-900); }
-        .hero-stat span { font-size: 13px; color: var(--muted); }
-        .hero-list,
-        .consent-list,
-        .support-list { margin: 0; padding-left: 18px; color: var(--muted); }
-        .hero-list li,
-        .consent-list li,
-        .support-list li { margin: 0 0 8px; line-height: 1.7; }
+        .result-detail-copy {
+            margin: 0;
+        }
         .stepper {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            margin: 8px 0 24px;
-            padding: 14px 18px;
-            border: 1px solid rgba(213, 227, 240, 0.14);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(10px);
+            gap: 8px;
+            margin: 10px 0 22px;
             flex-wrap: wrap;
         }
-        .step-item { display: flex; flex-direction: column; align-items: center; min-width: 76px; }
-        .step-circle {
-            width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 800; color: #d7e6f5; background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(216, 230, 242, 0.36);
-        }
-        .step-item.active .step-circle { background: #fff; color: var(--blue-700); border-color: #fff; }
-        .step-item.done .step-circle { background: var(--green-700); color: #fff; border-color: rgba(46,134,87,0.82); }
-        .step-label { margin-top: 6px; font-size: 12px; font-weight: 700; color: #d7e6f5; }
-        .step-line { width: 44px; height: 2px; border-radius: 999px; background: rgba(216, 230, 242, 0.3); }
-        .step-line.done { background: rgba(121, 214, 165, 0.95); }
-        .consent-grid { grid-template-columns: minmax(0, 1.3fr) minmax(250px, 0.9fr); }
-        .consent-panel { display: grid; gap: 14px; }
-        .consent-check-wrap {
-            margin-top: var(--space-3);
-            padding: 18px 20px;
-            border-radius: var(--radius-md);
-            border: 1px solid rgba(46, 134, 87, 0.18);
-            background: linear-gradient(180deg, rgba(245, 251, 247, 0.94) 0%, rgba(255,255,255,0.98) 100%);
-        }
-        .action-row { margin-top: var(--space-4); }
-        .form-card { display: grid; gap: var(--space-4); }
-        .form-grid { display: grid; gap: var(--space-4); }
-        .field-group { display: grid; gap: var(--space-3); }
-        .field-group-title { color: var(--blue-700); }
-        .field-group-copy { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
-        .field-note {
-            margin-top: 2px;
-            font-size: 12px;
-            color: var(--muted);
-        }
-        .validation-panel {
-            margin-top: var(--space-3);
-            padding: 14px 16px;
-            border-radius: var(--radius-sm);
-            border: 1px solid rgba(31, 79, 123, 0.12);
-            background: rgba(247, 251, 255, 0.88);
-        }
-        .progress-card { overflow: hidden; }
-        .survey-top-grid { grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.95fr); }
-        .progress-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; margin-bottom: 10px; }
-        .meter { width: 100%; height: 10px; border-radius: 999px; overflow: hidden; background: #dfeaf4; }
-        .meter > span {
-            display: block; height: 100%; border-radius: 999px;
-            background: linear-gradient(90deg, var(--blue-700) 0%, var(--green-700) 100%);
-            box-shadow: 0 8px 18px rgba(45, 98, 143, 0.24);
-        }
-        .progress-stat { display: grid; gap: 12px; align-content: start; }
-        .progress-stat strong { font-size: 24px; color: var(--navy-900); }
-        .instruction-card { padding: 20px 22px; margin-top: var(--space-4); }
-        .instruction-card p { margin: 0; }
-        .question-card {
-            padding: 22px 22px 18px;
-            margin-top: 0;
-            background: var(--card-strong);
-            border-radius: var(--radius-md);
-        }
-        .question-head {
+        .step-item {
             display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            align-items: flex-start;
-            margin-bottom: 16px;
+            flex-direction: column;
+            align-items: center;
+            min-width: 72px;
+        }
+        .step-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1px solid rgba(214, 226, 236, 0.55);
+            background: rgba(255,255,255,0.1);
+            color: #d8e7f5;
+            backdrop-filter: blur(6px);
+        }
+        .step-item.active .step-circle {
+            background: #ffffff;
+            border-color: #ffffff;
+            color: var(--blue);
+        }
+        .step-item.done .step-circle {
+            background: var(--green);
+            border-color: var(--green);
+            color: #fff;
+        }
+        .step-label {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #d8e7f5;
+            font-weight: 700;
+            text-align: center;
+        }
+        .step-item.active .step-label,
+        .step-item.done .step-label {
+            color: #ffffff;
+        }
+        .step-line {
+            width: 42px;
+            height: 2px;
+            background: rgba(214, 226, 236, 0.45);
+            border-radius: 999px;
+        }
+        .step-line.done {
+            background: var(--green);
         }
         .question-title {
             font-size: 18px;
-            line-height: 1.6;
-            font-weight: 750;
-            flex: 1;
+            font-weight: 700;
+            line-height: 1.55;
+            margin-bottom: 12px;
         }
-        .question-number {
-            min-width: 38px;
-            height: 38px;
+        .progress-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+        }
+        .meter {
+            width: 100%;
+            height: 10px;
+            background: #dbe8f4;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .meter > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+            border-radius: 999px;
+        }
+        .result-level {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--green);
+            margin: 6px 0 0;
+        }
+        .result-stack {
+            display: flex;
+            flex-direction: column;
+        }
+        .result-section {
+            margin-bottom: 24px;
+        }
+        .result-stack > .result-section:last-child {
+            margin-bottom: 0;
+        }
+        .result-card {
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at top right, rgba(46, 139, 87, 0.12), transparent 28%),
+                linear-gradient(180deg, rgba(245, 250, 255, 0.98) 0%, rgba(255, 255, 255, 1) 38%, rgba(247, 251, 255, 1) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.9);
+            border-radius: 28px;
+            padding: 26px;
+            box-shadow: 0 22px 48px rgba(8, 32, 58, 0.2);
+        }
+        .result-card::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -80px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(30, 78, 121, 0.08), transparent 70%);
+            pointer-events: none;
+        }
+        .result-topline {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .result-subcopy {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+            margin: 8px 0 0;
+        }
+        .score-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: end;
+            margin-top: 18px;
+            margin-bottom: 18px;
+        }
+        .score-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .score-kicker {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--green);
+            letter-spacing: 0.01em;
+        }
+        .score-big {
+            font-size: clamp(52px, 9vw, 78px);
+            line-height: 0.95;
+            font-weight: 900;
+            color: var(--navy);
+            letter-spacing: -0.04em;
+            margin: 0;
+        }
+        .score-unit {
+            font-size: 24px;
+            color: var(--blue);
+            font-weight: 800;
+            margin-left: 6px;
+        }
+        .result-label-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(46, 139, 87, 0.1);
+            border: 1px solid rgba(46, 139, 87, 0.18);
+            color: var(--green);
+            font-size: 14px;
+            font-weight: 800;
+        }
+        .result-summary {
+            font-size: 16px;
+            line-height: 1.75;
+            color: var(--text);
+            margin: 0;
+        }
+        .result-highlight-line {
+            margin: 24px 0 0;
+            padding-left: 14px;
+            border-left: 4px solid rgba(46, 139, 87, 0.65);
+            color: #245f49;
+            font-size: 15px;
+            line-height: 1.75;
+            font-weight: 700;
+        }
+        .bullet-graph-card {
+            margin: 24px 0 0;
+            padding: 18px 18px 14px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(242, 248, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.95);
+        }
+        .bullet-graph-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .bullet-graph-title {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+        .bullet-graph-caption {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .bullet-graph-chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(15, 39, 71, 0.06);
+            color: var(--blue);
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .bullet-scale {
+            position: relative;
+            height: 18px;
+            margin-bottom: 8px;
+        }
+        .bullet-scale-label {
+            position: absolute;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .bullet-track-wrap {
+            position: relative;
+            padding-top: 26px;
+        }
+        .bullet-track {
+            position: relative;
+            height: 20px;
+            border-radius: 999px;
+            background: #e4edf5;
+            overflow: visible;
+            box-shadow: inset 0 1px 2px rgba(15, 39, 71, 0.08);
+        }
+        .band {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 999px;
+            opacity: 0.95;
+        }
+        .band-low {
+            background: linear-gradient(90deg, rgba(198, 220, 239, 0.88) 0%, rgba(190, 214, 235, 0.9) 100%);
+        }
+        .band-mid {
+            background: linear-gradient(90deg, rgba(207, 227, 244, 0.96) 0%, rgba(198, 229, 218, 0.92) 100%);
+        }
+        .band-high {
+            background: linear-gradient(90deg, rgba(198, 234, 215, 0.96) 0%, rgba(184, 230, 206, 0.98) 100%);
+        }
+        .bullet-fill {
+            position: absolute;
+            inset: 3px auto 3px 3px;
+            width: 0;
+            max-width: calc(100% - 6px);
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(30, 78, 121, 0.9) 0%, rgba(46, 139, 87, 0.95) 100%);
+            box-shadow: 0 10px 18px rgba(46, 139, 87, 0.18);
+            animation: bulletGrow 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        }
+        .bullet-marker {
+            position: absolute;
+            top: -20px;
+            transform: translateX(-50%);
+            animation: markerAppear 0.7s ease-out forwards;
+        }
+        .bullet-marker::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 26px;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 34px;
+            background: rgba(15, 39, 71, 0.28);
+        }
+        .bullet-marker-dot {
+            display: block;
+            width: 14px;
+            height: 14px;
+            margin: 0 auto 6px;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 4px solid var(--green);
+            box-shadow: 0 8px 14px rgba(15, 39, 71, 0.14);
+        }
+        .bullet-marker-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--navy);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .bullet-ticks {
+            position: relative;
+            height: 26px;
+            margin-top: 10px;
+        }
+        .bullet-tick {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        .bullet-tick-line {
+            display: block;
+            width: 1px;
+            height: 8px;
+            background: rgba(15, 39, 71, 0.18);
+            margin: 0 auto 4px;
+        }
+        .bullet-tick-text {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .support-card {
+            background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(242, 248, 255, 0.96) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.96);
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: 0 12px 28px rgba(8, 32, 58, 0.12);
+        }
+        .support-card-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .support-icon {
+            width: 42px;
+            height: 42px;
             border-radius: 14px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: var(--blue-100);
-            color: var(--blue-700);
-            font-size: 14px;
-            font-weight: 800;
+            background: linear-gradient(135deg, rgba(30, 78, 121, 0.12) 0%, rgba(46, 139, 87, 0.16) 100%);
+            color: var(--green);
+            font-size: 20px;
         }
-        .survey-actions,
-        .result-actions { margin-top: var(--space-4); }
-        .survey-helper { margin-top: 8px; }
-        .result-stack { display: grid; gap: var(--space-4); }
-        .result-section { margin: 0; }
-        .result-card {
-            overflow: hidden;
-            background:
-                radial-gradient(circle at top right, rgba(46, 134, 87, 0.1), transparent 26%),
-                linear-gradient(180deg, rgba(247, 251, 255, 0.99) 0%, rgba(255, 255, 255, 1) 38%, rgba(244, 249, 255, 1) 100%);
-            box-shadow: var(--shadow-card);
-        }
-        .result-shell { display: grid; gap: var(--space-4); }
-        .result-topline {
-            display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-        }
-        .result-subcopy { max-width: 620px; margin-top: 10px; }
-        .result-label-chip {
-            display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: 999px;
-            background: rgba(44, 134, 87, 0.1); color: var(--green-700); border: 1px solid rgba(44, 134, 87, 0.16); font-size: 14px; font-weight: 800;
-        }
-        .score-hero {
-            display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr); gap: var(--space-4); align-items: stretch;
-        }
-        .score-stack,
-        .result-summary-panel {
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            background: rgba(255,255,255,0.86);
-            padding: 22px 22px;
-        }
-        .score-big {
-            font-size: clamp(58px, 10vw, 84px); line-height: 0.94; font-weight: 900; letter-spacing: -0.05em; color: var(--navy-900); margin: 10px 0 8px;
-        }
-        .score-unit { font-size: 24px; font-weight: 800; color: var(--blue-700); margin-left: 8px; }
-        .score-caption { margin: 0; color: var(--muted); }
-        .result-summary { margin: 0; font-weight: 700; }
-        .result-summary-support { margin: 12px 0 0; }
-        .result-highlight-line {
-            margin: 0; padding: 18px 20px; border-left: 4px solid rgba(44, 134, 87, 0.8);
-            background: linear-gradient(90deg, rgba(245, 251, 247, 0.94) 0%, rgba(255,255,255,0.96) 100%);
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: #255241; font-weight: 700; line-height: 1.75;
-        }
-        .bullet-graph-card {
-            padding: 22px; border-radius: var(--radius-md);
-            background: linear-gradient(180deg, rgba(241, 247, 253, 0.98) 0%, rgba(255,255,255,0.98) 100%);
-            border: 1px solid var(--border);
-        }
-        .bullet-graph-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
-        .bullet-graph-title { font-size: 17px; font-weight: 800; color: var(--text); }
-        .bullet-graph-chip {
-            padding: 8px 12px; border-radius: 999px; background: rgba(13, 36, 64, 0.06); color: var(--blue-700); font-size: 13px; font-weight: 800;
-        }
-        .bullet-scale {
-            position: relative; height: 42px; margin-bottom: 12px;
-        }
-        .bullet-scale-point { position: absolute; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; }
-        .bullet-scale-label { font-size: 12px; font-weight: 800; color: var(--text); white-space: nowrap; }
-        .bullet-scale-range { font-size: 11px; color: var(--muted); white-space: nowrap; }
-        .bullet-track-wrap { position: relative; }
-        .bullet-track-shell { padding-top: 24px; }
-        .bullet-track { position: relative; height: 18px; border-radius: 999px; background: #e1eaf3; overflow: visible; box-shadow: inset 0 1px 3px rgba(13, 36, 64, 0.08); }
-        .band { position: absolute; top: 0; bottom: 0; border-radius: 999px; opacity: 0.96; }
-        .band-low { background: linear-gradient(90deg, rgba(197, 217, 236, 0.95) 0%, rgba(185, 208, 230, 0.98) 100%); }
-        .band-mid { background: linear-gradient(90deg, rgba(207, 225, 240, 0.98) 0%, rgba(198, 228, 217, 0.93) 100%); }
-        .band-high { background: linear-gradient(90deg, rgba(196, 234, 215, 0.98) 0%, rgba(182, 229, 204, 1) 100%); }
-        .bullet-fill {
-            position: absolute; inset: 3px auto 3px 3px; width: 0; max-width: calc(100% - 6px); border-radius: 999px;
-            background: linear-gradient(90deg, rgba(31, 79, 123, 0.95) 0%, rgba(44, 134, 87, 0.96) 100%);
-            box-shadow: 0 10px 20px rgba(45, 98, 143, 0.22);
-            animation: bulletGrow 1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        }
-        .bullet-marker { position: absolute; top: -18px; transform: translateX(-50%); animation: markerAppear 0.7s ease-out forwards; }
-        .bullet-marker::after { content: ""; position: absolute; left: 50%; top: 28px; transform: translateX(-50%); width: 2px; height: 30px; background: rgba(13, 36, 64, 0.24); }
-        .bullet-marker-dot {
-            display: block; width: 14px; height: 14px; margin: 0 auto 6px; border-radius: 50%; background: #fff; border: 4px solid var(--green-700); box-shadow: 0 8px 16px rgba(13, 36, 64, 0.14);
-        }
-        .bullet-marker-pill {
-            display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 999px; background: var(--navy-900); color: #fff; font-size: 12px; font-weight: 800;
-        }
-        .bullet-ticks { position: relative; height: 28px; margin-top: 10px; }
-        .bullet-tick { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
-        .bullet-tick-line { display: block; width: 1px; height: 8px; background: rgba(13, 36, 64, 0.2); margin: 0 auto 4px; }
-        .bullet-tick-text { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
-        .bullet-graph-legend { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-top: 14px; color: var(--muted); font-size: 12px; font-weight: 700; }
-        .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
-        .legend-low { background: #b9d0e6; }
-        .legend-mid { background: #c4dbc8; }
-        .legend-high { background: #7bbf9c; }
-        .result-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .info-panel { display: grid; gap: 10px; padding: 20px 22px; }
-        .info-panel-accent {
-            background: linear-gradient(180deg, rgba(245, 250, 255, 0.98) 0%, rgba(255,255,255,0.98) 100%);
-            border: 1px solid rgba(166, 191, 214, 0.55);
-        }
-        .support-card { padding: 24px 26px; }
-        .support-card-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
-        .support-icon {
-            width: 46px; height: 46px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, rgba(31, 79, 123, 0.12) 0%, rgba(44, 134, 87, 0.18) 100%); color: var(--green-700); font-size: 20px;
-        }
-        .support-title { font-size: 20px; line-height: 1.35; }
-        .support-copy { margin: 0; color: var(--muted); }
-        .support-copy-secondary { margin-top: 12px; }
-        .result-close-note { margin-top: 12px; }
-        .survey-payload-bridge { display: none; }
-        div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) { display: none; }
-        div[data-testid="stCheckbox"] {
-            padding: 6px 0 2px;
-        }
-        div[data-testid="stCheckbox"] label p {
+        .support-title {
             color: var(--text);
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .support-copy {
+            color: var(--muted);
             font-size: 14px;
-            line-height: 1.7;
-            font-weight: 600;
+            line-height: 1.85;
+            margin: 0;
         }
-        div[data-testid="stRadio"] > label { display: none; }
-        div[data-testid="stRadio"] div[role="radiogroup"] {
-            display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px;
+        .support-copy-secondary {
+            margin-top: 10px;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label {
-            margin: 0; min-height: 72px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
-            padding: 12px 12px; display: flex; align-items: center; justify-content: center; text-align: center;
-            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        .result-actions {
+            padding-top: 0;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
-            border-color: rgba(31, 79, 123, 0.55); background: #eef6ff; transform: translateY(-1px); box-shadow: 0 10px 18px rgba(13, 36, 64, 0.08);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
-            border-color: rgba(44, 134, 87, 0.6); background: linear-gradient(180deg, rgba(235, 246, 239, 1) 0%, rgba(245, 251, 247, 1) 100%); box-shadow: 0 0 0 1px rgba(44, 134, 87, 0.16);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label p { color: var(--text); font-size: 0.9rem; font-weight: 700; line-height: 1.38; }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p { color: var(--green-700); }
-        div[data-testid="stTextInput"] label p,
-        div[data-testid="stSelectbox"] label p {
-            color: var(--text); font-size: 14px; font-weight: 700;
-        }
-        div[data-testid="stTextInput"] input,
-        div[data-baseweb="select"] > div {
-            border-radius: 16px !important; border-color: var(--border-strong) !important; background: #fff !important; min-height: 48px;
-        }
-        div[data-testid="stTextInput"] input:focus,
-        div[data-baseweb="select"] > div:focus-within {
-            border-color: rgba(31, 79, 123, 0.58) !important; box-shadow: 0 0 0 4px rgba(31, 79, 123, 0.08) !important;
-        }
-        div[data-testid="stAlert"] {
-            border-radius: 16px;
-        }
-        div[data-testid="stButton"] > button {
-            border-radius: 16px; min-height: 48px; border: 1px solid var(--border-strong); background: rgba(255,255,255,0.98);
-            color: var(--text); font-weight: 750; transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-        }
-        div[data-testid="stButton"] > button:hover {
-            transform: translateY(-1px); border-color: rgba(31, 79, 123, 0.5); color: var(--blue-700); box-shadow: 0 10px 20px rgba(13, 36, 64, 0.08);
-        }
-        div[data-testid="stButton"] > button[kind="primary"] {
-            background: linear-gradient(90deg, var(--blue-700) 0%, var(--green-700) 100%); color: #fff; border: none; box-shadow: 0 14px 28px rgba(31, 79, 123, 0.22);
-        }
-        div[data-testid="stButton"] > button[kind="primary"]:hover { color: #fff; filter: brightness(1.02); }
         @keyframes bulletGrow {
             from { width: 0; }
             to { width: min(var(--target-width), calc(100% - 6px)); }
         }
         @keyframes markerAppear {
-            from { opacity: 0; transform: translateX(-50%) translateY(6px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        .instruction-card {
+            background: rgba(248, 251, 255, 0.96);
+            border: 1px solid rgba(214, 226, 236, 0.95);
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin: 10px 0 18px;
+        }
+        .instruction-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .question-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 22px 22px 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
+        }
+        .survey-actions {
+            padding-top: 8px;
+            margin-top: 8px;
+            margin-bottom: 18px;
+        }
+        .survey-payload-bridge {
+            display: none;
+        }
+        div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
+            display: none;
+        }
+        div[data-testid="stRadio"] > label {
+            display: none;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            margin: 0;
+            min-height: 68px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--surface);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+            border-color: rgba(30, 78, 121, 0.65);
+            background: #eef6ff;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 39, 71, 0.08);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
+            border-color: rgba(46, 139, 87, 0.72);
+            background: var(--green-soft);
+            box-shadow: 0 0 0 1px rgba(46, 139, 87, 0.16);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label p {
+            color: var(--text);
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        div[data-testid="stRadio"] input[type="radio"] {
+            accent-color: var(--green);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p {
+            color: var(--green);
+        }
+        div[data-testid="stButton"] > button {
+            border-radius: 14px;
+            min-height: 46px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: var(--text);
+            font-weight: 700;
+        }
+        div[data-testid="stButton"] > button[kind="primary"] {
+            background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 14px 24px rgba(30, 78, 121, 0.2);
+        }
+        div[data-testid="stButton"] > button:hover {
+            border-color: rgba(30, 78, 121, 0.6);
+            color: var(--blue);
+        }
+        div[data-testid="stButton"] > button[kind="primary"]:hover {
+            color: #ffffff;
+            filter: brightness(1.03);
         }
         @media (max-width: 900px) {
-            .hero-grid,
-            .consent-grid,
-            .survey-top-grid,
-            .score-hero,
-            .result-info-grid { grid-template-columns: 1fr; }
-            div[data-testid="stRadio"] div[role="radiogroup"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .page-wrap { padding-bottom: 110px; }
-        }
-        @media (max-width: 640px) {
-            .page-wrap { padding-bottom: 96px; }
-            .hero-card,
-            .card,
-            .result-card,
-            .support-card,
-            .form-card,
-            .progress-card,
-            .question-card,
-            .instruction-card { padding: 22px 18px; }
-            .stepper { border-radius: 24px; justify-content: flex-start; }
-            .step-line { width: 28px; }
-            div[data-testid="stRadio"] div[role="radiogroup"] { grid-template-columns: 1fr; }
-            .bullet-scale { height: 56px; }
-            .bullet-graph-legend { gap: 10px 14px; }
+            div[data-testid="stRadio"] div[role="radiogroup"] {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .page-wrap {
+                padding-bottom: 96px;
+            }
+            .score-hero {
+                grid-template-columns: 1fr;
+                align-items: start;
+            }
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
 
 def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
@@ -1110,77 +1192,47 @@ def page_intro():
 
     st.markdown(
         f"""
-        <section class="hero-card">
-            <span class="badge badge-strong">RSES 기반</span>
+        <section class="card">
+            <span class="badge">RSES 기반</span>
             <span class="badge">총 10문항</span>
-            <span class="badge">약 2~3분 소요</span>
-            <div class="hero-grid">
-                <div class="hero-copy">
-                    <div>
-                        <div class="eyebrow">Self-esteem assessment</div>
-                        <h1 class="title-lg">{EXAM_TITLE}</h1>
-                        <p class="text" style="margin:12px 0 0;">
-                            본 검사는 자신에 대한 전반적인 인식과 태도를 차분히 돌아보기 위한 자기보고식 검사입니다.
-                            편안한 환경에서 현재 자신의 느낌에 가장 가까운 응답을 선택해 주세요.
-                        </p>
-                    </div>
-                    <div class="info-panel info-panel-accent">
-                        <div class="panel-kicker">검사 안내</div>
-                        <p class="text" style="margin:0;">
-                            결과는 현재 시점의 자기 인식을 이해하기 위한 참고 정보이며, 임상적 진단이나 전문 평가를 대신하지 않습니다.
-                        </p>
-                    </div>
-                </div>
-                <aside class="hero-aside">
-                    <div class="hero-stat">
-                        <strong>심리적으로 안전한 흐름</strong>
-                        <span>도입 → 기본 정보 → 문항 응답 → 결과 확인의 순서로 안정적으로 진행됩니다.</span>
-                    </div>
-                    <ul class="hero-list">
-                        <li>응답은 현재 세션에서 결과 산출에 사용됩니다.</li>
-                        <li>저장 여부는 연동 환경 설정에 따라 달라질 수 있습니다.</li>
-                        <li>지속적인 불편감이 있다면 전문가 상담을 권장드립니다.</li>
-                    </ul>
-                </aside>
+            <h1 class="title-lg">{EXAM_TITLE}</h1>
+            <p class="text" style="margin-top:8px;">
+                본 검사는 자신에 대한 전반적인 인식과 태도를 살펴보기 위한 자기보고식 검사입니다.
+                약 2~3분 내에 완료하실 수 있습니다.
+            </p>
+            <div class="note-box" style="margin-top:12px;">
+                <p class="text" style="margin:0;">
+                    <strong>안내:</strong> 본 결과는 참고용이며 임상적 진단을 대체하지 않습니다.
+                    지속적인 불편감이 있거나 일상 기능에 어려움이 있다면 전문가 상담을 권장드립니다.
+                </p>
+                <p class="muted" style="margin:8px 0 0;">
+                    입력하신 응답은 현재 세션에서 결과 산출에 사용되며, 저장 여부는 연동 환경 설정에 따라 달라질 수 있습니다.
+                </p>
             </div>
         </section>
-        <div class="section-stack">
-            <section class="card soft">
-                <div class="consent-grid">
-                    <div class="consent-panel">
-                        <div>
-                            <div class="panel-kicker">진행 전 확인</div>
-                            <h2 class="title-md" style="margin-top:6px;">검사 목적과 사용 방식을 확인해 주세요</h2>
-                        </div>
-                        <p class="text" style="margin:0;">
-                            검사 진행과 결과 산출을 위해 기본 인적사항을 수집합니다. 아래 내용을 확인한 뒤,
-                            준비가 되셨다면 동의 후 다음 단계로 이동해 주세요.
-                        </p>
-                    </div>
-                    <div class="consent-panel">
-                        <div class="panel-kicker">알아두실 점</div>
-                        <ul class="consent-list">
-                            <li>민감한 진단이 아닌 자기이해를 위한 참고 검사입니다.</li>
-                            <li>모든 문항에 응답해야 결과를 확인할 수 있습니다.</li>
-                            <li>원하지 않으시면 언제든 진행을 중단하실 수 있습니다.</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='consent-check-wrap'>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <section class="card soft">
+            <h2 class="title-md">검사 진행 동의</h2>
+            <p class="text">
+                검사 진행과 결과 산출을 위해 기본 인적사항을 수집합니다.
+                아래 안내를 확인하신 후 동의해 주세요.
+            </p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
     consent = st.checkbox(
         "예, 위 안내를 확인하였고 검사 진행에 동의합니다.",
         value=st.session_state.meta["consent"],
     )
     st.session_state.meta["consent"] = consent
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='action-row'>", unsafe_allow_html=True)
     c1, c2 = st.columns([3, 1])
     with c2:
         if st.button("검사 시작", type="primary", disabled=not consent, use_container_width=True):
@@ -1189,9 +1241,9 @@ def page_intro():
             st.session_state.meta["started_ts"] = now
             st.session_state.page = "info"
             st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 def page_info():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
@@ -1200,29 +1252,16 @@ def page_info():
     st.markdown(
         """
         <section class="card">
-            <div class="panel-kicker">기본 정보</div>
-            <h1 class="title-lg" style="margin-top:8px;">기본 정보 입력</h1>
-            <p class="text" style="margin:12px 0 0;">
-                결과 해석을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수 항목이며
+            <h1 class="title-lg">기본 정보 입력</h1>
+            <p class="text" style="margin-top:8px;">
+                아래 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수 항목이며
                 휴대폰번호와 이메일은 선택 입력 항목입니다.
             </p>
         </section>
-        <div class="section-stack">
-            <section class="form-card">
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        """
-        <div class="field-group">
-            <div>
-                <div class="field-group-title">필수 정보</div>
-                <p class="field-group-copy">검사 진행과 결과 구성을 위해 필요한 항목입니다.</p>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
     info_row_1_col_1, info_row_1_col_2 = st.columns(2)
     with info_row_1_col_1:
         name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
@@ -1232,6 +1271,7 @@ def page_info():
             options=[""] + GENDER_OPTIONS,
             index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", "")) if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS) else 0,
         )
+
     info_row_2_col_1, info_row_2_col_2 = st.columns(2)
     with info_row_2_col_1:
         age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
@@ -1241,22 +1281,9 @@ def page_info():
             options=[""] + REGION_OPTIONS,
             index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", "")) if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS) else 0,
         )
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown(
-        """
-        <div class="field-group">
-            <div>
-                <div class="field-group-title">선택 정보</div>
-                <p class="field-group-copy">연락 수단이 필요한 환경에서만 활용될 수 있으며 입력하지 않아도 검사는 진행됩니다.</p>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
     phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
     email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
-    st.markdown("<p class='field-note'>휴대폰번호는 숫자만 입력해 주세요.</p>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
     normalized_phone = normalize_phone(phone_input)
 
@@ -1276,30 +1303,34 @@ def page_info():
     phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
+    # 필수 입력 누락만 모아서 표시
     missing_fields = []
+
     if name_error:
         missing_fields.append("이름")
+
     if gender_error:
         missing_fields.append("성별")
+
     if age_error:
         missing_fields.append("연령")
+
     if region_error:
         missing_fields.append("거주지역")
 
     if missing_fields:
-        st.markdown("<div class='validation-panel'>", unsafe_allow_html=True)
         st.error(f"{', '.join(missing_fields)}을 입력해주세요.")
-        st.markdown("</div>", unsafe_allow_html=True)
 
+    # 선택항목은 따로 표시 (원하면 유지)
     if phone_error:
         st.warning(phone_error)
 
     if email_error:
         st.warning(email_error)
 
+    # 버튼 활성화 기준
     all_valid = len(missing_fields) == 0
 
-    st.markdown("</section></div>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
     with c1:
         if st.button("이전", use_container_width=True):
@@ -1312,6 +1343,7 @@ def page_info():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 def page_survey(dev_mode: bool = False):
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
@@ -1322,26 +1354,16 @@ def page_survey(dev_mode: bool = False):
 
     st.markdown(
         f"""
-        <div class="survey-top-grid">
-            <section class="progress-card">
-                <span class="badge">문항 10개</span>
-                <span class="badge">현재 진행률 {progress_pct}%</span>
-                <h1 class="title-lg" style="margin-top:10px;">문항 응답</h1>
-                <p class="text" style="margin:12px 0 0;">현재 자신의 모습에 가장 가까운 응답을 선택해 주세요.</p>
-                <div class="progress-row">
-                    <span class="progress-label">응답 완료 {answered_count}/10</span>
-                    <span class="progress-label">남은 문항 {len(QUESTIONS) - answered_count}개</span>
-                </div>
-                <div class="meter"><span style="width:{progress_pct}%;"></span></div>
-            </section>
-            <section class="instruction-card">
-                <div class="panel-kicker">응답 안내</div>
-                <p style="margin-top:8px;">
-                    정답은 없습니다. 최근의 이상적인 모습보다 현재의 실제 느낌에 가까운 선택지를 고르면 보다 자연스럽게 결과를 확인할 수 있습니다.
-                </p>
-            </section>
-        </div>
-        <div class="section-stack">
+        <section class="card">
+            <span class="badge">문항 10개</span>
+            <h1 class="title-lg">문항 응답</h1>
+            <p class="text">현재 자신의 모습에 가장 가까운 응답을 선택해 주세요.</p>
+            <div class="progress-row">
+                <span class="progress-label">저장된 진행률 {answered_count}/10</span>
+                <span class="progress-label">{progress_pct}%</span>
+            </div>
+            <div class="meter"><span style="width:{progress_pct}%;"></span></div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -1354,16 +1376,7 @@ def page_survey(dev_mode: bool = False):
         if radio_key not in st.session_state:
             st.session_state[radio_key] = label_from_score(selected_score)
 
-        st.markdown(
-            f"""
-            <section class='question-card'>
-                <div class='question-head'>
-                    <span class='question-number'>{i}</span>
-                    <div class='question-title'>{question}</div>
-                </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div>", unsafe_allow_html=True)
         selected_label = st.radio(
             f"{i}. {question}",
             options=SCALE_LABELS,
@@ -1381,12 +1394,12 @@ def page_survey(dev_mode: bool = False):
             st.session_state.answers[key] = score
 
     payload, missing = build_payload()
+    answered_count = len(st.session_state.answers)
 
     st.markdown(
         """
         <section class="instruction-card">
-            <div class="panel-kicker">결과 보기 안내</div>
-            <p style="margin-top:8px;">모든 문항을 응답하면 아래에서 결과 보기를 선택할 수 있습니다. 설문과 버튼 영역은 일반 문서 흐름을 유지해 마지막 문항까지 안정적으로 확인할 수 있도록 구성했습니다.</p>
+            <p>모든 문항을 응답하면 아래에서 결과 보기를 선택할 수 있습니다. 마지막 문항과 버튼 영역이 가려지지 않도록 설문은 일반 문서 흐름으로 배치했습니다.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -1399,7 +1412,7 @@ def page_survey(dev_mode: bool = False):
     c1, c2 = st.columns([1, 1])
     prev_clicked = c1.button("이전", use_container_width=True)
     submit_clicked = c2.button("결과 보기", type="primary", use_container_width=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if prev_clicked:
         st.session_state.page = "info"
@@ -1424,6 +1437,7 @@ def page_survey(dev_mode: bool = False):
         st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 def page_result(dev_mode: bool = False):
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
@@ -1485,7 +1499,7 @@ def page_result(dev_mode: bool = False):
                 height=0,
             )
             st.rerun()
-    st.markdown("</section></div>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     if st.session_state.close_attempted:
         st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
@@ -1497,6 +1511,7 @@ def page_result(dev_mode: bool = False):
         st.code(json.dumps(exam_data, ensure_ascii=False, indent=2), language="json")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 def main():
     inject_css()
