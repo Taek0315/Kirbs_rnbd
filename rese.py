@@ -1103,11 +1103,14 @@ def inject_css():
             position: relative;
             margin: 0;
             min-height: 68px;
+            width: 100%;
             border: 1px solid rgba(165, 188, 212, 0.9);
             border-radius: 16px;
             background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
             padding: 0;
-            display: block;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
             overflow: hidden;
             cursor: pointer;
             transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -1127,7 +1130,6 @@ def inject_css():
             width: 100%;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"]:first-child,
         div[data-testid="stRadio"] div[role="radiogroup"] > label input[type="radio"],
         div[data-testid="stRadio"] div[role="radiogroup"] > label svg {
             position: absolute;
@@ -1137,18 +1139,35 @@ def inject_css():
             height: 0;
             margin: 0;
         }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"] {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+            width: 100%;
+            min-width: 0;
+            min-height: 68px;
+            opacity: 1;
+            visibility: visible;
+            margin: 0;
+        }
         div[data-testid="stRadio"] div[role="radiogroup"] > label p {
             margin: 0;
+            width: 100%;
+            min-width: 0;
             min-height: 68px;
-            padding: 14px 12px;
+            padding: 14px 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             color: var(--text);
-            font-size: 0.9rem;
+            font-size: 13px;
             font-weight: 700;
-            line-height: 1.35;
+            line-height: 1.2;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p {
             color: var(--navy);
