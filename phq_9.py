@@ -291,22 +291,26 @@ body, p, div, span, li, button, label, input, textarea {
 .legend-chip strong { font-size: 0.95rem; }
 .legend-chip small { color: var(--muted-2); font-size: 0.8rem; }
 
-/* Form controls */
+/* Examinee form controls */
 [data-testid="stTextInput"],
 [data-testid="stSelectbox"] {
   width: 100%;
 }
 
+/* Labels */
 [data-testid="stTextInput"] > label,
 [data-testid="stSelectbox"] > label,
 [data-testid="stTextInput"] label,
 [data-testid="stSelectbox"] label {
-  color: var(--muted-2) !important;
-  font-size: 0.9rem !important;
+  display: block !important;
+  margin-bottom: 8px !important;
+  color: var(--ink) !important;
+  font-size: 0.92rem !important;
   font-weight: 700 !important;
-  margin-bottom: 6px !important;
+  letter-spacing: -0.01em !important;
 }
 
+/* Text input frame + selectbox frame */
 [data-testid="stTextInput"] div[data-baseweb="input"],
 [data-testid="stSelectbox"] div[data-baseweb="select"] {
   width: 100% !important;
@@ -319,31 +323,24 @@ body, p, div, span, li, button, label, input, textarea {
   padding: 0 14px !important;
   display: flex !important;
   align-items: center !important;
-  background: var(--surface) !important;
-  border: 1.5px solid var(--border-strong) !important;
-  border-radius: var(--radius-md) !important;
+  background: #FCFDFE !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-  padding-right: 14px !important;
+  padding-right: 12px !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
-  border-color: var(--border-strong) !important;
-  background: var(--surface) !important;
+  border-color: #B8C5D6 !important;
+  background: #FFFFFF !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([aria-expanded="true"]) {
-  border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px var(--brand-50) !important;
-  outline: none !important;
-}
-
+/* Text input inner reset + selectbox inner reset */
 [data-testid="stTextInput"] div[data-baseweb="input"] > div > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
@@ -373,35 +370,37 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stSelectbox"] input,
 [data-testid="stSelectbox"] input:focus,
 [data-testid="stSelectbox"] input[readonly],
-[data-testid="stSelectbox"] span,
-[data-testid="stSelectbox"] svg {
+[data-testid="stSelectbox"] [role="button"] > div,
+[data-testid="stSelectbox"] [role="button"] span {
   appearance: none !important;
   -webkit-appearance: none !important;
   width: 100% !important;
-  min-height: calc(var(--control-height) - 3px) !important;
-  height: calc(var(--control-height) - 3px) !important;
-  line-height: calc(var(--control-height) - 3px) !important;
+  min-height: calc(var(--control-height) - 2px) !important;
+  height: calc(var(--control-height) - 2px) !important;
+  line-height: calc(var(--control-height) - 2px) !important;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
-  background-image: none !important;
   color: var(--ink) !important;
-  fill: var(--ink) !important;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+  font-size: 0.97rem !important;
+  font-weight: 500 !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stTextInput"] input::placeholder {
+  color: var(--ink) !important;
 }
 
 [data-testid="stTextInput"] input::placeholder,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] span,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input::placeholder,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input[readonly],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected],
 [data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"] * {
+[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"] *,
+[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected],
+[data-testid="stSelectbox"] div[data-baseweb="select"] span {
   color: var(--ink) !important;
   opacity: 1 !important;
 }
@@ -409,23 +408,39 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
   width: 18px !important;
   min-width: 18px !important;
-  color: var(--muted) !important;
-  fill: var(--muted) !important;
+  height: 18px !important;
+  color: var(--muted-2) !important;
+  fill: var(--muted-2) !important;
 }
 
+/* Shared focus style */
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([aria-expanded="true"]) {
+  border-color: var(--brand) !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+  outline: none !important;
+}
+
+/* Dropdown menu styling */
 [data-baseweb="popover"] [role="listbox"] {
-  background: var(--surface) !important;
-  border: 1.5px solid var(--border-strong) !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-sm) !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.10) !important;
   padding: 6px !important;
 }
 
 [data-baseweb="popover"] [role="option"] {
-  background: var(--surface) !important;
-  border-radius: calc(var(--radius-md) - 4px) !important;
+  min-height: 42px !important;
+  padding: 10px 12px !important;
+  background: #FFFFFF !important;
+  border-radius: 10px !important;
   color: var(--ink) !important;
   opacity: 1 !important;
+  font-size: 0.96rem !important;
+  line-height: 1.35 !important;
 }
 
 [data-baseweb="popover"] [role="option"] *,
@@ -436,14 +451,15 @@ body, p, div, span, li, button, label, input, textarea {
 }
 
 [data-baseweb="popover"] [role="option"][aria-selected="true"] {
-  background: #E8F0FE !important;
+  background: #EAF2FF !important;
+  color: #12356B !important;
 }
 
 [data-baseweb="popover"] [role="option"]:hover,
 [data-baseweb="popover"] [role="option"]:focus-visible,
 [data-baseweb="popover"] [role="option"][data-highlighted],
 [data-baseweb="popover"] [role="option"]:has(:hover) {
-  background: var(--surface-3) !important;
+  background: #F4F8FD !important;
 }
 
 [data-testid="stTextInput"] input::before,
@@ -465,7 +481,7 @@ body, p, div, span, li, button, label, input, textarea {
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-webkit-autofill),
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-internal-autofill-selected) {
-  background: var(--surface) !important;
+  background: #FCFDFE !important;
 }
 
 [data-testid="stTextInput"] input:-webkit-autofill,
@@ -1193,10 +1209,10 @@ def render_examinee_page() -> None:
 
         st.markdown(
             """
-            <div class="card result-card">
+            <div class="card compact result-card">
               <div class="card-header">
                 <div class="title-lg">응답자 정보</div>
-                <div class="text">이름, 성별, 연령, 거주지역은 필수이며 연락처와 이메일은 선택 입력입니다.</div>
+                <div class="text">검사 결과 확인과 응답자 구분을 위해 기본 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
               </div>
             </div>
             """,
@@ -1208,9 +1224,9 @@ def render_examinee_page() -> None:
             <div class="card form-card">
               <div class="form-section">
                 <div class="section-header">
-                  <div class="section-caption">검사 결과와 응답자 구분을 위해 아래 항목을 입력해 주세요.</div>
+                  <div class="section-title">기본 정보 입력</div>
+                  <div class="section-caption">모든 필수 항목을 입력한 뒤 다음 단계로 이동할 수 있습니다.</div>
                 </div>
-                <div class="form-grid">
             """,
             unsafe_allow_html=True,
         )
@@ -1296,7 +1312,7 @@ def render_examinee_page() -> None:
         if region_error and region.strip():
             required_errors.append(region_error)
 
-        st.markdown('</div></div></div>', unsafe_allow_html=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
         if missing_fields or required_errors or phone_error or email_error:
             st.markdown('<div class="alert-stack">', unsafe_allow_html=True)
