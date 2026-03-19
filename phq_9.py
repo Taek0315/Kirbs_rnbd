@@ -133,7 +133,7 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-form { display: flex; flex-direction: column; gap: 22px; }
 .form-section { display: flex; flex-direction: column; gap: 14px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
-.optional-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+.unified-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
 .form-actions { margin-top: 8px; }
 .actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 6px; }
 .actions .stButton { margin: 0 !important; }
@@ -158,13 +158,6 @@ body, p, div, span, li, button, label, input, textarea {
   display: flex;
   flex-direction: column;
   gap: 22px;
-}
-
-.section-panel {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
 }
 
 .card-header { display: flex; flex-direction: column; gap: 10px; }
@@ -334,7 +327,7 @@ body, p, div, span, li, button, label, input, textarea {
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-  padding-right: 12px !important;
+  padding-right: 14px !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
@@ -379,6 +372,7 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:active,
 [data-testid="stSelectbox"] input,
 [data-testid="stSelectbox"] input:focus,
+[data-testid="stSelectbox"] input[readonly],
 [data-testid="stSelectbox"] span,
 [data-testid="stSelectbox"] svg {
   appearance: none !important;
@@ -396,6 +390,23 @@ body, p, div, span, li, button, label, input, textarea {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] span,
+[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] input::placeholder,
+[data-testid="stSelectbox"] div[data-baseweb="select"] input[readonly],
+[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected] {
+  color: var(--ink) !important;
+  opacity: 1 !important;
+}
+
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="popover"] [role="option"] * {
+  color: var(--ink) !important;
 }
 
 [data-testid="stTextInput"] input::before,
@@ -1160,8 +1171,7 @@ def render_examinee_page() -> None:
             <div class="card form-card">
               <div class="form-section">
                 <div class="section-header">
-                  <div class="section-title">필수 정보</div>
-                  <div class="section-caption">검사 결과와 응답자 구분을 위해 아래 항목을 모두 입력해 주세요.</div>
+                  <div class="section-caption">검사 결과와 응답자 구분을 위해 아래 항목을 입력해 주세요.</div>
                 </div>
                 <div class="form-grid">
             """,
@@ -1198,21 +1208,7 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        st.markdown(
-            """
-                </div>
-              </div>
-              <div class="divider"></div>
-              <div class="form-section section-panel">
-                <div class="section-header">
-                  <div class="section-title">선택 정보</div>
-                  <div class="section-caption">연락 가능한 정보를 남기려면 입력해 주세요. 미입력 시에도 검사는 계속 진행할 수 있습니다.</div>
-                </div>
-                <div class="optional-grid">
-            """,
-            unsafe_allow_html=True,
-        )
-
+        st.markdown('<div class="unified-form-grid">', unsafe_allow_html=True)
         optional_col1, optional_col2 = st.columns(2, gap="medium")
         with optional_col1:
             phone = st.text_input(
@@ -1224,6 +1220,7 @@ def render_examinee_page() -> None:
                 "이메일 (선택)",
                 value=st.session_state.examinee.get("email", ""),
             )
+        st.markdown('</div>', unsafe_allow_html=True)
 
         normalized_phone = normalize_phone(phone)
         st.session_state.examinee.update({
@@ -1262,7 +1259,7 @@ def render_examinee_page() -> None:
         if region_error and region.strip():
             required_errors.append(region_error)
 
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        st.markdown('</div></div></div>', unsafe_allow_html=True)
 
         if missing_fields or required_errors or phone_error or email_error:
             st.markdown('<div class="alert-stack">', unsafe_allow_html=True)
