@@ -1090,46 +1090,68 @@ def inject_css():
         div[data-testid="stRadio"] > label {
             display: none;
         }
+        div[data-testid="stRadio"] {
+            width: 100%;
+        }
         div[data-testid="stRadio"] div[role="radiogroup"] {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
+            width: 100%;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            position: relative;
             margin: 0;
             min-height: 68px;
-            border: 1px solid var(--border);
+            border: 1px solid rgba(165, 188, 212, 0.9);
             border-radius: 16px;
-            background: var(--surface);
-            padding: 10px 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+            padding: 0;
+            display: block;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+            border-color: rgba(30, 78, 121, 0.58);
+            background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(15, 39, 71, 0.09);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
+            border-color: rgba(46, 139, 87, 0.88);
+            background: linear-gradient(135deg, rgba(30, 78, 121, 0.14) 0%, rgba(46, 139, 87, 0.2) 100%);
+            box-shadow: 0 0 0 2px rgba(46, 139, 87, 0.12), 0 12px 24px rgba(46, 139, 87, 0.12);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label > div {
+            width: 100%;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"]:first-child,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label input[type="radio"],
+        div[data-testid="stRadio"] div[role="radiogroup"] > label svg {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            height: 0;
+            margin: 0;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label p {
+            margin: 0;
+            min-height: 68px;
+            padding: 14px 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
-            border-color: rgba(30, 78, 121, 0.65);
-            background: #eef6ff;
-            transform: translateY(-1px);
-            box-shadow: 0 8px 18px rgba(15, 39, 71, 0.08);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
-            border-color: rgba(46, 139, 87, 0.72);
-            background: var(--green-soft);
-            box-shadow: 0 0 0 1px rgba(46, 139, 87, 0.16);
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label p {
             color: var(--text);
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             font-weight: 700;
             line-height: 1.35;
         }
-        div[data-testid="stRadio"] input[type="radio"] {
-            accent-color: var(--green);
-        }
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p {
-            color: var(--green);
+            color: var(--navy);
         }
         div[data-testid="stButton"] > button {
             border-radius: 14px;
