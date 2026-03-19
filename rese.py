@@ -1061,12 +1061,8 @@ def inject_css():
         .support-copy-secondary {
             margin-top: 10px;
         }
-        .button-panel {
-            background: rgba(248, 251, 255, 0.82);
-            border: 1px solid rgba(214, 226, 236, 0.8);
-            border-radius: 22px;
-            padding: 20px 16px 16px;
-            box-shadow: 0 12px 24px rgba(8, 32, 58, 0.1);
+        .result-actions {
+            padding-top: 0;
         }
         @keyframes bulletGrow {
             from { width: 0; }
@@ -1490,7 +1486,7 @@ def page_result(dev_mode: bool = False):
     st.markdown(
         "<div class='result-stack'>"
         f"{result_section_html}"
-        "<div class='button-panel result-section'>",
+        "<section class='result-actions result-section'>",
         unsafe_allow_html=True,
     )
 
