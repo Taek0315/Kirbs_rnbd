@@ -86,60 +86,90 @@ def inject_css() -> None:
   --bg: #F6F8FB;
   --surface: #FFFFFF;
   --surface-2: #F8FAFC;
+  --surface-3: #F1F5F9;
   --ink: #0F172A;
   --muted: #475569;
   --muted-2: #64748B;
-  --border: #E2E8F0;
-  --shadow: 0 10px 30px rgba(15,23,42,.08);
-  --radius-lg: 24px;
-  --radius-md: 16px;
+  --border: #DCE4EE;
+  --border-strong: #CBD5E1;
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --control-height: 48px;
   --brand: #2563EB;
   --brand-600: #1D4ED8;
-  --brand-50: rgba(37,99,235,.10);
+  --brand-50: rgba(37, 99, 235, 0.10);
   --danger: #DC2626;
-  --danger-50: rgba(220,38,38,.10);
+  --danger-soft: #FFF7ED;
+  --danger-border: #FDBA74;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* Global / reset */
+* { box-sizing: border-box; }
 
 html, body {
   color-scheme: light !important;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif;
+  font-family: "Inter", "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Apple SD Gothic Neo, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-[data-testid="stAppViewContainer"] {
-  background: var(--bg) !important;
-}
-
-[data-testid="block-container"] {
-  max-width: 100%;
-  padding: 0;
-  margin: 0;
-}
-
 body, p, div, span, li, button, label, input, textarea {
-  font-family: "Inter","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Helvetica,Arial,sans-serif !important;
+  font-family: "Inter", "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, Apple SD Gothic Neo, Helvetica, Arial, sans-serif !important;
 }
 
-.app-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 56px; }
-.stack { display:flex; flex-direction:column; gap:16px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 28px; }
-.card.compact { padding: 20px; border-radius: var(--radius-md); }
-.card-header { display:flex; flex-direction:column; gap:10px; }
-.title-xl { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.4px; color: var(--ink); }
-.title-lg { font-size: 1.15rem; font-weight: 850; color: var(--ink); }
-.text { color: var(--muted); line-height: 1.7; font-size: 0.98rem; }
-.divider { height:1px; background: var(--border); margin: 10px 0; }
-.actions { display:flex; gap:12px; justify-content:center; align-items:center; margin-top: 6px; }
-.actions .stButton { margin:0 !important; }
-.actions-row { display:flex; gap:12px; }
+[data-testid="stAppViewContainer"] { background: var(--bg) !important; }
+[data-testid="block-container"] { max-width: 100%; padding: 0; margin: 0; }
+[data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
+/* Layout containers */
+.app-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 56px; }
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.examinee-layout { display: flex; flex-direction: column; gap: 24px; }
+.examinee-form { display: flex; flex-direction: column; gap: 22px; }
+.form-section { display: flex; flex-direction: column; gap: 14px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+.optional-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+.form-actions { margin-top: 8px; }
+.actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 6px; }
+.actions .stButton { margin: 0 !important; }
+.actions-row { display: flex; gap: 12px; }
+
+/* Card system */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.card.compact {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+}
+
+.form-card {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.section-panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.card-header { display: flex; flex-direction: column; gap: 10px; }
+.section-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 2px; }
+.divider { height: 1px; background: var(--border); margin: 2px 0 0; }
 .badge {
   display: inline-flex;
   padding: 4px 12px;
@@ -148,9 +178,18 @@ body, p, div, span, li, button, label, input, textarea {
   color: var(--brand);
   font-weight: 800;
   font-size: 12px;
-  border: 1px solid rgba(37,99,235,0.25);
+  border: 1px solid rgba(37, 99, 235, 0.25);
   width: fit-content;
 }
+
+/* Typography */
+.title-xl { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.4px; color: var(--ink); }
+.title-lg { font-size: 1.15rem; font-weight: 850; color: var(--ink); }
+.section-title { font-size: 0.98rem; font-weight: 800; color: var(--ink); }
+.section-caption { font-size: 0.88rem; color: var(--muted-2); line-height: 1.6; }
+.text { color: var(--muted); line-height: 1.7; font-size: 0.98rem; }
+.card p, .card li { line-height: 1.75 !important; }
+.footer-note { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
 
 .instruction-list {
   margin: 12px 0 0;
@@ -159,63 +198,27 @@ body, p, div, span, li, button, label, input, textarea {
   color: var(--ink);
   font-size: 0.98rem;
 }
-
 .instruction-list li { margin-bottom: 8px; }
+.question-header { display: flex; flex-direction: column; gap: 8px; }
+.question-text { font-weight: 700; font-size: 1rem; line-height: 1.6; color: var(--ink); }
+.question-card { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px !important; }
+.section-card { margin-bottom: 32px !important; }
+.section-to-question { margin-bottom: 40px !important; }
+.result-card { margin-bottom: 28px !important; }
+.result-danger { margin-top: 36px !important; }
+.result-actions { margin-top: 32px !important; }
 
-.question-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.question-text {
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--ink);
-}
-
-.question-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section-card {
-  margin-bottom: 32px !important;
-}
-
-.question-card {
-  margin-bottom: 20px !important;
-}
-
-.section-to-question {
-  margin-bottom: 40px !important;
-}
-
-.result-card {
-  margin-bottom: 28px !important;
-}
-
-.result-danger {
-  margin-top: 36px !important;
-}
-
-.result-actions {
-  margin-top: 32px !important;
-}
-
+/* Result / visualization cards */
 .summary-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
   margin-top: 18px;
 }
-
 .gauge-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 28px 22px 32px;
   text-align: center;
   box-shadow: var(--shadow);
@@ -223,7 +226,6 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 12px;
 }
-
 .gauge-circle {
   width: 210px;
   height: 210px;
@@ -235,7 +237,6 @@ body, p, div, span, li, button, label, input, textarea {
   justify-content: center;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
-
 .gauge-circle::after {
   content: "";
   position: absolute;
@@ -244,50 +245,32 @@ body, p, div, span, li, button, label, input, textarea {
   background: var(--surface);
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
-
-.gauge-inner {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
+.gauge-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .gauge-number { font-size: 3rem; font-weight: 900; line-height: 1; color: var(--ink); }
 .gauge-denom { font-size: 1rem; font-weight: 700; color: var(--muted); }
 .gauge-severity { display: inline-flex; padding: 6px 18px; border-radius: 999px; font-weight: 800; border: 1.5px solid currentColor; font-size: 1rem; }
-
 .narrative-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 26px 28px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-
 .narrative-title { font-weight: 800; font-size: 1rem; }
 .functional-highlight { border-top: 1px solid var(--border); padding-top: 14px; }
 .functional-title { font-size: 0.9rem; color: var(--muted-2); font-weight: 700; margin-bottom: 6px; }
 .functional-value { font-size: 1.05rem; }
-
 .domain-panel {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 22px 24px;
   background: var(--surface-2);
   box-shadow: var(--shadow);
 }
-
-.domain-profile {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
+.domain-profile { display: flex; flex-direction: column; gap: 18px; }
 .domain-note {
   margin-top: 14px;
   padding-top: 12px;
@@ -296,26 +279,13 @@ body, p, div, span, li, button, label, input, textarea {
   color: var(--muted);
   line-height: 1.5;
 }
-
-.domain-row {
-  display: grid;
-  grid-template-columns: 1.4fr 2.2fr 0.6fr;
-  gap: 16px;
-  align-items: center;
-}
-
+.domain-row { display: grid; grid-template-columns: 1.4fr 2.2fr 0.6fr; gap: 16px; align-items: center; }
 .domain-title { font-weight: 700; font-size: 1rem; }
 .domain-desc { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-.domain-bar { position: relative; height: 14px; background: rgba(226,232,240,0.9); border-radius: 999px; overflow: hidden; border: 1px solid rgba(203,213,225,0.9); }
+.domain-bar { position: relative; height: 14px; background: rgba(226, 232, 240, 0.9); border-radius: 999px; overflow: hidden; border: 1px solid rgba(203, 213, 225, 0.9); }
 .domain-fill { position: absolute; inset: 0; border-radius: 999px; background: var(--brand); }
 .domain-score { justify-self: end; font-weight: 700; }
-
-.severity-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
+.severity-legend { display: flex; flex-wrap: wrap; gap: 12px; }
 .legend-chip {
   display: flex;
   flex-direction: column;
@@ -325,71 +295,81 @@ body, p, div, span, li, button, label, input, textarea {
   background: var(--surface);
   min-width: 140px;
 }
-
 .legend-chip strong { font-size: 0.95rem; }
 .legend-chip small { color: var(--muted-2); font-size: 0.8rem; }
 
-.warn { background: #FFF7ED; border: 1px solid #FDBA74; color: #7C2D12; border-radius: var(--radius-md); padding: 14px 18px; font-weight: 600; }
-.safety-card { background: var(--danger-50); border: 1px solid var(--danger); color: var(--ink); border-radius: var(--radius-lg); padding: 22px 24px; box-shadow: var(--shadow); }
-.safety-card .title-lg { color: var(--danger); }
-
-.footer-note { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
-
-.card p,
-.card li {
-  line-height: 1.75 !important;
+/* Form controls */
+[data-testid="stTextInput"],
+[data-testid="stSelectbox"] {
+  width: 100%;
 }
 
-[data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
-
-/* Form controls: rebuilt text input + selectbox system */
+[data-testid="stTextInput"] > label,
+[data-testid="stSelectbox"] > label,
 [data-testid="stTextInput"] label,
 [data-testid="stSelectbox"] label {
   color: var(--muted-2) !important;
+  font-size: 0.9rem !important;
   font-weight: 700 !important;
+  margin-bottom: 6px !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
+[data-testid="stTextInput"] div[data-baseweb="input"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] {
+  width: 100% !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  min-height: var(--control-height) !important;
+  height: var(--control-height) !important;
+  padding: 0 14px !important;
   display: flex !important;
   align-items: center !important;
-  width: 100% !important;
-  min-height: 46px !important;
-  height: 46px !important;
-  padding: 0 14px !important;
-  background: #FFFFFF !important;
-  color: var(--ink) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-md) !important;
   box-shadow: none !important;
-  outline: none !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
 }
 
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
-  padding-right: 10px !important;
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  padding-right: 12px !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
+  border-color: var(--border-strong) !important;
+  background: var(--surface) !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([aria-expanded="true"]) {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px var(--brand-50) !important;
+  outline: none !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
-  display: flex !important;
-  align-items: center !important;
   width: 100% !important;
   min-height: 100% !important;
   height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
   background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  outline: none !important;
 }
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
   justify-content: space-between !important;
-  gap: 8px !important;
+  gap: 10px !important;
 }
 
 [data-testid="stTextInput"] input,
@@ -397,13 +377,16 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextInput"] input:focus-visible,
 [data-testid="stTextInput"] input:active,
-[data-testid="stTextInput"] input:invalid,
-[data-testid="stTextInput"] input:user-invalid,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input,
-[data-testid="stSelectbox"] div[data-baseweb="select"] span,
-[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
+[data-testid="stSelectbox"] input,
+[data-testid="stSelectbox"] input:focus,
+[data-testid="stSelectbox"] span,
+[data-testid="stSelectbox"] svg {
   appearance: none !important;
   -webkit-appearance: none !important;
+  width: 100% !important;
+  min-height: calc(var(--control-height) - 2px) !important;
+  height: calc(var(--control-height) - 2px) !important;
+  line-height: calc(var(--control-height) - 2px) !important;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
@@ -413,55 +396,28 @@ body, p, div, span, li, button, label, input, textarea {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  text-decoration: none !important;
-}
-
-[data-testid="stTextInput"] input,
-[data-testid="stTextInput"] input:hover,
-[data-testid="stTextInput"] input:focus,
-[data-testid="stTextInput"] input:focus-visible,
-[data-testid="stTextInput"] input:active,
-[data-testid="stTextInput"] input:invalid,
-[data-testid="stTextInput"] input:user-invalid {
-  width: 100% !important;
-  min-height: 44px !important;
-  height: 44px !important;
-  line-height: 44px !important;
 }
 
 [data-testid="stTextInput"] input::before,
 [data-testid="stTextInput"] input::after,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child::before,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child::after,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::before,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::after,
-[data-testid="stTextInput"] [aria-invalid="true"]::before,
-[data-testid="stTextInput"] [aria-invalid="true"]::after {
+[data-testid="stTextInput"] div[data-baseweb="input"] > div::before,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div::after {
   content: none !important;
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
 }
 
 [data-testid="stTextInput"] [aria-invalid="true"],
 [data-testid="stTextInput"] input[aria-invalid="true"],
 [data-testid="stTextInput"] div[aria-invalid="true"],
-[data-testid="stTextInput"] div[data-baseweb="input"] [aria-invalid="true"],
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child[aria-invalid="true"],
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has([aria-invalid="true"]),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div[aria-invalid="true"],
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input[aria-invalid="true"]),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:user-invalid),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:invalid) {
+[data-testid="stTextInput"] div[data-baseweb="input"] [aria-invalid="true"] {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
   background-image: none !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-webkit-autofill),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-internal-autofill-selected) {
-  background: #FFFFFF !important;
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-webkit-autofill),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-internal-autofill-selected) {
+  background: var(--surface) !important;
 }
 
 [data-testid="stTextInput"] input:-webkit-autofill,
@@ -471,27 +427,98 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:-internal-autofill-selected {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   transition: background-color 99999s ease-out 0s !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:hover,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:hover {
-  border-color: var(--border) !important;
+/* Alerts */
+.warn {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
+  color: #7C2D12;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-weight: 600;
+}
+[data-testid="stAlert"] {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--danger-border) !important;
+  background: var(--danger-soft) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+[data-testid="stAlert"] * {
+  color: var(--ink) !important;
+  opacity: 1 !important;
+}
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
+  font-weight: 600 !important;
+  line-height: 1.6 !important;
+}
+.alert-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([aria-expanded="true"]),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([role="combobox"][aria-expanded="true"]),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([role="button"][aria-expanded="true"]) {
-  border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px var(--brand-50) !important;
+.safety-card { background: rgba(220, 38, 38, 0.10); border: 1px solid var(--danger); color: var(--ink); border-radius: var(--radius-xl); padding: 22px 24px; box-shadow: var(--shadow); }
+.safety-card .title-lg { color: var(--danger); }
+
+/* Buttons */
+.stButton {
+  width: 100%;
+}
+.stButton > button {
+  width: 100% !important;
+  min-height: var(--control-height) !important;
+  height: var(--control-height) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid transparent !important;
+  padding: 0 20px !important;
+  font-size: 0.97rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  box-shadow: none !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease !important;
+}
+.stButton > button:focus-visible {
   outline: none !important;
+  box-shadow: 0 0 0 3px var(--brand-50) !important;
+}
+.stButton > button[kind="primary"] {
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: #FFFFFF !important;
+}
+.stButton > button[kind="primary"] * {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+.stButton > button[kind="primary"]:hover {
+  background: var(--brand-600) !important;
+  border-color: var(--brand-600) !important;
+}
+.stButton > button:not([kind="primary"]) {
+  background: var(--surface) !important;
+  color: var(--brand) !important;
+  border-color: var(--border-strong) !important;
+}
+.stButton > button:not([kind="primary"]) * {
+  color: var(--brand) !important;
+  -webkit-text-fill-color: var(--brand) !important;
+}
+.stButton > button:not([kind="primary"]):hover {
+  border-color: var(--brand) !important;
+  background: var(--surface-2) !important;
+}
+.stButton > button:disabled {
+  background: var(--surface-3) !important;
+  color: var(--muted-2) !important;
+  border-color: var(--border) !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
 }
 
 /* Checkbox */
@@ -502,131 +529,68 @@ body, p, div, span, li, button, label, input, textarea {
   opacity: 1 !important;
   font-weight: 700 !important;
 }
-
-[data-testid="stCheckbox"] svg {
-  color: var(--brand) !important;
-}
-
+[data-testid="stCheckbox"] svg { color: var(--brand) !important; }
 [data-testid="stCheckbox"] input:focus-visible + div {
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
   border-radius: 6px;
 }
 
-/* Radios */
+/* Radio controls */
+[data-testid="stRadio"] { margin-top: 6px; }
 [data-testid="stRadio"] > div[role="radiogroup"] {
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 10px !important;
   align-items: center !important;
 }
-
-[data-testid="stRadio"] {
-  margin-top: 6px;
-}
-
 [data-testid="stRadio"] [role="radio"] {
   display: inline-flex !important;
   align-items: center !important;
   gap: 8px !important;
   padding: 10px 16px !important;
   border-radius: 999px !important;
-  background: #fff !important;
+  background: var(--surface) !important;
   border: 1px solid var(--border) !important;
   color: var(--ink) !important;
   font-weight: 700 !important;
   white-space: nowrap !important;
 }
-
 [data-testid="stRadio"] [role="radio"][aria-checked="true"] {
   background: var(--brand-50) !important;
   border-color: var(--brand) !important;
 }
-
 [data-testid="stRadio"] label,
 [data-testid="stRadio"] label span {
   color: var(--ink) !important;
   opacity: 1 !important;
   white-space: nowrap !important;
 }
-
 [data-testid="stRadio"] label span {
-  color: var(--ink) !important;
   font-weight: 600 !important;
-  opacity: 1 !important;
 }
-
 [data-testid="stRadio"] input:checked + div {
-  outline: 2px solid rgba(37,99,235,.35) !important;
+  outline: 2px solid rgba(37, 99, 235, 0.35) !important;
   border-radius: 999px !important;
 }
-
-[data-testid="stRadio"] div {
-  color: var(--ink) !important;
-}
-
+[data-testid="stRadio"] div { color: var(--ink) !important; }
 [data-testid="stRadio"] label:focus-within {
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
 }
 
-/* Alerts */
-[data-testid="stAlert"] * {
-  color: #0F172A !important;
-  opacity: 1 !important;
-}
-
-/* Buttons */
-.stButton > button {
-  border-radius: 14px !important;
-  min-height: 46px !important;
-  font-weight: 900 !important;
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  padding: 0 22px !important;
-}
-
-.stButton > button:focus-visible {
-  outline: none !important;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.25) !important;
-}
-
-.stButton > button[kind="primary"] {
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
-  color: #FFFFFF !important;
-}
-
-.stButton > button[kind="primary"] * {
-  color: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
-}
-
-.stButton > button[kind="primary"]:hover {
-  background: var(--brand-600) !important;
-  border-color: var(--brand-600) !important;
-}
-
-.stButton > button:not([kind="primary"]) {
-  background: #fff !important;
-  color: var(--brand) !important;
-  border: 1.5px solid var(--brand) !important;
-}
-
-.stButton > button:not([kind="primary"]) * {
-  color: var(--brand) !important;
-  -webkit-text-fill-color: var(--brand) !important;
-}
-
-.stButton > button:disabled {
-  background: var(--surface-2) !important;
-  color: var(--muted-2) !important;
-  border-color: var(--border) !important;
-  cursor: not-allowed !important;
+/* Responsive rules */
+@media (max-width: 768px) {
+  .form-grid,
+  .optional-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
   .app-wrap { padding: 0 18px 40px; }
+  .card, .form-card { padding: 22px; }
+  .section-panel { padding: 18px; }
   .gauge-circle { width: 180px; height: 180px; }
   .domain-row { grid-template-columns: 1fr; }
   .domain-score { justify-self: start; }
@@ -635,7 +599,6 @@ body, p, div, span, li, button, label, input, textarea {
 """,
         unsafe_allow_html=True,
     )
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 상태 관리
@@ -1178,7 +1141,7 @@ def render_intro_page() -> None:
 
 def render_examinee_page() -> None:
     with st.container():
-        st.markdown('<div class="app-wrap"><div class="stack">', unsafe_allow_html=True)
+        st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
 
         st.markdown(
             """
@@ -1187,10 +1150,25 @@ def render_examinee_page() -> None:
                 <div class="title-lg">응답자 정보</div>
                 <div class="text">이름, 성별, 연령, 거주지역은 필수이며 연락처와 이메일은 선택 입력입니다.</div>
               </div>
+            </div>
             """,
             unsafe_allow_html=True,
         )
-        row1_col1, row1_col2 = st.columns([1, 1], gap="medium")
+
+        st.markdown(
+            """
+            <div class="card form-card">
+              <div class="form-section">
+                <div class="section-header">
+                  <div class="section-title">필수 정보</div>
+                  <div class="section-caption">검사 결과와 응답자 구분을 위해 아래 항목을 모두 입력해 주세요.</div>
+                </div>
+                <div class="form-grid">
+            """,
+            unsafe_allow_html=True,
+        )
+
+        row1_col1, row1_col2 = st.columns(2, gap="medium")
         with row1_col1:
             name = st.text_input(
                 "이름",
@@ -1205,7 +1183,7 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        row2_col1, row2_col2 = st.columns([1, 1], gap="medium")
+        row2_col1, row2_col2 = st.columns(2, gap="medium")
         with row2_col1:
             age = st.text_input(
                 "연령",
@@ -1220,14 +1198,32 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        phone = st.text_input(
-            "휴대폰번호 (선택)",
-            value=st.session_state.examinee.get("phone", ""),
+        st.markdown(
+            """
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="form-section section-panel">
+                <div class="section-header">
+                  <div class="section-title">선택 정보</div>
+                  <div class="section-caption">연락 가능한 정보를 남기려면 입력해 주세요. 미입력 시에도 검사는 계속 진행할 수 있습니다.</div>
+                </div>
+                <div class="optional-grid">
+            """,
+            unsafe_allow_html=True,
         )
-        email = st.text_input(
-            "이메일 (선택)",
-            value=st.session_state.examinee.get("email", ""),
-        )
+
+        optional_col1, optional_col2 = st.columns(2, gap="medium")
+        with optional_col1:
+            phone = st.text_input(
+                "휴대폰번호 (선택)",
+                value=st.session_state.examinee.get("phone", ""),
+            )
+        with optional_col2:
+            email = st.text_input(
+                "이메일 (선택)",
+                value=st.session_state.examinee.get("email", ""),
+            )
 
         normalized_phone = normalize_phone(phone)
         st.session_state.examinee.update({
@@ -1266,18 +1262,24 @@ def render_examinee_page() -> None:
         if region_error and region.strip():
             required_errors.append(region_error)
 
-        if missing_fields:
-            st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
-        for error in required_errors:
-            st.warning(error, icon="⚠️")
-        if phone_error:
-            st.warning(phone_error, icon="⚠️")
-        if email_error:
-            st.warning(email_error, icon="⚠️")
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        if missing_fields or required_errors or phone_error or email_error:
+            st.markdown('<div class="alert-stack">', unsafe_allow_html=True)
+            if missing_fields:
+                st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
+            for error in required_errors:
+                st.warning(error, icon="⚠️")
+            if phone_error:
+                st.warning(phone_error, icon="⚠️")
+            if email_error:
+                st.warning(email_error, icon="⚠️")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
+        st.markdown('<div class="form-actions">', unsafe_allow_html=True)
         actions = st.columns([1, 1], gap="medium")
         with actions[0]:
             if st.button("이전", use_container_width=True):
@@ -1287,8 +1289,7 @@ def render_examinee_page() -> None:
             if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
                 st.session_state.page = "survey"
                 st.rerun()
-
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        st.markdown('</div></div></div>', unsafe_allow_html=True)
 
 
 def render_survey_page() -> None:
