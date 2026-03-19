@@ -80,12 +80,12 @@ REVERSE_ITEMS = {3, 5, 8, 9, 10}
 
 
 def rses_level(total: int):
-    if total >= 40:
+    if total >= 38:
         return (
             "높은 자아존중감",
             "전반적으로 자신을 긍정적으로 인식하고 있으며, 자기 가치감과 자기 존중감이 비교적 안정적인 수준으로 해석될 수 있습니다.",
         )
-    if total >= 30:
+    if total >= 22:
         return (
             "보통 수준의 자아존중감",
             "자아존중감이 전반적으로 평균적인 수준으로 보입니다. 상황에 따라 자신에 대한 평가가 다소 흔들릴 수 있으나 전반적 적응은 무난한 편으로 볼 수 있습니다.",
@@ -246,7 +246,7 @@ def build_result_section_html(
         <div class="support-card-head">
             <div class="support-icon">☘</div>
             <div>
-                <h2 class="support-title">차분히 참고해 주세요</h2>
+                <h2 class="support-title">안내 드립니다.</h2>
             </div>
         </div>
         <p class="support-copy">{guidance}</p>
