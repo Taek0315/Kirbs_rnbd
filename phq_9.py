@@ -349,36 +349,41 @@ body, p, div, span, li, button, label, input, textarea {
   font-weight: 700 !important;
 }
 
-[data-testid="stTextInput"] input,
-[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
   background: #fff !important;
   color: var(--ink) !important;
-  border: 1px solid #CBD5E1 !important;
+  border: 1.5px solid #2B2F3A !important;
   border-radius: 12px !important;
   box-shadow: none !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
 [data-testid="stTextInput"] input {
+  background: transparent !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
   padding: 12px 14px !important;
   height: 44px !important;
 }
 
-[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
   min-height: 44px !important;
   padding: 2px 10px !important;
 }
 
-[data-testid="stTextInput"] input:hover,
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {
-  border-color: #94A3B8 !important;
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
+  border-color: #2B2F3A !important;
 }
 
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextInput"] input:focus-visible,
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:has(input:focus),
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:has(input:focus-visible) {
+[data-testid="stSelectbox"] div[data-baseweb="select"] div[aria-expanded="true"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus),
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus-visible) {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37,99,235,.18) !important;
 }
