@@ -226,43 +226,41 @@ def build_result_section_html(
     bullet_graph_html: str,
 ) -> str:
     return f"""
-    <div class="result-shell">
-        <section class="result-card result-section">
-            <div class="result-topline">
-                <div>
-                    <span class="badge">검사 완료</span>
-                    <h1 class="title-lg">검사 결과</h1>
-                    <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
-                </div>
-                <div class="result-label-chip">✓ {level}</div>
+    <section class="result-card result-section">
+        <div class="result-topline">
+            <div>
+                <span class="badge">검사 완료</span>
+                <h1 class="title-lg">검사 결과</h1>
+                <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
             </div>
-            <div class="score-hero">
-                <div class="score-stack">
-                    <div class="score-kicker">현재 총점</div>
-                    <p class="score-big">{total}<span class="score-unit">점</span></p>
-                </div>
-                <p class="result-summary">{subtitle}</p>
+            <div class="result-label-chip">✓ {level}</div>
+        </div>
+        <div class="score-hero">
+            <div class="score-stack">
+                <div class="score-kicker">현재 총점</div>
+                <p class="score-big">{total}<span class="score-unit">점</span></p>
             </div>
-            <p class="result-highlight-line">{summary}</p>
-            {bullet_graph_html}
-            <div class="note-box result-section-inner">
-                <h2 class="title-md" style="margin-bottom:8px;">결과 해석</h2>
-                <p class="text" style="margin:0;">{interpretation}</p>
+            <p class="result-summary">{subtitle}</p>
+        </div>
+        <p class="result-highlight-line">{summary}</p>
+        {bullet_graph_html}
+        <div class="note-box result-detail-box">
+            <h2 class="title-md result-detail-title">결과 해석</h2>
+            <p class="text result-detail-copy">{interpretation}</p>
+        </div>
+    </section>
+    <section class="support-card result-section">
+        <div class="support-card-head">
+            <div class="support-icon">☘</div>
+            <div>
+                <h2 class="support-title">차분히 참고해 주세요</h2>
             </div>
-        </section>
-        <section class="support-card result-section">
-            <div class="support-card-head">
-                <div class="support-icon">☘</div>
-                <div>
-                    <h2 class="support-title">차분히 참고해 주세요</h2>
-                </div>
-            </div>
-            <p class="support-copy">{guidance}</p>
-            <p class="support-copy" style="margin-top:10px;">
-                본 결과는 현재 시점의 자기보고를 바탕으로 한 참고 정보이며, 개인의 상태를 종합적으로 판단하는 전문적 평가나 진단을 대신하지 않습니다.
-            </p>
-        </section>
-    </div>
+        </div>
+        <p class="support-copy">{guidance}</p>
+        <p class="support-copy support-copy-secondary">
+            본 결과는 현재 시점의 자기보고를 바탕으로 한 참고 정보이며, 개인의 상태를 종합적으로 판단하는 전문적 평가나 진단을 대신하지 않습니다.
+        </p>
+    </section>
     """
 
 
@@ -673,8 +671,14 @@ def inject_css():
             border-radius: 18px;
             padding: 14px 16px;
         }
-        .result-section-inner {
+        .result-detail-box {
             margin-top: 24px;
+        }
+        .result-detail-title {
+            margin-bottom: 8px;
+        }
+        .result-detail-copy {
+            margin: 0;
         }
         .stepper {
             display: flex;
@@ -766,11 +770,10 @@ def inject_css():
             color: var(--green);
             margin: 6px 0 0;
         }
-        .result-shell {
+        .result-stack {
             display: flex;
             flex-direction: column;
             gap: 24px;
-            margin-bottom: 24px;
         }
         .result-section {
             margin-bottom: 0;
@@ -1053,13 +1056,16 @@ def inject_css():
             line-height: 1.85;
             margin: 0;
         }
+        .support-copy-secondary {
+            margin-top: 10px;
+        }
         .button-panel {
             background: rgba(248, 251, 255, 0.82);
             border: 1px solid rgba(214, 226, 236, 0.8);
             border-radius: 22px;
             padding: 20px 16px 16px;
             box-shadow: 0 12px 24px rgba(8, 32, 58, 0.1);
-            margin-top: 24px;
+            margin-top: 0;
         }
         .button-panel-note {
             color: var(--muted);
@@ -1485,9 +1491,12 @@ def page_result(dev_mode: bool = False):
         guidance=guidance,
         bullet_graph_html=bullet_graph_html,
     )
-    st.markdown(result_section_html, unsafe_allow_html=True)
-
-    st.markdown("<div class='button-panel'><p class='button-panel-note'>원하시면 다시 응답해 현재 상태를 새롭게 확인하실 수 있습니다.</p>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='result-stack'>"
+        f"{result_section_html}"
+        "<div class='button-panel result-section'><p class='button-panel-note'>원하시면 다시 응답해 현재 상태를 새롭게 확인하실 수 있습니다.</p>",
+        unsafe_allow_html=True,
+    )
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1506,7 +1515,7 @@ def page_result(dev_mode: bool = False):
                 height=0,
             )
             st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     if st.session_state.close_attempted:
         st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
