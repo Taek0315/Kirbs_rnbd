@@ -349,34 +349,30 @@ body, p, div, span, li, button, label, input, textarea {
   font-weight: 700 !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"],
-[data-testid="stSelectbox"] div[data-baseweb="select"],
-[data-testid="stTextInput"] div[data-baseweb="input"] *,
-[data-testid="stSelectbox"] div[data-baseweb="select"] * {
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
   background: #FFFFFF !important;
   color: var(--ink) !important;
-  border: 2px solid #2F3542 !important;
+  border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   min-height: 46px !important;
   height: 46px !important;
   padding: 0 14px !important;
   box-shadow: none !important;
   outline: none !important;
-  overflow: hidden !important;
-  display: flex !important;
-  align-items: center !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div > div,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div > span,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div > div,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child {
+  padding-right: 10px !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
 [data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
   background: transparent !important;
@@ -384,27 +380,18 @@ body, p, div, span, li, button, label, input, textarea {
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  min-height: 42px !important;
-  height: 42px !important;
+  min-height: 44px !important;
+  height: 44px !important;
   margin: 0 !important;
   padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
 }
 
-[data-testid="stTextInput"] input,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input,
-[data-testid="stSelectbox"] div[data-baseweb="select"] span,
-[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  background: transparent !important;
-  color: var(--ink) !important;
-  fill: var(--ink) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  margin: 0 !important;
+[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
 }
 
 [data-testid="stTextInput"] input,
@@ -412,88 +399,60 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextInput"] input:focus-visible,
 [data-testid="stTextInput"] input:active,
-[data-testid="stTextInput"] div[data-baseweb="input"] input,
-[data-testid="stTextInput"] div[data-baseweb="input"] input:hover,
-[data-testid="stTextInput"] div[data-baseweb="input"] input:focus,
-[data-testid="stTextInput"] div[data-baseweb="input"] input:focus-visible,
-[data-testid="stTextInput"] div[data-baseweb="input"] input:active {
+[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
   appearance: none !important;
   -webkit-appearance: none !important;
-  background-color: transparent !important;
+  background: transparent !important;
   background-image: none !important;
   color: var(--ink) !important;
+  fill: var(--ink) !important;
   border: 0 !important;
   border-bottom: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  text-decoration: none !important;
-  padding: 0 !important;
-  min-height: 42px !important;
-  height: 42px !important;
-  line-height: 42px !important;
+  margin: 0 !important;
 }
 
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-webkit-autofill),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-internal-autofill-selected) {
+[data-testid="stTextInput"] input {
+  padding: 0 !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-webkit-autofill),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-internal-autofill-selected) {
   background: #FFFFFF !important;
-  box-shadow: none !important;
 }
 
 [data-testid="stTextInput"] input:-webkit-autofill,
 [data-testid="stTextInput"] input:-webkit-autofill:hover,
 [data-testid="stTextInput"] input:-webkit-autofill:focus,
-[data-testid="stTextInput"] input:-webkit-autofill:active {
+[data-testid="stTextInput"] input:-webkit-autofill:active,
+[data-testid="stTextInput"] input:-internal-autofill-selected {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
-  background-color: transparent !important;
-  background-image: none !important;
+  background: transparent !important;
   border: 0 !important;
-  border-bottom: 0 !important;
-  box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-  outline: none !important;
-  transition: background-color 9999s ease-out 0s !important;
-}
-
-[data-testid="stTextInput"] input:-internal-autofill-selected {
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  color: var(--ink) !important;
-  border: 0 !important;
-  border-bottom: 0 !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   outline: none !important;
 }
 
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
-  width: 100% !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:hover,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:hover {
+  border-color: var(--border) !important;
 }
 
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] > span {
-  display: flex !important;
-  align-items: center !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
-  border-color: #2F3542 !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has(input:focus-visible),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([aria-expanded="true"]),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([role="combobox"][aria-expanded="true"]),
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([role="button"][aria-expanded="true"]) {
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:focus-within,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([aria-expanded="true"]),
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([role="combobox"][aria-expanded="true"]),
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child:has([role="button"][aria-expanded="true"]) {
   border-color: var(--brand) !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 3px var(--brand-50) !important;
   outline: none !important;
 }
 
