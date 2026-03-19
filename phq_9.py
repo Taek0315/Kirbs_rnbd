@@ -433,12 +433,35 @@ body, p, div, span, li, button, label, input, textarea {
 
 [data-testid="stTextInput"] input::before,
 [data-testid="stTextInput"] input::after,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child::before,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child::after,
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::before,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::after {
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::after,
+[data-testid="stTextInput"] [aria-invalid="true"]::before,
+[data-testid="stTextInput"] [aria-invalid="true"]::after {
   content: none !important;
   border: none !important;
+  border-bottom: none !important;
   box-shadow: none !important;
   background: none !important;
+}
+
+[data-testid="stTextInput"] [aria-invalid="true"],
+[data-testid="stTextInput"] input[aria-invalid="true"],
+[data-testid="stTextInput"] div[aria-invalid="true"],
+[data-testid="stTextInput"] div[data-baseweb="input"] [aria-invalid="true"],
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child[aria-invalid="true"],
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has([aria-invalid="true"]),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div[aria-invalid="true"],
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input[aria-invalid="true"]),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:user-invalid),
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div:has(input:invalid) {
+  border: none !important;
+  border-bottom: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-image: none !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-webkit-autofill),
