@@ -227,7 +227,7 @@ def build_result_section_html(
 ) -> str:
     return f"""
     <div class="result-shell">
-        <section class="result-card">
+        <section class="result-card result-section">
             <div class="result-topline">
                 <div>
                     <span class="badge">검사 완료</span>
@@ -245,12 +245,12 @@ def build_result_section_html(
             </div>
             <p class="result-highlight-line">{summary}</p>
             {bullet_graph_html}
-            <div class="note-box" style="margin-top:16px;">
+            <div class="note-box result-section-inner">
                 <h2 class="title-md" style="margin-bottom:8px;">결과 해석</h2>
                 <p class="text" style="margin:0;">{interpretation}</p>
             </div>
         </section>
-        <section class="support-card">
+        <section class="support-card result-section">
             <div class="support-card-head">
                 <div class="support-icon">☘</div>
                 <div>
@@ -673,6 +673,9 @@ def inject_css():
             border-radius: 18px;
             padding: 14px 16px;
         }
+        .result-section-inner {
+            margin-top: 24px;
+        }
         .stepper {
             display: flex;
             align-items: center;
@@ -764,8 +767,13 @@ def inject_css():
             margin: 6px 0 0;
         }
         .result-shell {
-            display: grid;
-            gap: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .result-section {
+            margin-bottom: 0;
         }
         .result-card {
             position: relative;
@@ -1049,13 +1057,14 @@ def inject_css():
             background: rgba(248, 251, 255, 0.82);
             border: 1px solid rgba(214, 226, 236, 0.8);
             border-radius: 22px;
-            padding: 16px;
+            padding: 20px 16px 16px;
             box-shadow: 0 12px 24px rgba(8, 32, 58, 0.1);
+            margin-top: 24px;
         }
         .button-panel-note {
             color: var(--muted);
             font-size: 13px;
-            margin: 0 0 12px;
+            margin: 0 0 16px;
         }
         @keyframes bulletGrow {
             from { width: 0; }
@@ -1482,7 +1491,7 @@ def page_result(dev_mode: bool = False):
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("다시 차분히 검사하기", type="primary", use_container_width=True):
+        if st.button("검사 다시하기", type="primary", use_container_width=True):
             reset_all()
             st.rerun()
     with c2:
