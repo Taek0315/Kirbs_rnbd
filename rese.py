@@ -103,6 +103,116 @@ def rses_level(total: int):
     )
 
 
+def result_display_content(level: str, total: int) -> dict[str, str]:
+    if level == "높은 자아존중감":
+        return {
+            "subtitle": "현재의 자기 인식을 차분하게 잘 지지하고 있는 상태예요",
+            "summary": "자신의 강점과 가치를 비교적 안정적으로 바라보고 계신 편으로 읽힙니다.",
+            "interpretation": (
+                f"현재 점수는 {total}점으로, 전반적인 자아존중감이 비교적 안정적인 높은 범위에 놓여 있습니다. "
+                "이는 여러 상황에서 자신의 가치와 강점을 대체로 균형 있게 인식하고 있을 가능성을 시사합니다. "
+                "물론 누구나 환경에 따라 자신감이 흔들릴 수 있지만, 지금의 결과는 스스로를 대하는 기본적인 시선이 비교적 단단하게 유지되고 있음을 보여줍니다."
+            ),
+            "guidance": (
+                "지금의 균형감을 유지하기 위해 평소 자신에게 도움이 되었던 회복 방법이나 일상 습관을 함께 돌아보는 것도 좋습니다. "
+                "만약 최근의 부담이나 변화로 인해 마음의 여유가 줄어든다면, 충분한 휴식과 주변의 지지를 통해 현재의 안정감을 부드럽게 이어가 보세요."
+            ),
+        }
+    if level == "보통 수준의 자아존중감":
+        return {
+            "subtitle": "대체로 균형 잡힌 자기 시선을 유지하고 있는 모습으로 보입니다",
+            "summary": "상황에 따라 흔들릴 수는 있지만, 기본적인 자기 평가는 무난한 범위에 가깝습니다.",
+            "interpretation": (
+                f"현재 점수는 {total}점으로, 전반적인 자아존중감이 평균적인 범위에 해당합니다. "
+                "이는 많은 상황에서 자신을 비교적 균형 있게 바라볼 수 있음을 뜻하지만, 스트레스나 관계의 영향에 따라 자기평가가 일시적으로 흔들릴 수도 있음을 함께 보여줍니다. "
+                "현재의 결과는 지나치게 부정적이기보다, 일상 속 경험에 따라 자신감의 높낮이가 자연스럽게 달라질 수 있는 상태로 이해하시면 좋습니다."
+            ),
+            "guidance": (
+                "최근 스스로를 조금 더 지지해 주었던 순간과 반대로 위축되었던 순간을 함께 떠올려 보면 도움이 됩니다. "
+                "만약 자신을 낮게 평가하는 생각이 자주 반복된다면, 혼자 견디기보다 신뢰할 수 있는 사람이나 전문가와 차분히 이야기해 보는 것도 좋은 방법입니다."
+            ),
+        }
+    return {
+        "subtitle": "지금은 자신을 대하는 시선이 다소 지쳐 있을 가능성이 있어요",
+        "summary": "최근의 부담이나 반복된 자기비판이 자기 가치감을 낮추고 있을 수 있습니다.",
+        "interpretation": (
+            f"현재 점수는 {total}점으로, 자아존중감이 비교적 낮은 범위에 머물러 있는 것으로 보입니다. "
+            "이 결과는 요즘 자신을 바라보는 마음이 다소 엄격해졌거나, 스스로의 장점과 가치를 충분히 느끼기 어려운 상태일 수 있음을 시사합니다. "
+            "다만 이는 현재 시점의 자기보고 결과이며, 곧바로 어떤 상태를 단정하거나 진단하는 의미는 아닙니다. "
+            "최근의 스트레스, 관계 경험, 피로 등이 함께 영향을 주었을 가능성도 차분히 살펴볼 필요가 있습니다."
+        ),
+        "guidance": (
+            "이와 같은 느낌이 한동안 이어지거나 일상에서의 의욕, 관계, 감정 조절에까지 영향을 준다면 혼자만의 문제로 두지 않으셔도 괜찮습니다. "
+            "자신을 비난하기보다 현재의 어려움을 이해하려는 태도로 접근하고, 필요하다면 상담기관이나 정신건강 전문가의 도움을 받아 보다 세심하게 살펴보시길 권합니다."
+        ),
+    }
+
+
+def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50) -> str:
+    score_span = max_score - min_score
+    normalized_pct = ((total - min_score) / score_span) * 100 if score_span else 0
+    fill_pct = max(0, min(100, normalized_pct))
+
+    segments = [
+        ("낮음", min_score, 29, "band band-low"),
+        ("보통", 30, 39, "band band-mid"),
+        ("높음", 40, max_score, "band band-high"),
+    ]
+
+    band_html = []
+    scale_html = []
+    for label, start, end, band_class in segments:
+        width_pct = ((end - start) / score_span) * 100 if score_span else 0
+        left_pct = ((start - min_score) / score_span) * 100 if score_span else 0
+        center_pct = left_pct + (width_pct / 2)
+        band_html.append(
+            f"<span class='{band_class}' style='left:{left_pct:.2f}%; width:{width_pct:.2f}%;'></span>"
+        )
+        scale_html.append(
+            f"<span class='bullet-scale-label' style='left:{center_pct:.2f}%;'>{label}</span>"
+        )
+
+    ticks = []
+    for tick in [10, 20, 30, 40, 50]:
+        tick_left = ((tick - min_score) / score_span) * 100 if score_span else 0
+        ticks.append(
+            f"""
+            <span class='bullet-tick' style='left:{tick_left:.2f}%;'>
+                <span class='bullet-tick-line'></span>
+                <span class='bullet-tick-text'>{tick}</span>
+            </span>
+            """
+        )
+
+    return f"""
+    <div class="bullet-graph-card">
+        <div class="bullet-graph-head">
+            <div>
+                <div class="bullet-graph-title">점수 흐름</div>
+                <div class="bullet-graph-caption">전체 범위 안에서 현재 위치를 차분하게 보여드립니다</div>
+            </div>
+            <div class="bullet-graph-chip">총점 {total} / {max_score}</div>
+        </div>
+        <div class="bullet-scale">
+            {''.join(scale_html)}
+        </div>
+        <div class="bullet-track-wrap">
+            <div class="bullet-track">
+                {''.join(band_html)}
+                <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>
+                <div class="bullet-marker" style="left:{fill_pct:.2f}%;">
+                    <span class="bullet-marker-dot"></span>
+                    <span class="bullet-marker-pill">{total}점</span>
+                </div>
+            </div>
+            <div class="bullet-ticks">
+                {''.join(ticks)}
+            </div>
+        </div>
+    </div>
+    """
+
+
 def score_from_label(label: str | None):
     if not label:
         return None
@@ -600,6 +710,314 @@ def inject_css():
             color: var(--green);
             margin: 6px 0 0;
         }
+        .result-shell {
+            display: grid;
+            gap: 18px;
+        }
+        .result-card {
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at top right, rgba(46, 139, 87, 0.12), transparent 28%),
+                linear-gradient(180deg, rgba(245, 250, 255, 0.98) 0%, rgba(255, 255, 255, 1) 38%, rgba(247, 251, 255, 1) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.9);
+            border-radius: 28px;
+            padding: 26px;
+            box-shadow: 0 22px 48px rgba(8, 32, 58, 0.2);
+        }
+        .result-card::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -80px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(30, 78, 121, 0.08), transparent 70%);
+            pointer-events: none;
+        }
+        .result-topline {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .result-subcopy {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+            margin: 8px 0 0;
+        }
+        .score-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: end;
+            margin-top: 18px;
+            margin-bottom: 18px;
+        }
+        .score-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .score-kicker {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--green);
+            letter-spacing: 0.01em;
+        }
+        .score-big {
+            font-size: clamp(52px, 9vw, 78px);
+            line-height: 0.95;
+            font-weight: 900;
+            color: var(--navy);
+            letter-spacing: -0.04em;
+            margin: 0;
+        }
+        .score-unit {
+            font-size: 24px;
+            color: var(--blue);
+            font-weight: 800;
+            margin-left: 6px;
+        }
+        .result-label-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(46, 139, 87, 0.1);
+            border: 1px solid rgba(46, 139, 87, 0.18);
+            color: var(--green);
+            font-size: 14px;
+            font-weight: 800;
+        }
+        .result-summary {
+            font-size: 16px;
+            line-height: 1.75;
+            color: var(--text);
+            margin: 0;
+        }
+        .result-highlight-line {
+            margin-top: 14px;
+            padding-left: 14px;
+            border-left: 4px solid rgba(46, 139, 87, 0.65);
+            color: #245f49;
+            font-size: 15px;
+            line-height: 1.75;
+            font-weight: 700;
+        }
+        .bullet-graph-card {
+            margin: 6px 0 8px;
+            padding: 18px 18px 14px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(242, 248, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.95);
+        }
+        .bullet-graph-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .bullet-graph-title {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+        .bullet-graph-caption {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .bullet-graph-chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(15, 39, 71, 0.06);
+            color: var(--blue);
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .bullet-scale {
+            position: relative;
+            height: 18px;
+            margin-bottom: 8px;
+        }
+        .bullet-scale-label {
+            position: absolute;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .bullet-track-wrap {
+            position: relative;
+            padding-top: 26px;
+        }
+        .bullet-track {
+            position: relative;
+            height: 20px;
+            border-radius: 999px;
+            background: #e4edf5;
+            overflow: visible;
+            box-shadow: inset 0 1px 2px rgba(15, 39, 71, 0.08);
+        }
+        .band {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 999px;
+            opacity: 0.95;
+        }
+        .band-low {
+            background: linear-gradient(90deg, rgba(198, 220, 239, 0.88) 0%, rgba(190, 214, 235, 0.9) 100%);
+        }
+        .band-mid {
+            background: linear-gradient(90deg, rgba(207, 227, 244, 0.96) 0%, rgba(198, 229, 218, 0.92) 100%);
+        }
+        .band-high {
+            background: linear-gradient(90deg, rgba(198, 234, 215, 0.96) 0%, rgba(184, 230, 206, 0.98) 100%);
+        }
+        .bullet-fill {
+            position: absolute;
+            inset: 3px auto 3px 3px;
+            width: 0;
+            max-width: calc(100% - 6px);
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(30, 78, 121, 0.9) 0%, rgba(46, 139, 87, 0.95) 100%);
+            box-shadow: 0 10px 18px rgba(46, 139, 87, 0.18);
+            animation: bulletGrow 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        }
+        .bullet-marker {
+            position: absolute;
+            top: -20px;
+            transform: translateX(-50%);
+            animation: markerAppear 0.7s ease-out forwards;
+        }
+        .bullet-marker::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 26px;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 34px;
+            background: rgba(15, 39, 71, 0.28);
+        }
+        .bullet-marker-dot {
+            display: block;
+            width: 14px;
+            height: 14px;
+            margin: 0 auto 6px;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 4px solid var(--green);
+            box-shadow: 0 8px 14px rgba(15, 39, 71, 0.14);
+        }
+        .bullet-marker-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--navy);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .bullet-ticks {
+            position: relative;
+            height: 26px;
+            margin-top: 10px;
+        }
+        .bullet-tick {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        .bullet-tick-line {
+            display: block;
+            width: 1px;
+            height: 8px;
+            background: rgba(15, 39, 71, 0.18);
+            margin: 0 auto 4px;
+        }
+        .bullet-tick-text {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .support-card {
+            background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(242, 248, 255, 0.96) 100%);
+            border: 1px solid rgba(214, 226, 236, 0.96);
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: 0 12px 28px rgba(8, 32, 58, 0.12);
+        }
+        .support-card-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .support-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(30, 78, 121, 0.12) 0%, rgba(46, 139, 87, 0.16) 100%);
+            color: var(--green);
+            font-size: 20px;
+        }
+        .support-title {
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .support-copy {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.85;
+            margin: 0;
+        }
+        .button-panel {
+            background: rgba(248, 251, 255, 0.82);
+            border: 1px solid rgba(214, 226, 236, 0.8);
+            border-radius: 22px;
+            padding: 16px;
+            box-shadow: 0 12px 24px rgba(8, 32, 58, 0.1);
+        }
+        .button-panel-note {
+            color: var(--muted);
+            font-size: 13px;
+            margin: 0 0 12px;
+        }
+        @keyframes bulletGrow {
+            from { width: 0; }
+            to { width: min(var(--target-width), calc(100% - 6px)); }
+        }
+        @keyframes markerAppear {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
         .instruction-card {
             background: rgba(248, 251, 255, 0.96);
             border: 1px solid rgba(214, 226, 236, 0.95);
@@ -704,6 +1122,10 @@ def inject_css():
             }
             .page-wrap {
                 padding-bottom: 96px;
+            }
+            .score-hero {
+                grid-template-columns: 1fr;
+                align-items: start;
             }
         }
         </style>
@@ -984,37 +1406,59 @@ def page_result(dev_mode: bool = False):
     result = internal_payload["result"]
     total = result["total"]
     level = result["level"]
-    interpretation = result["interpretation"]
+    display_content = result_display_content(level, total)
+    score_min = result.get("score_range", {}).get("min", 10)
+    score_max = result.get("score_range", {}).get("max", 50)
+    bullet_graph_html = build_bullet_graph_html(total, min_score=score_min, max_score=score_max)
 
     st.markdown(
         f"""
-        <section class="card">
-            <span class="badge">검사 완료</span>
-            <h1 class="title-lg">검사 결과</h1>
-            <p class="result-score" style="margin-top:16px;">{total}점</p>
-            <p class="result-level">{level}</p>
-            <p class="text" style="margin-top:14px;">{interpretation}</p>
-        </section>
+        <div class="result-shell">
+            <section class="result-card">
+                <div class="result-topline">
+                    <div>
+                        <span class="badge">검사 완료</span>
+                        <h1 class="title-lg">검사 결과</h1>
+                        <p class="result-subcopy">현재 응답을 바탕으로 산출된 자아존중감 결과를 안내드립니다.</p>
+                    </div>
+                    <div class="result-label-chip">✓ {level}</div>
+                </div>
+                <div class="score-hero">
+                    <div class="score-stack">
+                        <div class="score-kicker">현재 총점</div>
+                        <p class="score-big">{total}<span class="score-unit">점</span></p>
+                    </div>
+                    <p class="result-summary">{display_content["subtitle"]}</p>
+                </div>
+                <p class="result-highlight-line">{display_content["summary"]}</p>
+                {bullet_graph_html}
+                <div class="note-box" style="margin-top:16px;">
+                    <h2 class="title-md" style="margin-bottom:8px;">결과 해석</h2>
+                    <p class="text" style="margin:0;">{display_content["interpretation"]}</p>
+                </div>
+            </section>
+            <section class="support-card">
+                <div class="support-card-head">
+                    <div class="support-icon">☘</div>
+                    <div>
+                        <h2 class="support-title">차분히 참고해 주세요</h2>
+                    </div>
+                </div>
+                <p class="support-copy">{display_content["guidance"]}</p>
+                <p class="support-copy" style="margin-top:10px;">
+                    본 결과는 현재 시점의 자기보고를 바탕으로 한 참고 정보이며, 개인의 상태를 종합적으로 판단하는 전문적 평가나 진단을 대신하지 않습니다.
+                </p>
+            </section>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        """
-        <section class="card soft">
-            <h2 class="title-md">안내</h2>
-            <p class="footer-note">
-                본 결과는 참고용이며, 개인의 상태를 종합적으로 판단하는 전문적 평가를 대체하지 않습니다.
-                자신에 대한 부정적 평가가 지속되거나 정서적 어려움이 반복된다면 전문가와 상담해 보시길 권장드립니다.
-            </p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='button-panel'><p class='button-panel-note'>원하시면 다시 응답해 현재 상태를 새롭게 확인하실 수 있습니다.</p>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("검사 다시하기", type="primary", use_container_width=True):
+        if st.button("다시 차분히 검사하기", type="primary", use_container_width=True):
             reset_all()
             st.rerun()
     with c2:
@@ -1029,6 +1473,7 @@ def page_result(dev_mode: bool = False):
                 height=0,
             )
             st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.close_attempted:
         st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
