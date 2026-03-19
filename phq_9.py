@@ -29,6 +29,9 @@ def _reset_to_survey():
     st.session_state.examinee = {
         "user_id": str(uuid.uuid4()),
         "name": "",
+        "gender": "",
+        "age": "",
+        "region": "",
         "email": "",
         "phone": "",
     }
@@ -523,12 +526,31 @@ def init_state() -> None:
         st.session_state.examinee = {
             "user_id": str(uuid.uuid4()),
             "name": "",
+            "gender": "",
+            "age": "",
+            "region": "",
             "email": "",
             "phone": "",
         }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 문항/선택지
+REGION_OPTIONS = [
+    "수도권",
+    "충청권",
+    "강원권",
+    "전라권",
+    "경상권",
+    "제주도",
+]
+
+GENDER_OPTIONS = [
+    "남성",
+    "여성",
+    "기타",
+    "응답하지 않음",
+]
+
 QUESTIONS = [
     {"no":1,"ko":"일상적인 활동(예: 취미나 일상 일과 등)에 흥미나 즐거움을 거의 느끼지 못한다.","domain":"흥미/즐거움 상실"},
     {"no":2,"ko":"기분이 가라앉거나, 우울하거나, 희망이 없다고 느낀다.","domain":"우울한 기분"},
@@ -561,6 +583,72 @@ def dict_to_kv_csv(d: dict) -> str:
     for k, v in d.items():
         parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
     return ",".join(parts)
+
+def validate_name(name: str) -> str | None:
+    if not name.strip():
+        return "이름을 입력해 주세요."
+    return None
+
+
+def validate_gender(gender: str) -> str | None:
+    if not gender.strip():
+        return "성별을 선택해 주세요."
+    if gender not in GENDER_OPTIONS:
+        return "성별을 다시 선택해 주세요."
+    return None
+
+
+def validate_age(age: str) -> str | None:
+    value = age.strip()
+    if not value:
+        return "연령을 입력해 주세요."
+    if not value.isdigit():
+        return "연령은 숫자만 입력해 주세요."
+    age_num = int(value)
+    if not 1 <= age_num <= 120:
+        return "연령은 1세부터 120세 사이로 입력해 주세요."
+    return None
+
+
+def validate_region(region: str) -> str | None:
+    if not region.strip():
+        return "거주지역을 선택해 주세요."
+    if region not in REGION_OPTIONS:
+        return "거주지역을 다시 선택해 주세요."
+    return None
+
+
+def validate_phone(phone: str) -> str | None:
+    value = phone.strip()
+    if not value:
+        return None
+    if not all(ch.isdigit() or ch == "-" for ch in value):
+        return "연락처는 숫자와 하이픈(-)만 입력해 주세요."
+    return None
+
+
+def validate_email(email: str) -> str | None:
+    value = email.strip()
+    if not value:
+        return None
+    if "@" not in value or "." not in value:
+        return "이메일 형식이 올바르지 않습니다. (@와 . 포함)"
+    return None
+
+
+def normalize_phone(phone: str) -> str:
+    value = phone.strip().replace(" ", "")
+    cleaned = []
+    last_dash = False
+    for ch in value:
+        if ch.isdigit():
+            cleaned.append(ch)
+            last_dash = False
+        elif ch == "-" and not last_dash:
+            cleaned.append(ch)
+            last_dash = True
+    return "".join(cleaned).strip("-")
+
 
 def build_exam_data_phq9(payload: dict) -> dict:
     """
@@ -918,7 +1006,7 @@ def render_intro_page() -> None:
                     <div class="title-lg">개인정보 수집·이용 동의</div>
                   </div>
                   <ul class="instruction-list">
-                    <li>수집 항목: 이름, 이메일, 연락처, 응답 내용, 결과, 제출 시각</li>
+                    <li>수집 항목: 이름, 성별, 연령, 거주지역, 이메일, 연락처, 응답 내용, 결과, 제출 시각</li>
                     <li>이용 목적: 검사 수행 및 결과 제공, 통계 및 품질 개선, DB 저장</li>
                     <li>보관 기간: 내부 정책에 따름</li>
                     <li>제3자 제공: 없음</li>
@@ -965,26 +1053,76 @@ def render_examinee_page() -> None:
             <div class="card result-card">
               <div class="card-header">
                 <div class="title-lg">응답자 정보</div>
-                <div class="text">검사 결과 제공을 위해 필수 정보를 입력해 주세요.</div>
+                <div class="text">이름, 성별, 연령, 거주지역은 필수이며 연락처와 이메일은 선택 입력입니다.</div>
               </div>
             """,
             unsafe_allow_html=True,
         )
-        name_col, email_col = st.columns([1, 1], gap="medium")
-        with name_col:
-            st.session_state.examinee["name"] = st.text_input(
+        row1_col1, row1_col2 = st.columns([1, 1], gap="medium")
+        with row1_col1:
+            name = st.text_input(
                 "이름",
                 value=st.session_state.examinee.get("name", ""),
             )
-        with email_col:
-            st.session_state.examinee["email"] = st.text_input(
-                "이메일 (선택)",
-                value=st.session_state.examinee.get("email", ""),
+        with row1_col2:
+            gender = st.selectbox(
+                "성별",
+                options=[""] + GENDER_OPTIONS,
+                index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
+                if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
+                else 0,
             )
-        st.session_state.examinee["phone"] = st.text_input(
-            "연락처 (선택)",
+
+        row2_col1, row2_col2 = st.columns([1, 1], gap="medium")
+        with row2_col1:
+            age = st.text_input(
+                "연령",
+                value=st.session_state.examinee.get("age", ""),
+            )
+        with row2_col2:
+            region = st.selectbox(
+                "거주지역",
+                options=[""] + REGION_OPTIONS,
+                index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
+                if st.session_state.examinee.get("region", "") in REGION_OPTIONS
+                else 0,
+            )
+
+        phone = st.text_input(
+            "휴대폰번호 (선택)",
             value=st.session_state.examinee.get("phone", ""),
         )
+        email = st.text_input(
+            "이메일 (선택)",
+            value=st.session_state.examinee.get("email", ""),
+        )
+
+        normalized_phone = normalize_phone(phone)
+        st.session_state.examinee.update({
+            "name": name.strip(),
+            "gender": gender,
+            "age": age.strip(),
+            "region": region,
+            "phone": normalized_phone,
+            "email": email.strip(),
+        })
+
+        name_error = validate_name(name)
+        gender_error = validate_gender(gender)
+        age_error = validate_age(age)
+        region_error = validate_region(region)
+        phone_error = validate_phone(normalized_phone)
+        email_error = validate_email(email)
+
+        required_errors = [error for error in [name_error, gender_error, age_error, region_error] if error]
+        if required_errors:
+            st.warning("필수 정보를 모두 올바르게 입력해 주세요: " + " / ".join(required_errors), icon="⚠️")
+        if phone_error:
+            st.warning(phone_error, icon="⚠️")
+        if email_error:
+            st.warning(email_error, icon="⚠️")
+
+        all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
         st.markdown("</div>", unsafe_allow_html=True)
 
         actions = st.columns([1, 1], gap="medium")
@@ -993,12 +1131,9 @@ def render_examinee_page() -> None:
                 st.session_state.page = "intro"
                 st.rerun()
         with actions[1]:
-            if st.button("다음", type="primary", use_container_width=True):
-                if not st.session_state.examinee.get("name", "").strip():
-                    st.warning("이름을 입력해 주세요.", icon="⚠️")
-                else:
-                    st.session_state.page = "survey"
-                    st.rerun()
+            if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
+                st.session_state.page = "survey"
+                st.rerun()
 
         st.markdown("</div></div>", unsafe_allow_html=True)
 
