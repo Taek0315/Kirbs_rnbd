@@ -1113,18 +1113,33 @@ def inject_css():
             justify-content: stretch;
             overflow: hidden;
             cursor: pointer;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
             transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
             border-color: rgba(30, 78, 121, 0.58);
             background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
             transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(15, 39, 71, 0.09);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09);
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] {
-            border-color: rgba(46, 139, 87, 0.88);
-            background: linear-gradient(135deg, rgba(30, 78, 121, 0.14) 0%, rgba(46, 139, 87, 0.2) 100%);
-            box-shadow: 0 0 0 2px rgba(46, 139, 87, 0.12), 0 12px 24px rgba(46, 139, 87, 0.12);
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"],
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
+            border-color: #1f6fb2;
+            background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%);
+            transform: translateY(-1px);
+            box-shadow:
+                inset 0 0 0 2px rgba(31, 111, 178, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.96),
+                0 14px 28px rgba(19, 74, 120, 0.18);
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"]:hover,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked):hover {
+            border-color: #16659f;
+            background: linear-gradient(135deg, rgba(210, 235, 255, 1) 0%, rgba(224, 244, 234, 1) 100%);
+            box-shadow:
+                inset 0 0 0 2px rgba(31, 111, 178, 0.26),
+                inset 0 1px 0 rgba(255, 255, 255, 0.98),
+                0 16px 30px rgba(19, 74, 120, 0.2);
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label > div {
             width: 100%;
@@ -1168,9 +1183,12 @@ def inject_css():
             font-size: 13px;
             font-weight: 700;
             line-height: 1.2;
+            transition: color 0.16s ease, font-weight 0.16s ease;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p {
-            color: var(--navy);
+        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) p {
+            color: #0d3f68;
+            font-weight: 800;
         }
         div[data-testid="stButton"] > button {
             border-radius: 14px;
