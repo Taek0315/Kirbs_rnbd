@@ -42,6 +42,22 @@ SCALE_TEXT_LABELS = [
 
 SCALE_SCORES = [0, 1, 2, 3]
 
+REGION_OPTIONS = [
+    "수도권",
+    "충청권",
+    "강원권",
+    "전라권",
+    "경상권",
+    "제주도",
+]
+
+GENDER_OPTIONS = [
+    "남성",
+    "여성",
+    "기타",
+    "응답하지 않음",
+]
+
 QUESTIONS = [
     "초조하거나 불안하거나 조마조마함을 느낌",
     "걱정하는 것을 멈추거나 조절하기 어려움",
@@ -111,6 +127,9 @@ def init_state():
     if "examinee" not in st.session_state:
         st.session_state.examinee = {
             "name": "",
+            "gender": "",
+            "age": "",
+            "region": "",
             "phone": "",
             "email": "",
         }
@@ -137,6 +156,9 @@ def reset_all():
     st.session_state.answers = {f"q{i}": None for i in range(1, 8)}
     st.session_state.examinee = {
         "name": "",
+        "gender": "",
+        "age": "",
+        "region": "",
         "phone": "",
         "email": "",
     }
@@ -926,7 +948,7 @@ def page_intro():
         """
         <section class="card soft">
             <h2 class="title-md">검사 진행 동의</h2>
-            <p class="text">검사 진행과 결과 산출을 위해 이름을 수집하며, 휴대폰번호·이메일은 선택 입력 항목입니다. 아래를 확인 후 동의해 주세요.</p>
+            <p class="text">검사 진행과 결과 산출을 위해 이름·성별·연령·거주지역을 수집하며, 휴대폰번호·이메일은 선택 입력 항목입니다. 아래를 확인 후 동의해 주세요.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -950,6 +972,34 @@ def page_intro():
 def validate_name(name: str) -> str | None:
     if not name.strip():
         return "이름을 입력해 주세요."
+    return None
+
+
+def validate_gender(gender: str) -> str | None:
+    if not gender.strip():
+        return "성별을 선택해 주세요."
+    if gender not in GENDER_OPTIONS:
+        return "성별을 다시 선택해 주세요."
+    return None
+
+
+def validate_age(age: str) -> str | None:
+    value = age.strip()
+    if not value:
+        return "연령을 입력해 주세요."
+    if not value.isdigit():
+        return "연령은 숫자만 입력해 주세요."
+    age_num = int(value)
+    if not 1 <= age_num <= 120:
+        return "연령은 1세부터 120세 사이로 입력해 주세요."
+    return None
+
+
+def validate_region(region: str) -> str | None:
+    if not region.strip():
+        return "거주지역을 선택해 주세요."
+    if region not in REGION_OPTIONS:
+        return "거주지역을 다시 선택해 주세요."
     return None
 
 
@@ -987,13 +1037,36 @@ def page_info():
         <section class="card">
             <span class="badge">개인정보 입력</span>
             <h1 class="title-lg">검사 대상자 정보</h1>
-            <p class="text">이름은 필수이며, 휴대폰번호와 이메일은 선택 입력입니다.</p>
+            <p class="text">이름, 성별, 연령, 거주지역은 필수이며, 휴대폰번호와 이메일은 선택 입력입니다.</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+    row1_col1, row1_col2 = st.columns(2, gap="medium")
+    with row1_col1:
+        name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+    with row1_col2:
+        gender = st.selectbox(
+            "성별",
+            options=[""] + GENDER_OPTIONS,
+            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
+            if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
+            else 0,
+        )
+
+    row2_col1, row2_col2 = st.columns(2, gap="medium")
+    with row2_col1:
+        age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
+    with row2_col2:
+        region = st.selectbox(
+            "거주지역",
+            options=[""] + REGION_OPTIONS,
+            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
+            if st.session_state.examinee.get("region", "") in REGION_OPTIONS
+            else 0,
+        )
+
     phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
     email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
 
@@ -1001,20 +1074,29 @@ def page_info():
 
     st.session_state.examinee = {
         "name": name.strip(),
+        "gender": gender,
+        "age": age.strip(),
+        "region": region,
         "phone": normalized_phone,
         "email": email.strip(),
     }
 
-    name_error = None if name.strip() else "required"
+    name_error = validate_name(name)
+    gender_error = validate_gender(gender)
+    age_error = validate_age(age)
+    region_error = validate_region(region)
     phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
+    required_errors = [error for error in [name_error, gender_error, age_error, region_error] if error]
+    if required_errors:
+        st.error("필수 정보를 모두 올바르게 입력해 주세요: " + " / ".join(required_errors))
     if phone_error:
         st.error(phone_error)
     if email_error:
         st.error(email_error)
 
-    all_valid = not any([name_error, phone_error, email_error])
+    all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
     c1, c2 = st.columns([3, 1])
     with c2:
         if st.button("다음", type="primary", disabled=not all_valid, use_container_width=True):
