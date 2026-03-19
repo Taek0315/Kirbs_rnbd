@@ -299,15 +299,14 @@ body, p, div, span, li, button, label, input, textarea {
   padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
 }
 .examinee-form-head {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.examinee-form-grid,
-.examinee-optional-grid {
+.examinee-form-grid {
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -316,32 +315,66 @@ body, p, div, span, li, button, label, input, textarea {
   gap: 18px;
 }
 .examinee-form-card [data-testid="column"] {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 16px 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 .examinee-form-card [data-testid="stTextInput"],
 .examinee-form-card [data-testid="stSelectbox"] {
   width: 100%;
 }
+.examinee-form-card label[data-testid="stWidgetLabel"] p,
+.examinee-form-card label[data-testid="stWidgetLabel"] span,
 .examinee-form-card [data-testid="stTextInput"] label,
 .examinee-form-card [data-testid="stSelectbox"] label {
   color: var(--ink) !important;
   font-weight: 700 !important;
+  font-size: 0.96rem !important;
+  line-height: 1.5 !important;
+  opacity: 1 !important;
 }
-.examinee-optional-note {
-  font-size: 0.86rem;
-  color: var(--muted-2);
-  margin-top: -4px;
+.examinee-form-card [data-testid="stWidgetLabel"] {
+  margin-bottom: 8px !important;
+}
+.examinee-form-card input,
+.examinee-form-card [data-baseweb="select"] > div {
+  min-height: var(--control-height) !important;
+  height: var(--control-height) !important;
+  border-radius: var(--radius-md) !important;
+  background: #FFFFFF !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: none !important;
+}
+.examinee-form-card input::placeholder {
+  color: var(--muted-2) !important;
+  -webkit-text-fill-color: var(--muted-2) !important;
+}
+.examinee-form-card input:focus,
+.examinee-form-card input:focus-visible,
+.examinee-form-card [data-baseweb="select"] > div:focus-within {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+}
+.examinee-form-card [data-baseweb="select"] span,
+.examinee-form-card [data-baseweb="select"] input,
+.examinee-form-card [data-baseweb="select"] svg {
+  color: var(--ink) !important;
+  fill: var(--ink) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}
+.examinee-form-card [data-baseweb="select"] > div > div {
+  background: transparent !important;
 }
 .examinee-warning-area {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 4px;
 }
 .examinee-actions {
-  padding-top: 4px;
+  padding-top: 8px;
 }
 
 /* Alerts */
@@ -1061,7 +1094,7 @@ def render_examinee_page() -> None:
                 <div class="card examinee-intro">
                   <div class="card-header">
                     <div class="title-lg">응답자 정보</div>
-                    <div class="text">검사 진행과 결과 확인을 위해 기본 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                    <div class="text">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
                   </div>
                 </div>
                 """
@@ -1074,8 +1107,8 @@ def render_examinee_page() -> None:
                 """
                 <div class="card examinee-form-card">
                   <div class="examinee-form-head">
-                    <div class="section-title">기본 정보 입력</div>
-                    <div class="section-caption">필수 항목을 모두 입력하면 다음 단계로 이동할 수 있습니다.</div>
+                    <div class="section-title">정보 입력</div>
+                    <div class="section-caption">모든 항목은 한 곳에서 확인할 수 있으며, 필수 항목을 입력하면 다음 단계로 이동할 수 있습니다.</div>
                   </div>
                   <div class="examinee-form-grid">
                 """
@@ -1113,32 +1146,14 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        st.markdown(
-            dedent(
-                """
-                  </div>
-                  <div class="divider"></div>
-                  <div class="examinee-form-head">
-                    <div class="section-title">선택 정보</div>
-                    <div class="examinee-optional-note">연락 가능한 정보를 남기면 결과 확인과 응답 구분에 도움이 됩니다.</div>
-                  </div>
-                  <div class="examinee-optional-grid">
-                """
-            ),
-            unsafe_allow_html=True,
+        phone = st.text_input(
+            "휴대폰번호 (선택)",
+            value=st.session_state.examinee.get("phone", ""),
         )
-
-        phone_col, email_col = st.columns(2, gap="medium")
-        with phone_col:
-            phone = st.text_input(
-                "휴대폰번호 (선택)",
-                value=st.session_state.examinee.get("phone", ""),
-            )
-        with email_col:
-            email = st.text_input(
-                "이메일 (선택)",
-                value=st.session_state.examinee.get("email", ""),
-            )
+        email = st.text_input(
+            "이메일 (선택)",
+            value=st.session_state.examinee.get("email", ""),
+        )
 
         st.markdown('</div></div>', unsafe_allow_html=True)
 
