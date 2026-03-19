@@ -291,209 +291,57 @@ body, p, div, span, li, button, label, input, textarea {
 .legend-chip strong { font-size: 0.95rem; }
 .legend-chip small { color: var(--muted-2); font-size: 0.8rem; }
 
-/* Examinee form controls */
-[data-testid="stTextInput"],
-[data-testid="stSelectbox"] {
+/* Examinee page layout */
+.examinee-intro {
+  padding: 24px 28px;
+}
+.examinee-form-card {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.examinee-form-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.examinee-form-grid,
+.examinee-optional-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.examinee-form-card [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+  gap: 18px;
+}
+.examinee-form-card [data-testid="column"] {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 16px 10px;
+}
+.examinee-form-card [data-testid="stTextInput"],
+.examinee-form-card [data-testid="stSelectbox"] {
   width: 100%;
 }
-
-/* Labels */
-[data-testid="stTextInput"] > label,
-[data-testid="stSelectbox"] > label,
-[data-testid="stTextInput"] label,
-[data-testid="stSelectbox"] label {
-  display: block !important;
-  margin-bottom: 8px !important;
+.examinee-form-card [data-testid="stTextInput"] label,
+.examinee-form-card [data-testid="stSelectbox"] label {
   color: var(--ink) !important;
-  font-size: 0.92rem !important;
   font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
 }
-
-/* Text input frame + selectbox frame */
-[data-testid="stTextInput"] div[data-baseweb="input"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] {
-  width: 100% !important;
+.examinee-optional-note {
+  font-size: 0.86rem;
+  color: var(--muted-2);
+  margin-top: -4px;
 }
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-  min-height: var(--control-height) !important;
-  height: var(--control-height) !important;
-  padding: 0 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  background: #FCFDFE !important;
-  border: 1px solid var(--border-strong) !important;
-  border-radius: 12px !important;
-  box-shadow: none !important;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
+.examinee-warning-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-  padding-right: 12px !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:hover,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
-  border-color: #B8C5D6 !important;
-  background: #FFFFFF !important;
-}
-
-/* Text input inner reset + selectbox inner reset */
-[data-testid="stTextInput"] div[data-baseweb="input"] > div > div,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
-  width: 100% !important;
-  min-height: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-[data-testid="stSelectbox"] div[data-baseweb="select"] [role="button"] {
-  justify-content: space-between !important;
-  gap: 10px !important;
-}
-
-[data-testid="stTextInput"] input,
-[data-testid="stTextInput"] input:hover,
-[data-testid="stTextInput"] input:focus,
-[data-testid="stTextInput"] input:focus-visible,
-[data-testid="stTextInput"] input:active,
-[data-testid="stSelectbox"] input,
-[data-testid="stSelectbox"] input:focus,
-[data-testid="stSelectbox"] input[readonly],
-[data-testid="stSelectbox"] [role="button"] > div,
-[data-testid="stSelectbox"] [role="button"] span {
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  width: 100% !important;
-  min-height: calc(var(--control-height) - 2px) !important;
-  height: calc(var(--control-height) - 2px) !important;
-  line-height: calc(var(--control-height) - 2px) !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: transparent !important;
-  color: var(--ink) !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  font-size: 0.97rem !important;
-  font-weight: 500 !important;
-}
-
-[data-testid="stTextInput"] input,
-[data-testid="stTextInput"] input::placeholder {
-  color: var(--ink) !important;
-}
-
-[data-testid="stTextInput"] input::placeholder,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input::placeholder,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input[readonly],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"] *,
-[data-testid="stSelectbox"] div[data-baseweb="select"] [aria-selected],
-[data-testid="stSelectbox"] div[data-baseweb="select"] span {
-  color: var(--ink) !important;
-  opacity: 1 !important;
-}
-
-[data-testid="stSelectbox"] div[data-baseweb="select"] svg {
-  width: 18px !important;
-  min-width: 18px !important;
-  height: 18px !important;
-  color: var(--muted-2) !important;
-  fill: var(--muted-2) !important;
-}
-
-/* Shared focus style */
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
-[data-testid="stSelectbox"] div[data-baseweb="select"] > div:has([aria-expanded="true"]) {
-  border-color: var(--brand) !important;
-  background: #FFFFFF !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
-  outline: none !important;
-}
-
-/* Dropdown menu styling */
-[data-baseweb="popover"] [role="listbox"] {
-  background: #FFFFFF !important;
-  border: 1px solid var(--border-strong) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.10) !important;
-  padding: 6px !important;
-}
-
-[data-baseweb="popover"] [role="option"] {
-  min-height: 42px !important;
-  padding: 10px 12px !important;
-  background: #FFFFFF !important;
-  border-radius: 10px !important;
-  color: var(--ink) !important;
-  opacity: 1 !important;
-  font-size: 0.96rem !important;
-  line-height: 1.35 !important;
-}
-
-[data-baseweb="popover"] [role="option"] *,
-[data-baseweb="popover"] [role="option"] [data-testid="stMarkdownContainer"],
-[data-baseweb="popover"] [role="option"] [data-testid="stMarkdownContainer"] * {
-  color: var(--ink) !important;
-  opacity: 1 !important;
-}
-
-[data-baseweb="popover"] [role="option"][aria-selected="true"] {
-  background: #EAF2FF !important;
-  color: #12356B !important;
-}
-
-[data-baseweb="popover"] [role="option"]:hover,
-[data-baseweb="popover"] [role="option"]:focus-visible,
-[data-baseweb="popover"] [role="option"][data-highlighted],
-[data-baseweb="popover"] [role="option"]:has(:hover) {
-  background: #F4F8FD !important;
-}
-
-[data-testid="stTextInput"] input::before,
-[data-testid="stTextInput"] input::after,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div::before,
-[data-testid="stTextInput"] div[data-baseweb="input"] > div::after {
-  content: none !important;
-}
-
-[data-testid="stTextInput"] [aria-invalid="true"],
-[data-testid="stTextInput"] input[aria-invalid="true"],
-[data-testid="stTextInput"] div[aria-invalid="true"],
-[data-testid="stTextInput"] div[data-baseweb="input"] [aria-invalid="true"] {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background-image: none !important;
-}
-
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-webkit-autofill),
-[data-testid="stTextInput"] div[data-baseweb="input"] > div:has(input:-internal-autofill-selected) {
-  background: #FCFDFE !important;
-}
-
-[data-testid="stTextInput"] input:-webkit-autofill,
-[data-testid="stTextInput"] input:-webkit-autofill:hover,
-[data-testid="stTextInput"] input:-webkit-autofill:focus,
-[data-testid="stTextInput"] input:-webkit-autofill:active,
-[data-testid="stTextInput"] input:-internal-autofill-selected {
-  -webkit-text-fill-color: var(--ink) !important;
-  caret-color: var(--ink) !important;
-  box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-  transition: background-color 99999s ease-out 0s !important;
+.examinee-actions {
+  padding-top: 4px;
 }
 
 /* Alerts */
@@ -1208,36 +1056,40 @@ def render_examinee_page() -> None:
         st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
 
         st.markdown(
-            """
-            <div class="card compact result-card">
-              <div class="card-header">
-                <div class="title-lg">응답자 정보</div>
-                <div class="text">검사 결과 확인과 응답자 구분을 위해 기본 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
-              </div>
-            </div>
-            """,
+            dedent(
+                """
+                <div class="card examinee-intro">
+                  <div class="card-header">
+                    <div class="title-lg">응답자 정보</div>
+                    <div class="text">검사 진행과 결과 확인을 위해 기본 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                  </div>
+                </div>
+                """
+            ),
             unsafe_allow_html=True,
         )
 
         st.markdown(
-            """
-            <div class="card form-card">
-              <div class="form-section">
-                <div class="section-header">
-                  <div class="section-title">기본 정보 입력</div>
-                  <div class="section-caption">모든 필수 항목을 입력한 뒤 다음 단계로 이동할 수 있습니다.</div>
-                </div>
-            """,
+            dedent(
+                """
+                <div class="card examinee-form-card">
+                  <div class="examinee-form-head">
+                    <div class="section-title">기본 정보 입력</div>
+                    <div class="section-caption">필수 항목을 모두 입력하면 다음 단계로 이동할 수 있습니다.</div>
+                  </div>
+                  <div class="examinee-form-grid">
+                """
+            ),
             unsafe_allow_html=True,
         )
 
-        row1_col1, row1_col2 = st.columns(2, gap="medium")
-        with row1_col1:
+        identity_col, gender_col = st.columns(2, gap="medium")
+        with identity_col:
             name = st.text_input(
                 "이름",
                 value=st.session_state.examinee.get("name", ""),
             )
-        with row1_col2:
+        with gender_col:
             gender = st.selectbox(
                 "성별",
                 options=[""] + GENDER_OPTIONS,
@@ -1246,13 +1098,13 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        row2_col1, row2_col2 = st.columns(2, gap="medium")
-        with row2_col1:
+        age_col, region_col = st.columns(2, gap="medium")
+        with age_col:
             age = st.text_input(
                 "연령",
                 value=st.session_state.examinee.get("age", ""),
             )
-        with row2_col2:
+        with region_col:
             region = st.selectbox(
                 "거주지역",
                 options=[""] + REGION_OPTIONS,
@@ -1261,19 +1113,34 @@ def render_examinee_page() -> None:
                 else 0,
             )
 
-        st.markdown('<div class="unified-form-grid">', unsafe_allow_html=True)
-        optional_col1, optional_col2 = st.columns(2, gap="medium")
-        with optional_col1:
+        st.markdown(
+            dedent(
+                """
+                  </div>
+                  <div class="divider"></div>
+                  <div class="examinee-form-head">
+                    <div class="section-title">선택 정보</div>
+                    <div class="examinee-optional-note">연락 가능한 정보를 남기면 결과 확인과 응답 구분에 도움이 됩니다.</div>
+                  </div>
+                  <div class="examinee-optional-grid">
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+
+        phone_col, email_col = st.columns(2, gap="medium")
+        with phone_col:
             phone = st.text_input(
                 "휴대폰번호 (선택)",
                 value=st.session_state.examinee.get("phone", ""),
             )
-        with optional_col2:
+        with email_col:
             email = st.text_input(
                 "이메일 (선택)",
                 value=st.session_state.examinee.get("email", ""),
             )
-        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
         normalized_phone = normalize_phone(phone)
         st.session_state.examinee.update({
@@ -1312,10 +1179,8 @@ def render_examinee_page() -> None:
         if region_error and region.strip():
             required_errors.append(region_error)
 
-        st.markdown('</div></div>', unsafe_allow_html=True)
-
         if missing_fields or required_errors or phone_error or email_error:
-            st.markdown('<div class="alert-stack">', unsafe_allow_html=True)
+            st.markdown('<div class="examinee-warning-area">', unsafe_allow_html=True)
             if missing_fields:
                 st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
             for error in required_errors:
@@ -1327,9 +1192,8 @@ def render_examinee_page() -> None:
             st.markdown('</div>', unsafe_allow_html=True)
 
         all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
-        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="form-actions">', unsafe_allow_html=True)
+        st.markdown('<div class="examinee-actions">', unsafe_allow_html=True)
         actions = st.columns([1, 1], gap="medium")
         with actions[0]:
             if st.button("이전", use_container_width=True):
