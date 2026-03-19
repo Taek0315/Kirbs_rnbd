@@ -147,16 +147,18 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
     fill_pct = max(0.0, min(100.0, normalized_pct))
 
     segments = [
-        ("낮음", min_score, 29, "band band-low"),
-        ("보통", 30, 39, "band band-mid"),
-        ("높음", 40, max_score, "band band-high"),
+        ("낮음", 10, 21, "band band-low"),
+        ("보통", 22, 37, "band band-mid"),
+        ("높음", 38, 50, "band band-high"),
     ]
 
     band_html: list[str] = []
     scale_html: list[str] = []
     for label, start, end, band_class in segments:
-        width_pct = ((end - start) / score_span) * 100 if score_span else 0
-        left_pct = ((start - min_score) / score_span) * 100 if score_span else 0
+        band_start = max(min_score, start - 0.5)
+        band_end = min(max_score, end + 0.5)
+        left_pct = ((band_start - min_score) / score_span) * 100 if score_span else 0
+        width_pct = ((band_end - band_start) / score_span) * 100 if score_span else 0
         center_pct = left_pct + (width_pct / 2)
         band_html.append(
             f"<span class='{band_class}' style='left:{left_pct:.2f}%; width:{width_pct:.2f}%;'></span>"
