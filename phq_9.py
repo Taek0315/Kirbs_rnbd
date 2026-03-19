@@ -399,6 +399,8 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextInput"] input:focus-visible,
 [data-testid="stTextInput"] input:active,
+[data-testid="stTextInput"] input:invalid,
+[data-testid="stTextInput"] input:user-invalid,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input,
 [data-testid="stSelectbox"] div[data-baseweb="select"] span,
 [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
@@ -408,18 +410,35 @@ body, p, div, span, li, button, label, input, textarea {
   background-image: none !important;
   color: var(--ink) !important;
   fill: var(--ink) !important;
-  border: 0 !important;
-  border-bottom: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
   box-shadow: none !important;
   outline: none !important;
   margin: 0 !important;
+  text-decoration: none !important;
 }
 
-[data-testid="stTextInput"] input {
+[data-testid="stTextInput"] input,
+[data-testid="stTextInput"] input:hover,
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextInput"] input:focus-visible,
+[data-testid="stTextInput"] input:active,
+[data-testid="stTextInput"] input:invalid,
+[data-testid="stTextInput"] input:user-invalid {
   padding: 0 !important;
   min-height: 44px !important;
   height: 44px !important;
   line-height: 44px !important;
+}
+
+[data-testid="stTextInput"] input::before,
+[data-testid="stTextInput"] input::after,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::before,
+[data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child > div::after {
+  content: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: none !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:has(input:-webkit-autofill),
@@ -434,11 +453,17 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stTextInput"] input:-internal-autofill-selected {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   background: transparent !important;
-  border: 0 !important;
+  background-image: none !important;
+  border: none !important;
+  border-bottom: none !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   outline: none !important;
+  text-decoration: none !important;
+  transition: background-color 99999s ease-out 0s !important;
 }
 
 [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child:hover,
