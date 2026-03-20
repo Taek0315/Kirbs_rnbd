@@ -78,6 +78,25 @@ QUESTIONS = [
 
 REVERSE_ITEMS = {3, 5, 8, 9, 10}
 
+# 최종 문구 교체 예정: intro 화면 안내 문구를 한 곳에서 쉽게 수정할 수 있도록 상수로 분리합니다.
+INTRO_DESC_BULLETS = [
+    "이 검사는 현재 자신을 어떻게 인식하고 있는지 전반적인 경향을 살펴보기 위한 자기보고식 검사입니다.",
+    "총 10개 문항으로 구성되어 있으며, 일반적으로 약 2~3분 안에 완료할 수 있습니다.",
+    "문항에는 정답이 없으므로 최근의 나를 가장 잘 설명하는 응답을 선택해 주세요.",
+]
+
+INTRO_NOTICE_BULLETS = [
+    "검사 결과는 현재 응답을 바탕으로 제공되는 참고용 안내이며, 전문적 진단이나 평가를 대체하지 않습니다.",
+    "최근의 스트레스나 컨디션에 따라 결과가 달라질 수 있으므로, 필요 시 충분한 휴식 후 다시 확인해 보셔도 됩니다.",
+    "지속적인 불편감이나 일상 기능의 어려움이 있다면 전문가 상담과 같은 추가적인 도움을 고려해 주세요.",
+]
+
+PRIVACY_BULLETS = [
+    "검사 진행과 결과 제공을 위해 이름, 성별, 연령, 거주지역 등 기본 정보를 입력받습니다.",
+    "휴대폰번호와 이메일은 선택 입력 항목이며, 연동 환경 설정에 따라 응답 및 결과 정보가 저장될 수 있습니다.",
+    "동의 후 검사 시작 시점과 동의 시점 정보가 기록되며, 이후 응답 내용은 결과 산출에 사용됩니다.",
+]
+
 
 def rses_level(total: int):
     if total >= 38:
@@ -257,6 +276,13 @@ def build_result_section_html(
         </p>
     </section>
     """
+
+
+def render_bullet_list(items: list[str], css_class: str = "intro-bullets") -> str:
+    bullet_items = []
+    for item in items:
+        bullet_items.append(f"<li>{item}</li>")
+    return f"<ul class='{css_class}'>" + "".join(bullet_items) + "</ul>"
 
 
 def score_from_label(label: str | None):
@@ -665,6 +691,51 @@ def inject_css():
             border: 1px solid rgba(46, 139, 87, 0.2);
             border-radius: 18px;
             padding: 14px 16px;
+        }
+        .intro-section {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .intro-section + .intro-section {
+            margin-top: 8px;
+        }
+        .intro-subtitle {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--blue);
+            letter-spacing: 0.01em;
+            margin: 0 0 10px;
+        }
+        .intro-bullets {
+            margin: 0;
+            padding-left: 1.2rem;
+            display: grid;
+            gap: 10px;
+        }
+        .intro-bullets li {
+            color: var(--text);
+            font-size: 15px;
+            line-height: 1.72;
+            padding-left: 0.1rem;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+        }
+        .intro-note, .privacy-note {
+            border-radius: 18px;
+            padding: 14px 16px;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .intro-note {
+            background: rgba(30, 78, 121, 0.06);
+            border: 1px solid rgba(30, 78, 121, 0.12);
+            color: var(--muted);
+        }
+        .privacy-note {
+            background: rgba(46, 139, 87, 0.08);
+            border: 1px solid rgba(46, 139, 87, 0.16);
+            color: #245f49;
         }
         .result-detail-box {
             margin-top: 24px;
@@ -1226,6 +1297,22 @@ def inject_css():
                 align-items: start;
             }
         }
+        @media (max-width: 640px) {
+            .card {
+                padding: 20px 18px;
+            }
+            .intro-section {
+                gap: 16px;
+            }
+            .intro-bullets {
+                padding-left: 1.05rem;
+                gap: 8px;
+            }
+            .intro-bullets li {
+                font-size: 14px;
+                line-height: 1.68;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1236,24 +1323,31 @@ def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
+    intro_desc_html = render_bullet_list(INTRO_DESC_BULLETS)
+    intro_notice_html = render_bullet_list(INTRO_NOTICE_BULLETS)
+    privacy_html = render_bullet_list(PRIVACY_BULLETS)
+
     st.markdown(
         f"""
         <section class="card">
             <span class="badge">RSES 기반</span>
             <span class="badge">총 10문항</span>
-            <h1 class="title-lg">{EXAM_TITLE}</h1>
-            <p class="text" style="margin-top:8px;">
-                본 검사는 자신에 대한 전반적인 인식과 태도를 살펴보기 위한 자기보고식 검사입니다.
-                약 2~3분 내에 완료하실 수 있습니다.
-            </p>
-            <div class="note-box" style="margin-top:12px;">
-                <p class="text" style="margin:0;">
-                    <strong>안내:</strong> 본 결과는 참고용이며 임상적 진단을 대체하지 않습니다.
-                    지속적인 불편감이 있거나 일상 기능에 어려움이 있다면 전문가 상담을 권장드립니다.
-                </p>
-                <p class="muted" style="margin:8px 0 0;">
+            <div class="intro-section">
+                <div>
+                    <h1 class="title-lg">{EXAM_TITLE}</h1>
+                    <p class="muted" style="margin:8px 0 0;">검사 안내와 유의사항을 확인한 뒤 진행해 주세요.</p>
+                </div>
+                <div>
+                    <p class="intro-subtitle">검사 설명</p>
+                    {intro_desc_html}
+                </div>
+                <div>
+                    <p class="intro-subtitle">진행 전 유의사항</p>
+                    {intro_notice_html}
+                </div>
+                <div class="intro-note">
                     입력하신 응답은 현재 세션에서 결과 산출에 사용되며, 저장 여부는 연동 환경 설정에 따라 달라질 수 있습니다.
-                </p>
+                </div>
             </div>
         </section>
         """,
@@ -1261,20 +1355,27 @@ def page_intro():
     )
 
     st.markdown(
-        """
+        f"""
         <section class="card soft">
-            <h2 class="title-md">검사 진행 동의</h2>
-            <p class="text">
-                검사 진행과 결과 산출을 위해 기본 인적사항을 수집합니다.
-                아래 안내를 확인하신 후 동의해 주세요.
-            </p>
+            <div class="intro-section">
+                <div>
+                    <h2 class="title-md">개인정보 수집 및 검사 진행 동의</h2>
+                    <p class="muted" style="margin:8px 0 0;">검사 진행과 결과 제공을 위해 아래 내용을 확인해 주세요.</p>
+                </div>
+                <div>
+                    {privacy_html}
+                </div>
+                <div class="privacy-note">
+                    아래 항목에 동의하시면 검사 시작 버튼이 활성화되며, 기존 동의 및 시작 시각 기록 로직은 동일하게 적용됩니다.
+                </div>
+            </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
     consent = st.checkbox(
-        "예, 위 안내를 확인하였고 검사 진행에 동의합니다.",
+        "위 안내를 확인했으며, 개인정보 수집·이용 및 검사 진행에 동의합니다.",
         value=st.session_state.meta["consent"],
     )
     st.session_state.meta["consent"] = consent
