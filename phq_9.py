@@ -147,7 +147,13 @@ body, p, div, span, li, button, label, input, textarea {
 .stat-row strong { color: var(--ink); font-size: 1rem; }
 .stat-row span { color: var(--muted); font-size: 0.92rem; text-align: right; }
 .surface-card, .panel-card { padding: 28px; }
+.card-stack { display: flex; flex-direction: column; gap: 18px; }
 .section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.stat-tile { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; min-height: 110px; }
+.stat-tile-label { color: var(--muted-2); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-tile-value { color: var(--ink); font-size: 1.02rem; font-weight: 800; line-height: 1.5; }
+.notice-card { background: linear-gradient(180deg, #fffdf7 0%, #ffffff 100%); border: 1px solid #f5dfae; }
 .section-card-title, .panel-title, .result-title, .question-title { color: var(--ink); font-weight: 800; }
 .section-card-title { font-size: 1.12rem; margin-bottom: 10px; }
 .section-card-body, .body-text { color: var(--muted); line-height: 1.75; font-size: 0.97rem; }
@@ -173,9 +179,12 @@ body, p, div, span, li, button, label, input, textarea {
 .field-caption { margin-top: -6px; color: var(--muted-2); font-size: 0.82rem; }
 .optional-block { margin-top: 6px; padding-top: 18px; border-top: 1px solid var(--line); }
 .optional-title { color: var(--ink); font-size: 0.94rem; font-weight: 800; margin-bottom: 12px; }
+.form-section-label { color: var(--ink); font-size: 0.98rem; font-weight: 800; margin-bottom: 12px; }
+.form-section-copy { color: var(--muted); font-size: 0.9rem; line-height: 1.7; margin-top: -4px; margin-bottom: 14px; }
 .alert-stack { display: flex; flex-direction: column; gap: 10px; }
 .nav-shell { background: rgba(255,255,255,0.82); border: 1px solid var(--line); border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow-sm); }
-.nav-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.nav-copy { color: var(--muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 14px; }
+.nav-actions { display: flex; flex-direction: column; gap: 0; }
 .question-shell { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
 .question-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .question-title { font-size: 1rem; line-height: 1.7; }
@@ -212,6 +221,7 @@ body, p, div, span, li, button, label, input, textarea {
 .notice-banner { background: var(--danger-soft); border: 1px solid var(--danger-line); color: #8a2f2f; border-radius: 18px; padding: 14px 18px; font-weight: 700; }
 .safety-card { background: linear-gradient(180deg, #fff5f5 0%, #fff 100%); border: 1px solid rgba(220, 38, 38, 0.28); }
 .footer-card { text-align: center; color: var(--muted); font-size: 0.82rem; line-height: 1.7; }
+[data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] .stButton { margin-top: 0; }
 [data-testid="stAlert"] { border-radius: 18px !important; border: 1px solid var(--danger-line) !important; background: var(--danger-soft) !important; box-shadow: var(--shadow-sm) !important; }
 [data-testid="stAlert"] * { color: var(--ink) !important; }
 [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p { font-weight: 600 !important; line-height: 1.65 !important; }
@@ -693,14 +703,19 @@ def render_step_strip(current_page: str) -> None:
     st.markdown(f'<div class="step-strip">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
-def render_nav_buttons(prev_label: str, next_label: str, next_disabled: bool = False):
-    st.markdown('<div class="nav-shell"><div class="nav-grid">', unsafe_allow_html=True)
-    prev_col, next_col = st.columns(2, gap="medium")
-    with prev_col:
-        prev_clicked = st.button(prev_label, use_container_width=True)
-    with next_col:
-        next_clicked = st.button(next_label, type="primary", use_container_width=True, disabled=next_disabled)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+def render_nav_buttons(prev_label: str, next_label: str, next_disabled: bool = False, helper_text: str | None = None):
+    nav_container = st.container()
+    with nav_container:
+        st.markdown('<div class="nav-shell">', unsafe_allow_html=True)
+        if helper_text:
+            st.markdown(f'<div class="nav-copy">{helper_text}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="nav-actions">', unsafe_allow_html=True)
+        prev_col, next_col = st.columns(2, gap="medium")
+        with prev_col:
+            prev_clicked = st.button(prev_label, use_container_width=True)
+        with next_col:
+            next_clicked = st.button(next_label, type="primary", use_container_width=True, disabled=next_disabled)
+        st.markdown('</div></div>', unsafe_allow_html=True)
     return prev_clicked, next_clicked
 
 
@@ -830,30 +845,33 @@ def render_intro_page() -> None:
         ),
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(
-        dedent(
-            """
-            <div class="panel-header">
-              <div>
-                <div class="panel-title">검사 시작 동의</div>
-                <div class="panel-subtitle">동의 후 다음 단계에서 응답자 정보를 입력하고 검사를 진행할 수 있습니다.</div>
-              </div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
-    consent_checked = st.checkbox(
-        "개인정보 수집 및 이용에 동의합니다. (필수)",
-        key="consent_checkbox",
-        value=st.session_state.consent,
-    )
+    with st.container():
+        st.markdown(
+            dedent(
+                """
+                <div class="panel-card card-stack">
+                  <div class="panel-header" style="margin-bottom:0;">
+                    <div>
+                      <div class="panel-title">검사 시작 동의</div>
+                      <div class="panel-subtitle">동의 후 다음 단계에서 응답자 정보를 입력하고 검사를 진행할 수 있습니다.</div>
+                    </div>
+                    <div class="helper-note">동의하지 않으면 검사를 진행할 수 없습니다.</div>
+                  </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+        consent_checked = st.checkbox(
+            "개인정보 수집 및 이용에 동의합니다. (필수)",
+            key="consent_checkbox",
+            value=st.session_state.consent,
+        )
     if consent_checked != st.session_state.consent:
         st.session_state.consent = consent_checked
         if not consent_checked:
             st.session_state.consent_ts = None
-    _, next_clicked = render_nav_buttons("안내 확인", "다음")
+    _, next_clicked = render_nav_buttons("안내 확인", "다음", helper_text="검사 안내를 확인한 뒤 동의 여부를 점검하고 다음 단계로 이동합니다.")
     if next_clicked:
         if not st.session_state.consent:
             st.warning("동의가 필요합니다.", icon="⚠️")
@@ -862,7 +880,6 @@ def render_intro_page() -> None:
                 st.session_state.consent_ts = kst_iso_now()
             st.session_state.page = "examinee"
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
     render_shell_end()
 
 
@@ -890,51 +907,57 @@ def render_examinee_page() -> None:
         ),
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="form-shell"><div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(
-        dedent(
-            """
-            <div class="panel-header">
-              <div>
-                <div class="panel-title">응답자 정보</div>
-                <div class="panel-subtitle">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
-              </div>
-              <div class="helper-note">필수 항목을 모두 입력하고 형식이 맞아야 다음 단계로 이동할 수 있습니다.</div>
-            </div>
-            """
-        ),
-        unsafe_allow_html=True,
-    )
-    identity_col, gender_col = st.columns(2, gap="medium")
-    with identity_col:
-        name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
-    with gender_col:
-        gender = st.selectbox(
-            "성별",
-            options=[""] + GENDER_OPTIONS,
-            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
-            if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
-            else 0,
+    with st.container():
+        st.markdown(
+            dedent(
+                """
+                <div class="panel-card">
+                  <div class="panel-header">
+                    <div>
+                      <div class="panel-title">응답자 정보</div>
+                      <div class="panel-subtitle">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                    </div>
+                    <div class="helper-note">필수 항목을 모두 입력하고 형식이 맞아야 다음 단계로 이동할 수 있습니다.</div>
+                  </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
         )
-    age_col, region_col = st.columns(2, gap="medium")
-    with age_col:
-        age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
-    with region_col:
-        region = st.selectbox(
-            "거주지역",
-            options=[""] + REGION_OPTIONS,
-            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
-            if st.session_state.examinee.get("region", "") in REGION_OPTIONS
-            else 0,
-        )
-    st.markdown('<div class="optional-block"><div class="optional-title">선택 입력 정보</div></div>', unsafe_allow_html=True)
-    phone_col, email_col = st.columns(2, gap="medium")
-    with phone_col:
-        phone = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
-        st.markdown('<div class="field-caption">숫자만 입력해도 기존 규칙에 맞게 정규화됩니다.</div>', unsafe_allow_html=True)
-    with email_col:
-        email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
-        st.markdown('<div class="field-caption">선택 입력이며, 형식이 올바를 때만 다음 단계가 활성화됩니다.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="form-section-label">필수 입력 정보</div>', unsafe_allow_html=True)
+        st.markdown('<div class="form-section-copy">결과 해석과 기록을 위해 필수 항목을 정확하게 입력해 주세요.</div>', unsafe_allow_html=True)
+        identity_col, gender_col = st.columns(2, gap="medium")
+        with identity_col:
+            name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+        with gender_col:
+            gender = st.selectbox(
+                "성별",
+                options=[""] + GENDER_OPTIONS,
+                index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
+                if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
+                else 0,
+            )
+        age_col, region_col = st.columns(2, gap="medium")
+        with age_col:
+            age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
+        with region_col:
+            region = st.selectbox(
+                "거주지역",
+                options=[""] + REGION_OPTIONS,
+                index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
+                if st.session_state.examinee.get("region", "") in REGION_OPTIONS
+                else 0,
+            )
+        st.markdown('<div class="optional-block"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="optional-title">선택 입력 정보</div>', unsafe_allow_html=True)
+        st.markdown('<div class="form-section-copy">선택 정보는 결과 전달이나 후속 안내가 필요한 경우에만 입력하시면 됩니다.</div>', unsafe_allow_html=True)
+        phone_col, email_col = st.columns(2, gap="medium")
+        with phone_col:
+            phone = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
+            st.markdown('<div class="field-caption">숫자만 입력해도 기존 규칙에 맞게 정규화됩니다.</div>', unsafe_allow_html=True)
+        with email_col:
+            email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
+            st.markdown('<div class="field-caption">선택 입력이며, 형식이 올바를 때만 다음 단계가 활성화됩니다.</div>', unsafe_allow_html=True)
 
     normalized_phone = normalize_phone(phone)
     st.session_state.examinee.update({
@@ -978,31 +1001,36 @@ def render_examinee_page() -> None:
         st.markdown('</div>', unsafe_allow_html=True)
 
     all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
-    prev_clicked, next_clicked = render_nav_buttons("이전", "다음", next_disabled=not all_valid)
+    prev_clicked, next_clicked = render_nav_buttons(
+        "이전",
+        "다음",
+        next_disabled=not all_valid,
+        helper_text="필수 항목이 모두 채워지고 입력 형식이 유효할 때 다음 단계가 활성화됩니다.",
+    )
     if prev_clicked:
         st.session_state.page = "intro"
         st.rerun()
     if next_clicked:
         st.session_state.page = "survey"
         st.rerun()
-    st.markdown('</div></div>', unsafe_allow_html=True)
     render_shell_end()
 
 
 def render_survey_page() -> None:
     render_shell_start()
     render_step_strip("survey")
-    st.markdown('<div class="questionnaire-header">', unsafe_allow_html=True)
     st.markdown(
         dedent(
             """
-            <div class="panel-card">
-              <div class="panel-title">질문지 (지난 2주)</div>
-              <div class="panel-subtitle">각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</div>
-              <div class="meta-chip-row">
-                <div class="meta-chip">총 9개 문항</div>
-                <div class="meta-chip">동일한 0–3점 척도</div>
-                <div class="meta-chip">기능 손상 문항 포함</div>
+            <div class="questionnaire-header">
+              <div class="panel-card">
+                <div class="panel-title">질문지 (지난 2주)</div>
+                <div class="panel-subtitle">각 문항에 대해 지난 2주 동안의 빈도를 <b>전혀 아님(0)</b> · <b>며칠 동안(1)</b> · <b>절반 이상(2)</b> · <b>거의 매일(3)</b> 가운데 가장 가까운 값으로 선택합니다.</div>
+                <div class="meta-chip-row">
+                  <div class="meta-chip">총 9개 문항</div>
+                  <div class="meta-chip">동일한 0–3점 척도</div>
+                  <div class="meta-chip">기능 손상 문항 포함</div>
+                </div>
               </div>
             </div>
             """
@@ -1010,11 +1038,10 @@ def render_survey_page() -> None:
         unsafe_allow_html=True,
     )
     render_questionnaire_progress()
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown(
         dedent(
             """
-            <div class="surface-card">
+            <div class="surface-card notice-card">
               <div class="section-card-title">응답 안내</div>
               <ul class="info-list">
                 <li>각 문항은 지난 2주를 기준으로 가장 가까운 빈도를 선택합니다.</li>
@@ -1028,7 +1055,11 @@ def render_survey_page() -> None:
     for q in QUESTIONS:
         render_question_item(q)
     render_functional_block()
-    prev_clicked, next_clicked = render_nav_buttons("이전", "결과 보기")
+    prev_clicked, next_clicked = render_nav_buttons(
+        "이전",
+        "결과 보기",
+        helper_text="미응답 문항이 있더라도 현재 동작과 동일하게 결과를 계산하지만, 가능한 한 모든 문항에 응답해 주세요.",
+    )
     if prev_clicked:
         st.session_state.page = "examinee"
         st.rerun()
@@ -1116,6 +1147,26 @@ def render_result_page(dev_mode: bool = False) -> None:
         ),
         unsafe_allow_html=True,
     )
+    stat_labels = [
+        ("중증도", sev),
+        ("기능 손상", functional_value),
+        ("자살/자해 관련 응답", f"{item9_score}점"),
+        ("미응답 문항", f"{unanswered}개"),
+    ]
+    stat_tiles = "".join(
+        f"<div class='stat-tile'><div class='stat-tile-label'>{label}</div><div class='stat-tile-value'>{value}</div></div>"
+        for label, value in stat_labels
+    )
+    st.markdown(
+        f"""
+        <div class="surface-card">
+          <div class="section-card-title">핵심 지표 요약</div>
+          <div class="section-card-body">현재 결과를 빠르게 검토할 수 있도록 주요 지표를 한곳에 정리했습니다.</div>
+          <div class="stat-grid" style="margin-top:16px;">{stat_tiles}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if unanswered > 0:
         st.markdown(f'<div class="notice-banner">⚠️ 미응답 {unanswered}개 문항은 0점으로 계산되었습니다.</div>', unsafe_allow_html=True)
@@ -1148,7 +1199,11 @@ def render_result_page(dev_mode: bool = False) -> None:
             unsafe_allow_html=True,
         )
 
-    prev_clicked, next_clicked = render_nav_buttons("닫기", "새 검사 시작")
+    prev_clicked, next_clicked = render_nav_buttons(
+        "닫기",
+        "새 검사 시작",
+        helper_text="결과를 확인한 뒤 창을 닫거나, 동일한 흐름으로 새로운 검사를 다시 시작할 수 있습니다.",
+    )
     if prev_clicked:
         components.html("<script>window.close();</script>", height=0)
         st.info("창이 닫히지 않으면 브라우저 탭을 직접 닫거나 ‘새 검사 시작’을 눌러 주세요.", icon="ℹ️")
