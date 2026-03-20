@@ -305,7 +305,6 @@ body, p, div, span, li, button, label, input, textarea {
   padding: 24px 28px;
 }
 
-/* marker */
 .respondent-form-scope {
   width: 0;
   height: 0;
@@ -317,31 +316,67 @@ body, p, div, span, li, button, label, input, textarea {
   display: block;
 }
 
-/* marker가 들어간 Streamlit container 자체를 카드화 */
+.respondent-form-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.respondent-form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.respondent-form-title {
+  font-size: 1.15rem;
+  font-weight: 850;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.respondent-form-desc {
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.72;
+  white-space: normal !important;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.respondent-form-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+
+.examinee-warning-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.examinee-actions {
+  padding-top: 2px;
+}
+
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, #FFFFFF 100%) !important;
-  border: 1px solid rgba(220, 228, 238, 0.98) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 24px !important;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
-  padding: 32px 30px !important;
-  gap: 22px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 30px !important;
+  gap: 0 !important;
 }
 
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) > div[data-testid="element-container"] {
   margin-bottom: 0 !important;
 }
 
-.examinee-form-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.examinee-form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) > div[data-testid="element-container"]:has(.respondent-form-scope) {
+  display: none !important;
 }
 
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stHorizontalBlock"] {
@@ -357,10 +392,9 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="col
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"],
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] {
   width: 100%;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
-/* 라벨 */
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stWidgetLabel"],
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stWidgetLabel"] *,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) label[data-testid="stWidgetLabel"] p,
@@ -382,7 +416,6 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stW
   margin-bottom: 8px !important;
 }
 
-/* 입력 텍스트 */
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] input,
@@ -395,7 +428,12 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="ba
   background: transparent !important;
 }
 
-/* wrapper */
+div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input::placeholder,
+div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+}
+
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"],
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] > div,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"],
@@ -408,13 +446,12 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stS
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div > div {
   min-height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
-  background: var(--field-bg) !important;
-  border: 1px solid var(--field-border) !important;
+  background: #F8FAFC !important;
+  border: 1px solid #D7E0EA !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
 }
 
-/* hover */
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"]:hover,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] > div:hover,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"]:hover,
@@ -425,10 +462,9 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stT
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div:hover,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div > div:hover {
   background: var(--field-bg-hover) !important;
-  border-color: #C9D5E3 !important;
+  border-color: #C5D0DD !important;
 }
 
-/* focus */
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input:focus,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input:focus-visible,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea:focus,
@@ -439,18 +475,10 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="se
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div:focus-within,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div:focus-within {
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
   background: #FFFFFF !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input::placeholder,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea::placeholder {
-  color: var(--field-placeholder) !important;
-  opacity: 1 !important;
-  -webkit-text-fill-color: var(--field-placeholder) !important;
-}
-
-/* select text / icon */
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] span,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] div,
 div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] input,
@@ -467,15 +495,19 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="ba
   -webkit-text-fill-color: var(--field-text) !important;
 }
 
-.examinee-warning-area {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
-}
+@media (max-width: 640px) {
+  div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) {
+    padding: 22px 18px !important;
+    border-radius: 20px !important;
+  }
 
-.examinee-actions {
-  padding-top: 8px;
+  .respondent-form-shell {
+    gap: 16px;
+  }
+
+  .respondent-form-desc {
+    font-size: 0.94rem;
+  }
 }
 
 /* Alerts */
@@ -1196,15 +1228,16 @@ def render_examinee_page() -> None:
 
         with st.container():
             st.markdown('<div class="respondent-form-scope"></div>', unsafe_allow_html=True)
-
             st.markdown(
                 dedent(
                     """
-                    <div class="examinee-form-header">
-                      <div class="title-lg">응답자 정보</div>
-                      <div class="text">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                    <div class="respondent-form-shell">
+                      <div class="respondent-form-header">
+                        <div class="respondent-form-title">응답자 정보</div>
+                        <div class="respondent-form-desc">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                      </div>
+                      <div class="respondent-form-divider"></div>
                     </div>
-                    <div class="divider"></div>
                     """
                 ),
                 unsafe_allow_html=True,
@@ -1215,7 +1248,7 @@ def render_examinee_page() -> None:
                 name = st.text_input(
                     "이름",
                     value=st.session_state.examinee.get("name", ""),
-                    placeholder="이름을 입력하세요",
+                    placeholder="",
                 )
             with gender_col:
                 gender = st.selectbox(
@@ -1231,7 +1264,7 @@ def render_examinee_page() -> None:
                 age = st.text_input(
                     "연령",
                     value=st.session_state.examinee.get("age", ""),
-                    placeholder="숫자만 입력",
+                    placeholder="",
                 )
             with region_col:
                 region = st.selectbox(
@@ -1245,12 +1278,12 @@ def render_examinee_page() -> None:
             phone = st.text_input(
                 "휴대폰번호 (선택)",
                 value=st.session_state.examinee.get("phone", ""),
-                placeholder="예: 010-1234-5678",
+                placeholder="",
             )
             email = st.text_input(
                 "이메일 (선택)",
                 value=st.session_state.examinee.get("email", ""),
-                placeholder="예: example@email.com",
+                placeholder="",
             )
 
             normalized_phone = normalize_phone(phone)
@@ -1302,17 +1335,18 @@ def render_examinee_page() -> None:
                     st.warning(email_error, icon="⚠️")
                 st.markdown('</div>', unsafe_allow_html=True)
 
+            st.markdown('<div class="examinee-actions">', unsafe_allow_html=True)
+            actions = st.columns([1, 1], gap="medium")
             all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
-
-        actions = st.columns([1, 1], gap="medium")
-        with actions[0]:
-            if st.button("이전", use_container_width=True):
-                st.session_state.page = "intro"
-                st.rerun()
-        with actions[1]:
-            if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
-                st.session_state.page = "survey"
-                st.rerun()
+            with actions[0]:
+                if st.button("이전", use_container_width=True):
+                    st.session_state.page = "intro"
+                    st.rerun()
+            with actions[1]:
+                if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
+                    st.session_state.page = "survey"
+                    st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('</div></div>', unsafe_allow_html=True)
 
