@@ -299,12 +299,7 @@ body, p, div, span, li, button, label, input, textarea {
   padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-.examinee-form-head {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  gap: 18px;
 }
 .examinee-form-grid {
   display: flex;
@@ -337,6 +332,8 @@ body, p, div, span, li, button, label, input, textarea {
   margin-bottom: 8px !important;
 }
 .examinee-form-card input,
+.examinee-form-card textarea,
+.examinee-form-card [data-baseweb="input"] > div,
 .examinee-form-card [data-baseweb="select"] > div {
   min-height: var(--control-height) !important;
   height: var(--control-height) !important;
@@ -346,8 +343,15 @@ body, p, div, span, li, button, label, input, textarea {
   border: 1px solid var(--border-strong) !important;
   box-shadow: none !important;
 }
-.examinee-form-card input::placeholder {
+.examinee-form-card input,
+.examinee-form-card textarea {
+  -webkit-text-fill-color: var(--ink) !important;
+  caret-color: var(--ink) !important;
+}
+.examinee-form-card input::placeholder,
+.examinee-form-card textarea::placeholder {
   color: var(--muted-2) !important;
+  opacity: 1 !important;
   -webkit-text-fill-color: var(--muted-2) !important;
 }
 .examinee-form-card input:focus,
@@ -358,13 +362,16 @@ body, p, div, span, li, button, label, input, textarea {
 }
 .examinee-form-card [data-baseweb="select"] span,
 .examinee-form-card [data-baseweb="select"] input,
-.examinee-form-card [data-baseweb="select"] svg {
+.examinee-form-card [data-baseweb="select"] svg,
+.examinee-form-card [data-baseweb="input"] span,
+.examinee-form-card [data-baseweb="input"] input {
   color: var(--ink) !important;
   fill: var(--ink) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--ink) !important;
 }
-.examinee-form-card [data-baseweb="select"] > div > div {
+.examinee-form-card [data-baseweb="select"] > div > div,
+.examinee-form-card [data-baseweb="input"] > div {
   background: transparent !important;
 }
 .examinee-warning-area {
@@ -1106,10 +1113,6 @@ def render_examinee_page() -> None:
             dedent(
                 """
                 <div class="card examinee-form-card">
-                  <div class="examinee-form-head">
-                    <div class="section-title">정보 입력</div>
-                    <div class="section-caption">모든 항목은 한 곳에서 확인할 수 있으며, 필수 항목을 입력하면 다음 단계로 이동할 수 있습니다.</div>
-                  </div>
                   <div class="examinee-form-grid">
                 """
             ),
