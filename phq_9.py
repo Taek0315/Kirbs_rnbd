@@ -545,23 +545,21 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
 }
 
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div > div,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -571,6 +569,16 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   border: 1px solid var(--field-border) !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
+  overflow: hidden !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div > div {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  min-height: calc(var(--control-height) - 2px) !important;
 }
 
 /* labels */
@@ -600,8 +608,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
 /* input text */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] input,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] textarea,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] input {
   color: var(--field-text) !important;
@@ -610,53 +616,43 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   background: transparent !important;
   width: 100% !important;
   min-width: 0 !important;
+  opacity: 1 !important;
 }
 
-/* remove placeholder */
+/* remove placeholder only */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input::placeholder,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea::placeholder {
   color: transparent !important;
   opacity: 0 !important;
-  -webkit-text-fill-color: transparent !important;
 }
 
 /* hover */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"]:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div:hover,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div:hover {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:hover {
   background: var(--field-bg-hover) !important;
   border-color: #C5D0DD !important;
 }
 
 /* focus */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus-visible,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus-visible,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div:focus-within,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div:focus-within,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div:focus-within,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div:focus-within,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div:focus-within {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
   background: #FFFFFF !important;
 }
 
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus-visible,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* select text/icon */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] span,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] div,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] svg,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] *[aria-hidden="true"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] span,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] span,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] input {
   color: var(--field-text) !important;
@@ -1432,7 +1428,6 @@ def render_examinee_page() -> None:
                 name = st.text_input(
                     "이름",
                     value=st.session_state.examinee.get("name", ""),
-                    placeholder="",
                 )
             with gender_col:
                 gender = st.selectbox(
@@ -1448,7 +1443,6 @@ def render_examinee_page() -> None:
                 age = st.text_input(
                     "연령",
                     value=st.session_state.examinee.get("age", ""),
-                    placeholder="",
                 )
             with region_col:
                 region = st.selectbox(
@@ -1462,12 +1456,10 @@ def render_examinee_page() -> None:
             phone = st.text_input(
                 "휴대폰번호 (선택)",
                 value=st.session_state.examinee.get("phone", ""),
-                placeholder="",
             )
             email = st.text_input(
                 "이메일 (선택)",
                 value=st.session_state.examinee.get("email", ""),
-                placeholder="",
             )
 
             normalized_phone = normalize_phone(phone)
