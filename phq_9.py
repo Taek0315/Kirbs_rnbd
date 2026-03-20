@@ -92,6 +92,7 @@ def inject_css() -> None:
           --ink: {INK};
           --muted: {SUBTLE};
           --line: {BORDER};
+          --line-soft: rgba(191, 212, 237, 0.7);
           --brand: {BRAND};
           --brand-dark: {BRAND_DARK};
           --warn-bg: {WARN_BG};
@@ -102,9 +103,9 @@ def inject_css() -> None:
           --radius-xl: 22px;
           --radius-lg: 18px;
           --radius-md: 14px;
-          --shadow-lg: 0 24px 54px rgba(15, 23, 42, 0.08);
-          --shadow-md: 0 16px 34px rgba(15, 23, 42, 0.06);
-          --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
+          --shadow-lg: 0 22px 48px rgba(15, 23, 42, 0.07);
+          --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.055);
+          --shadow-sm: 0 6px 16px rgba(15, 23, 42, 0.035);
         }}
 
         html, body, [class*="css"] {{
@@ -119,8 +120,8 @@ def inject_css() -> None:
 
         [data-testid="block-container"] {{
           max-width: 980px;
-          padding-top: 18px;
-          padding-bottom: 56px;
+          padding-top: 14px;
+          padding-bottom: 44px;
         }}
 
         [data-testid="stToolbar"], #MainMenu, header, footer {{
@@ -129,44 +130,53 @@ def inject_css() -> None:
 
         /* Border container card styling */
         div[data-testid="stVerticalBlockBorderWrapper"] {{
-          border: 1px solid var(--line) !important;
-          border-radius: var(--radius-2xl) !important;
-          background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, #ffffff 100%) !important;
-          box-shadow: var(--shadow-md) !important;
+          border: 1px solid rgba(216, 229, 245, 0.82) !important;
+          border-radius: 24px !important;
+          background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, #ffffff 100%) !important;
+          box-shadow: var(--shadow-sm) !important;
           overflow: hidden !important;
         }}
 
         div[data-testid="stVerticalBlockBorderWrapper"] > div {{
-          padding: 0.2rem 0.2rem 0.35rem 0.2rem;
+          padding: 0.1rem 0.1rem 0.2rem 0.1rem;
+        }}
+
+        .hero-shell {{
+          padding: 8px 8px 6px;
+        }}
+
+        .hero-content {{
+          padding: 4px 4px 2px;
         }}
 
         .hero-eyebrow {{
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 14px;
+          padding: 6px 12px;
           border-radius: 999px;
-          background: rgba(37, 99, 235, 0.1);
+          background: rgba(37, 99, 235, 0.08);
           color: var(--brand);
-          border: 1px solid rgba(37, 99, 235, 0.16);
-          font-size: 0.82rem;
+          border: 1px solid rgba(37, 99, 235, 0.12);
+          font-size: 0.76rem;
           font-weight: 800;
         }}
 
         .hero-title {{
           color: var(--ink);
-          font-size: clamp(1.85rem, 3vw, 2.65rem);
-          line-height: 1.14;
+          font-size: clamp(1.7rem, 2.7vw, 2.35rem);
+          line-height: 1.16;
           letter-spacing: -0.03em;
           font-weight: 900;
-          margin: 14px 0 0;
+          margin: 10px 0 0;
         }}
 
         .hero-copy {{
           color: var(--muted);
-          line-height: 1.8;
-          font-size: 1rem;
-          margin: 14px 0 0;
+          line-height: 1.68;
+          font-size: 0.96rem;
+          margin: 12px 0 0;
+          max-width: 58ch;
         }}
 
         .section-title {{
@@ -186,36 +196,38 @@ def inject_css() -> None:
         .chip-row {{
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 18px;
+          gap: 8px;
+          margin-top: 14px;
         }}
 
         .chip {{
           display: inline-flex;
           align-items: center;
-          padding: 10px 14px;
+          padding: 7px 11px;
           border-radius: 999px;
-          border: 1px solid var(--line);
-          background: var(--surface-soft);
+          border: 1px solid rgba(216, 229, 245, 0.92);
+          background: rgba(248, 251, 255, 0.92);
           color: var(--muted);
-          font-size: 0.9rem;
+          font-size: 0.84rem;
           font-weight: 600;
+          line-height: 1.3;
         }}
 
         .info-panel {{
-          border: 1px solid var(--line);
-          border-radius: 22px;
-          background: linear-gradient(180deg, #F8FBFF 0%, #EEF5FF 100%);
-          padding: 18px 18px 6px;
+          border: 1px solid rgba(216, 229, 245, 0.92);
+          border-radius: 20px;
+          background: linear-gradient(180deg, #F8FBFF 0%, #F1F7FF 100%);
+          padding: 12px 14px 4px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
         }}
 
         .info-row {{
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 14px;
-          padding: 10px 0;
-          border-bottom: 1px solid rgba(191, 212, 237, 0.7);
+          gap: 10px;
+          padding: 9px 0;
+          border-bottom: 1px solid rgba(191, 212, 237, 0.58);
         }}
 
         .info-row:last-child {{
@@ -234,24 +246,26 @@ def inject_css() -> None:
         }}
 
         .step-card {{
-          border: 1px solid var(--line);
-          border-radius: 22px;
-          background: rgba(255,255,255,0.82);
-          box-shadow: var(--shadow-sm);
-          padding: 18px;
+          border: 1px solid rgba(216, 229, 245, 0.86);
+          border-radius: 18px;
+          background: rgba(255,255,255,0.78);
+          box-shadow: none;
+          padding: 14px 15px;
           display: flex;
-          gap: 14px;
-          min-height: 118px;
+          align-items: flex-start;
+          gap: 12px;
+          min-height: 92px;
         }}
 
         .step-card.active {{
-          background: linear-gradient(180deg, #ffffff 0%, #EEF5FF 100%);
-          border-color: rgba(37, 99, 235, 0.35);
+          background: linear-gradient(180deg, #ffffff 0%, #F1F7FF 100%);
+          border-color: rgba(37, 99, 235, 0.28);
+          box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
         }}
 
         .step-index {{
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
           display: inline-flex;
           align-items: center;
@@ -269,7 +283,7 @@ def inject_css() -> None:
 
         .step-label {{
           color: var(--brand);
-          font-size: 0.76rem;
+          font-size: 0.72rem;
           font-weight: 800;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -277,43 +291,92 @@ def inject_css() -> None:
 
         .step-title {{
           color: var(--ink);
-          font-size: 1rem;
+          font-size: 0.96rem;
           font-weight: 800;
-          margin-top: 4px;
+          line-height: 1.35;
+          margin-top: 2px;
         }}
 
         .step-copy {{
           color: var(--muted);
-          font-size: 0.88rem;
-          line-height: 1.6;
-          margin-top: 5px;
+          font-size: 0.84rem;
+          line-height: 1.5;
+          margin-top: 4px;
+        }}
+
+        .surface-card {{
+          padding: 10px 12px 8px;
+        }}
+
+        .surface-card.soft {{
+          background: linear-gradient(180deg, rgba(248,251,255,0.78) 0%, rgba(255,255,255,0.98) 100%);
+          border-radius: 20px;
         }}
 
         .bullet-list {{
-          margin: 12px 0 0;
+          margin: 10px 0 0;
           padding-left: 18px;
           color: var(--ink);
-          line-height: 1.8;
+          line-height: 1.65;
+          font-size: 0.94rem;
         }}
 
         .bullet-list li {{
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }}
 
         .helper-box {{
-          padding: 14px 16px;
-          border: 1px solid var(--line);
+          padding: 12px 14px;
+          border: 1px solid rgba(216, 229, 245, 0.9);
           border-radius: 16px;
-          background: var(--surface-soft);
+          background: linear-gradient(180deg, rgba(248,251,255,0.96) 0%, rgba(239,245,255,0.96) 100%);
           color: var(--muted);
-          font-size: 0.9rem;
-          line-height: 1.65;
+          font-size: 0.86rem;
+          line-height: 1.58;
         }}
 
         .section-divider {{
-          border-top: 1px solid var(--line);
-          margin: 14px 0 0;
-          padding-top: 16px;
+          border-top: 1px solid var(--line-soft);
+          margin: 12px 0 0;
+          padding-top: 14px;
+        }}
+
+
+        .info-card-note {{
+          color: var(--muted);
+          font-size: 0.88rem;
+          line-height: 1.6;
+          margin: 10px 0 0;
+        }}
+
+        .consent-shell {{
+          padding: 10px 12px 8px;
+        }}
+
+        .consent-check-wrap {{
+          margin-top: 12px;
+          padding: 14px 16px;
+          border-radius: 18px;
+          background: rgba(248, 251, 255, 0.95);
+          border: 1px solid rgba(216, 229, 245, 0.9);
+        }}
+
+        .consent-caption {{
+          color: var(--muted);
+          font-size: 0.84rem;
+          margin: 4px 0 0;
+          line-height: 1.55;
+        }}
+
+        .nav-shell {{
+          padding: 6px 10px 4px;
+        }}
+
+        .nav-helper {{
+          color: var(--muted);
+          font-size: 0.9rem;
+          line-height: 1.55;
+          margin: 2px 0 12px;
         }}
 
         .question-head {{
@@ -529,8 +592,8 @@ def inject_css() -> None:
 
         .stButton > button {{
           width: 100% !important;
-          min-height: 50px !important;
-          border-radius: 15px !important;
+          min-height: 46px !important;
+          border-radius: 14px !important;
           font-size: 0.96rem !important;
           font-weight: 800 !important;
           border: 1px solid transparent !important;
@@ -540,7 +603,7 @@ def inject_css() -> None:
         .stButton > button[kind="primary"] {{
           background: linear-gradient(135deg, {BRAND} 0%, {BRAND_DARK} 100%) !important;
           color: #fff !important;
-          box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22) !important;
+          box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18) !important;
         }}
 
         .stButton > button[kind="primary"] * {{
@@ -551,7 +614,8 @@ def inject_css() -> None:
         .stButton > button:not([kind="primary"]) {{
           background: #fff !important;
           color: {BRAND} !important;
-          border-color: #BFD4ED !important;
+          border-color: rgba(191, 212, 237, 0.95) !important;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
         }}
 
         .stButton > button:not([kind="primary"]) * {{
@@ -959,28 +1023,33 @@ def render_hero(
     info_rows: list[tuple[str, str]],
 ) -> None:
     with st.container(border=True):
-        left, right = st.columns([1.45, 0.95], gap="large")
+        st.markdown('<div class="hero-shell">', unsafe_allow_html=True)
+        left, right = st.columns([1.28, 0.9], gap="medium")
         with left:
+            st.markdown('<div class="hero-content">', unsafe_allow_html=True)
             st.markdown(f'<div class="hero-eyebrow">{eyebrow}</div>', unsafe_allow_html=True)
             st.markdown(f'<h1 class="hero-title">{title}</h1>', unsafe_allow_html=True)
             st.markdown(f'<p class="hero-copy">{copy}</p>', unsafe_allow_html=True)
             chip_html = "".join([f'<span class="chip">{escape(chip)}</span>' for chip in chips])
-            st.markdown(f'<div class="chip-row">{chip_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chip-row">{chip_html}</div></div>', unsafe_allow_html=True)
 
         with right:
             rows_html = "".join(
                 [f'<div class="info-row"><strong>{escape(label)}</strong><span>{escape(value)}</span></div>' for label, value in info_rows]
             )
             st.markdown(f'<div class="info-panel">{rows_html}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_info_card(title: str, bullet_items: list[str], note: str | None = None) -> None:
     with st.container(border=True):
+        st.markdown('<div class="surface-card soft">', unsafe_allow_html=True)
         st.markdown(f'<h2 class="section-title">{title}</h2>', unsafe_allow_html=True)
         bullets = "".join([f"<li>{item}</li>" for item in bullet_items])
         st.markdown(f'<ul class="bullet-list">{bullets}</ul>', unsafe_allow_html=True)
         if note:
-            st.markdown(f'<p class="section-copy">{note}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="info-card-note">{note}</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_section_header(title: str, copy: str, helper: str | None = None) -> None:
@@ -1000,13 +1069,15 @@ def render_navigation_row(
     helper_text: str | None = None,
 ):
     with st.container(border=True):
+        st.markdown('<div class="nav-shell">', unsafe_allow_html=True)
         if helper_text:
-            st.markdown(f'<p class="section-copy" style="margin-top:0;">{helper_text}</p>', unsafe_allow_html=True)
-        prev_col, next_col = st.columns(2, gap="medium")
+            st.markdown(f'<p class="nav-helper">{helper_text}</p>', unsafe_allow_html=True)
+        prev_col, next_col = st.columns(2, gap="small")
         with prev_col:
             prev_clicked = st.button(prev_label, use_container_width=True)
         with next_col:
             next_clicked = st.button(next_label, type="primary", use_container_width=True, disabled=next_disabled)
+        st.markdown('</div>', unsafe_allow_html=True)
     return prev_clicked, next_clicked
 
 
@@ -1049,19 +1120,24 @@ def render_intro_page() -> None:
         )
 
     with st.container(border=True):
+        st.markdown('<div class="consent-shell">', unsafe_allow_html=True)
         render_section_header(
             "검사 시작 동의",
             "동의 후 다음 단계에서 응답자 정보를 입력하고 검사를 진행할 수 있습니다.",
-            "동의하지 않으면 검사를 진행할 수 없습니다.",
+            "검사 안내 확인과 동의 체크를 완료해야 다음 단계로 이동할 수 있습니다.",
         )
+        st.markdown('<div class="consent-check-wrap">', unsafe_allow_html=True)
         checked = st.checkbox(
             "개인정보 수집 및 이용에 동의합니다. (필수)",
             value=st.session_state.consent,
         )
+        st.markdown('<p class="consent-caption">동의하지 않으면 검사를 진행할 수 없습니다.</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         if checked != st.session_state.consent:
             st.session_state.consent = checked
             if not checked:
                 st.session_state.consent_ts = None
+        st.markdown('</div>', unsafe_allow_html=True)
 
     _, next_clicked = render_navigation_row(
         "안내 확인",
