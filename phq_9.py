@@ -295,14 +295,14 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-intro {
   padding: 24px 28px;
 }
-.examinee-form-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #FFFFFF 100%);
-  border: 1px solid rgba(220, 228, 238, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
-  padding: 32px 30px;
+.st-key-respondent_info_card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, #FFFFFF 100%) !important;
+  border: 1px solid rgba(220, 228, 238, 0.98) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
+  padding: 32px 30px !important;
 }
-.examinee-form-shell {
+.st-key-respondent_info_card > div[data-testid="stVerticalBlock"] {
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -318,42 +318,42 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 18px;
 }
-.examinee-form-shell > [data-testid="stHorizontalBlock"] {
+.st-key-respondent_info_card [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
-.examinee-form-shell [data-testid="column"] {
+.st-key-respondent_info_card [data-testid="column"] {
   padding: 0;
   background: transparent;
   border: none;
 }
-.examinee-form-shell [data-testid="stTextInput"],
-.examinee-form-shell [data-testid="stSelectbox"] {
+.st-key-respondent_info_card [data-testid="stTextInput"],
+.st-key-respondent_info_card [data-testid="stSelectbox"] {
   width: 100%;
   margin-bottom: 2px;
 }
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] *,
-.examinee-form-shell label[data-testid="stWidgetLabel"] p,
-.examinee-form-shell label[data-testid="stWidgetLabel"] span,
-.examinee-form-shell [data-testid="stTextInput"] label,
-.examinee-form-shell [data-testid="stSelectbox"] label,
-.examinee-form-shell [data-testid="stTextInput"] p,
-.examinee-form-shell [data-testid="stSelectbox"] p,
-.examinee-form-shell [data-testid="stMarkdownContainer"] label,
-.examinee-form-shell [data-testid="stMarkdownContainer"] p {
+.st-key-respondent_info_card label[data-testid="stWidgetLabel"] p,
+.st-key-respondent_info_card label[data-testid="stWidgetLabel"] span,
+.st-key-respondent_info_card [data-testid="stTextInput"] label,
+.st-key-respondent_info_card [data-testid="stSelectbox"] label,
+.st-key-respondent_info_card [data-testid="stTextInput"] p,
+.st-key-respondent_info_card [data-testid="stSelectbox"] p,
+.st-key-respondent_info_card [data-testid="stMarkdownContainer"] label,
+.st-key-respondent_info_card [data-testid="stMarkdownContainer"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
   line-height: 1.5 !important;
   opacity: 1 !important;
 }
-.examinee-form-shell [data-testid="stWidgetLabel"] {
+.st-key-respondent_info_card [data-testid="stWidgetLabel"] {
   margin-bottom: 8px !important;
 }
-.examinee-form-shell input,
-.examinee-form-shell textarea,
-.examinee-form-shell [data-baseweb="input"] > div,
-.examinee-form-shell [data-baseweb="select"] > div {
+.st-key-respondent_info_card input,
+.st-key-respondent_info_card textarea,
+.st-key-respondent_info_card [data-baseweb="input"] > div,
+.st-key-respondent_info_card [data-baseweb="select"] > div {
   min-height: var(--control-height) !important;
   height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
@@ -363,40 +363,40 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
 }
-.examinee-form-shell input,
-.examinee-form-shell textarea {
+.st-key-respondent_info_card input,
+.st-key-respondent_info_card textarea {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
 }
-.examinee-form-shell input::placeholder,
-.examinee-form-shell textarea::placeholder {
+.st-key-respondent_info_card input::placeholder,
+.st-key-respondent_info_card textarea::placeholder {
   color: var(--muted-2) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--muted-2) !important;
 }
-.examinee-form-shell input:focus,
-.examinee-form-shell input:focus-visible,
-.examinee-form-shell textarea:focus,
-.examinee-form-shell textarea:focus-visible,
-.examinee-form-shell [data-baseweb="input"] > div:focus-within,
-.examinee-form-shell [data-baseweb="select"] > div:focus-within {
+.st-key-respondent_info_card input:focus,
+.st-key-respondent_info_card input:focus-visible,
+.st-key-respondent_info_card textarea:focus,
+.st-key-respondent_info_card textarea:focus-visible,
+.st-key-respondent_info_card [data-baseweb="input"] > div:focus-within,
+.st-key-respondent_info_card [data-baseweb="select"] > div:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
 }
-.examinee-form-shell [data-baseweb="select"] span,
-.examinee-form-shell [data-baseweb="select"] input,
-.examinee-form-shell [data-baseweb="select"] svg,
-.examinee-form-shell [data-baseweb="select"] *[aria-hidden="true"],
-.examinee-form-shell [data-baseweb="input"] span,
-.examinee-form-shell [data-baseweb="input"] input {
+.st-key-respondent_info_card [data-baseweb="select"] span,
+.st-key-respondent_info_card [data-baseweb="select"] input,
+.st-key-respondent_info_card [data-baseweb="select"] svg,
+.st-key-respondent_info_card [data-baseweb="select"] *[aria-hidden="true"],
+.st-key-respondent_info_card [data-baseweb="input"] span,
+.st-key-respondent_info_card [data-baseweb="input"] input {
   color: var(--ink) !important;
   fill: var(--ink) !important;
   stroke: var(--ink) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--ink) !important;
 }
-.examinee-form-shell [data-baseweb="select"] > div > div,
-.examinee-form-shell [data-baseweb="input"] > div {
+.st-key-respondent_info_card [data-baseweb="select"] > div > div,
+.st-key-respondent_info_card [data-baseweb="input"] > div {
   background: transparent !important;
 }
 .examinee-warning-area {
@@ -575,7 +575,7 @@ body, p, div, span, li, button, label, input, textarea {
   .gauge-circle { width: 180px; height: 180px; }
   .domain-row { grid-template-columns: 1fr; }
   .domain-score { justify-self: start; }
-  .examinee-form-card { padding: 24px 20px; border-radius: 18px; }
+  .st-key-respondent_info_card { padding: 24px 20px !important; border-radius: 18px !important; }
 }
 </style>
 """,
@@ -1123,12 +1123,9 @@ def render_intro_page() -> None:
 
 def render_examinee_page() -> None:
     with st.container():
-        st.markdown(
-            '<div class="app-wrap"><div class="stack examinee-layout"><div class="card examinee-form-card"><div class="examinee-form-shell">',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
 
-        with st.container():
+        with st.container(border=True, key="respondent_info_card"):
             st.markdown(
                 dedent(
                     """
@@ -1244,7 +1241,7 @@ def render_examinee_page() -> None:
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('</div></div></div></div>', unsafe_allow_html=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
 
 def render_survey_page() -> None:
