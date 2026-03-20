@@ -112,7 +112,7 @@ def inject_css() -> None:
   --field-bg-hover: #F1F5F9;
   --field-border: #D7E0EA;
   --field-text: #0F172A;
-  --field-placeholder: #7C8A9A;
+  --field-placeholder: transparent;
 }
 
 /* Global / reset */
@@ -136,15 +136,49 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
 /* Layout containers */
-.app-wrap { max-width: 960px; margin: 0 auto; padding: 18px 24px 56px; }
-.stack { display: flex; flex-direction: column; gap: 18px; }
-.examinee-layout { display: flex; flex-direction: column; gap: 24px; }
-.examinee-form { display: flex; flex-direction: column; gap: 22px; }
-.form-section { display: flex; flex-direction: column; gap: 14px; }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
-.unified-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+.app-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 18px 24px 56px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.examinee-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.examinee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+.unified-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
 .form-actions { margin-top: 8px; }
-.actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 6px; }
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 6px;
+}
 .actions .stButton { margin: 0 !important; }
 .actions-row { display: flex; gap: 12px; }
 
@@ -169,9 +203,22 @@ body, p, div, span, li, button, label, input, textarea {
   gap: 22px;
 }
 
-.card-header { display: flex; flex-direction: column; gap: 10px; }
-.section-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 2px; }
-.divider { height: 1px; background: var(--border); margin: 2px 0 0; }
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0 0;
+}
 .badge {
   display: inline-flex;
   padding: 4px 12px;
@@ -185,13 +232,39 @@ body, p, div, span, li, button, label, input, textarea {
 }
 
 /* Typography */
-.title-xl { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.4px; color: var(--ink); }
-.title-lg { font-size: 1.15rem; font-weight: 850; color: var(--ink); }
-.section-title { font-size: 0.98rem; font-weight: 800; color: var(--ink); }
-.section-caption { font-size: 0.88rem; color: var(--muted-2); line-height: 1.6; }
-.text { color: var(--muted); line-height: 1.7; font-size: 0.98rem; }
+.title-xl {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+}
+.title-lg {
+  font-size: 1.15rem;
+  font-weight: 850;
+  color: var(--ink);
+}
+.section-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.section-caption {
+  font-size: 0.88rem;
+  color: var(--muted-2);
+  line-height: 1.6;
+}
+.text {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 0.98rem;
+}
 .card p, .card li { line-height: 1.75 !important; }
-.footer-note { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.footer-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
 
 .instruction-list {
   margin: 12px 0 0;
@@ -201,9 +274,23 @@ body, p, div, span, li, button, label, input, textarea {
   font-size: 0.98rem;
 }
 .instruction-list li { margin-bottom: 8px; }
-.question-header { display: flex; flex-direction: column; gap: 8px; }
-.question-text { font-weight: 700; font-size: 1rem; line-height: 1.6; color: var(--ink); }
-.question-card { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px !important; }
+.question-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.question-text {
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px !important;
+}
 .section-card { margin-bottom: 32px !important; }
 .section-to-question { margin-bottom: 40px !important; }
 .result-card { margin-bottom: 28px !important; }
@@ -247,10 +334,33 @@ body, p, div, span, li, button, label, input, textarea {
   background: var(--surface);
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
-.gauge-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.gauge-number { font-size: 3rem; font-weight: 900; line-height: 1; color: var(--ink); }
-.gauge-denom { font-size: 1rem; font-weight: 700; color: var(--muted); }
-.gauge-severity { display: inline-flex; padding: 6px 18px; border-radius: 999px; font-weight: 800; border: 1.5px solid currentColor; font-size: 1rem; }
+.gauge-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gauge-number {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink);
+}
+.gauge-denom {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.gauge-severity {
+  display: inline-flex;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-weight: 800;
+  border: 1.5px solid currentColor;
+  font-size: 1rem;
+}
 .narrative-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -262,8 +372,16 @@ body, p, div, span, li, button, label, input, textarea {
   gap: 14px;
 }
 .narrative-title { font-weight: 800; font-size: 1rem; }
-.functional-highlight { border-top: 1px solid var(--border); padding-top: 14px; }
-.functional-title { font-size: 0.9rem; color: var(--muted-2); font-weight: 700; margin-bottom: 6px; }
+.functional-highlight {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.functional-title {
+  font-size: 0.9rem;
+  color: var(--muted-2);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
 .functional-value { font-size: 1.05rem; }
 .domain-panel {
   border: 1px solid var(--border);
@@ -272,7 +390,11 @@ body, p, div, span, li, button, label, input, textarea {
   background: var(--surface-2);
   box-shadow: var(--shadow);
 }
-.domain-profile { display: flex; flex-direction: column; gap: 18px; }
+.domain-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 .domain-note {
   margin-top: 14px;
   padding-top: 12px;
@@ -281,13 +403,38 @@ body, p, div, span, li, button, label, input, textarea {
   color: var(--muted);
   line-height: 1.5;
 }
-.domain-row { display: grid; grid-template-columns: 1.4fr 2.2fr 0.6fr; gap: 16px; align-items: center; }
+.domain-row {
+  display: grid;
+  grid-template-columns: 1.4fr 2.2fr 0.6fr;
+  gap: 16px;
+  align-items: center;
+}
 .domain-title { font-weight: 700; font-size: 1rem; }
-.domain-desc { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-.domain-bar { position: relative; height: 14px; background: rgba(226, 232, 240, 0.9); border-radius: 999px; overflow: hidden; border: 1px solid rgba(203, 213, 225, 0.9); }
-.domain-fill { position: absolute; inset: 0; border-radius: 999px; background: var(--brand); }
+.domain-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.domain-bar {
+  position: relative;
+  height: 14px;
+  background: rgba(226, 232, 240, 0.9);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+}
+.domain-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--brand);
+}
 .domain-score { justify-self: end; font-weight: 700; }
-.severity-legend { display: flex; flex-wrap: wrap; gap: 12px; }
+.severity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .legend-chip {
   display: flex;
   flex-direction: column;
@@ -298,14 +445,18 @@ body, p, div, span, li, button, label, input, textarea {
   min-width: 140px;
 }
 .legend-chip strong { font-size: 0.95rem; }
-.legend-chip small { color: var(--muted-2); font-size: 0.8rem; }
+.legend-chip small {
+  color: var(--muted-2);
+  font-size: 0.8rem;
+}
 
 /* Examinee page */
 .examinee-intro {
   padding: 24px 28px;
 }
 
-.respondent-form-scope {
+/* marker */
+.respondent-card-marker {
   width: 0;
   height: 0;
   overflow: hidden;
@@ -316,17 +467,41 @@ body, p, div, span, li, button, label, input, textarea {
   display: block;
 }
 
+/* only the bordered container wrapper */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 28px 30px !important;
+  overflow: hidden !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) > div {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* header text wrapper */
+.respondent-form-shell,
+.respondent-form-header {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .respondent-form-shell {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .respondent-form-header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
 }
 
 .respondent-form-title {
@@ -334,160 +509,156 @@ body, p, div, span, li, button, label, input, textarea {
   font-weight: 850;
   color: var(--ink);
   line-height: 1.4;
+  width: 100%;
+  max-width: 100%;
 }
 
 .respondent-form-desc {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   color: var(--muted);
   font-size: 0.98rem;
   line-height: 1.72;
   white-space: normal !important;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+  line-break: auto;
 }
 
 .respondent-form-divider {
   width: 100%;
+  max-width: 100%;
   height: 1px;
   background: var(--border);
 }
 
-.examinee-warning-area {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.examinee-actions {
-  padding-top: 2px;
-}
-
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 24px !important;
-  box-shadow: var(--shadow) !important;
-  padding: 30px !important;
-  gap: 0 !important;
-}
-
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) > div[data-testid="element-container"] {
-  margin-bottom: 0 !important;
-}
-
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) > div[data-testid="element-container"]:has(.respondent-form-scope) {
-  display: none !important;
-}
-
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stHorizontalBlock"] {
+/* layout / width control */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="column"] {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="column"] {
   padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
+  min-width: 0 !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"],
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] {
-  width: 100%;
-  margin-bottom: 0;
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stWidgetLabel"],
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stWidgetLabel"] *,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) label[data-testid="stWidgetLabel"] p,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) label[data-testid="stWidgetLabel"] span,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] label,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] label,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] p,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] p,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stMarkdownContainer"] label,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stMarkdownContainer"] p {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: var(--control-height) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--field-bg) !important;
+  border: 1px solid var(--field-border) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
+}
+
+/* labels */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stWidgetLabel"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stWidgetLabel"] *,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) label[data-testid="stWidgetLabel"] p,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) label[data-testid="stWidgetLabel"] span,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] label,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] label,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] p,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] p,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stMarkdownContainer"] label,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stMarkdownContainer"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
   line-height: 1.5 !important;
   opacity: 1 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stWidgetLabel"] {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stWidgetLabel"] {
   margin-bottom: 8px !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] input,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] textarea,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] input,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] input {
+/* input text */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] textarea,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] input {
   color: var(--field-text) !important;
   -webkit-text-fill-color: var(--field-text) !important;
   caret-color: var(--field-text) !important;
   background: transparent !important;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input::placeholder,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea::placeholder {
+/* remove placeholder */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input::placeholder,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea::placeholder {
   color: transparent !important;
   opacity: 0 !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"],
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"],
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] > div > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div > div {
-  min-height: var(--control-height) !important;
-  border-radius: var(--radius-md) !important;
-  background: #F8FAFC !important;
-  border: 1px solid #D7E0EA !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
-}
-
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"]:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"]:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div:hover,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div > div:hover {
+/* hover */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"]:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div:hover {
   background: var(--field-bg-hover) !important;
   border-color: #C5D0DD !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input:focus,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) input:focus-visible,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea:focus,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) textarea:focus-visible,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] > div:focus-within,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] > div:focus-within,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] > div:focus-within,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stTextInput"] > div:focus-within,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-testid="stSelectbox"] > div:focus-within {
+/* focus */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus-visible,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus-visible,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] > div:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
   background: #FFFFFF !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] span,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] div,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] input,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] svg,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="select"] *[aria-hidden="true"],
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] span,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="input"] input,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] span,
-div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="base-input"] input {
+/* select text/icon */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] span,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] svg,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] *[aria-hidden="true"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] span,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="input"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] span,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] input {
   color: var(--field-text) !important;
   fill: var(--field-text) !important;
   stroke: var(--field-text) !important;
@@ -495,19 +666,26 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="ba
   -webkit-text-fill-color: var(--field-text) !important;
 }
 
-@media (max-width: 640px) {
-  div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) {
-    padding: 22px 18px !important;
-    border-radius: 20px !important;
-  }
+/* warnings */
+.examinee-warning-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  width: 100%;
+  max-width: 100%;
+}
 
-  .respondent-form-shell {
-    gap: 16px;
-  }
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stAlert"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
 
-  .respondent-form-desc {
-    font-size: 0.94rem;
-  }
+.examinee-actions {
+  padding-top: 8px;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Alerts */
@@ -682,9 +860,14 @@ div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) [data-baseweb="ba
   .domain-row { grid-template-columns: 1fr; }
   .domain-score { justify-self: start; }
 
-  div[data-testid="stVerticalBlock"]:has(.respondent-form-scope) {
-    padding: 24px 20px !important;
-    border-radius: 18px !important;
+  div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) {
+    padding: 22px 18px !important;
+    border-radius: 20px !important;
+  }
+
+  .respondent-form-desc {
+    font-size: 0.94rem;
+    line-height: 1.68;
   }
 }
 </style>
@@ -1226,8 +1409,9 @@ def render_examinee_page() -> None:
     with st.container():
         st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
 
-        with st.container():
-            st.markdown('<div class="respondent-form-scope"></div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="respondent-card-marker"></div>', unsafe_allow_html=True)
+
             st.markdown(
                 dedent(
                     """
