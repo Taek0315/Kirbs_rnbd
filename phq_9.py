@@ -295,14 +295,14 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-intro {
   padding: 24px 28px;
 }
-.st-key-respondent_info_card {
+.respondent-info-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, #FFFFFF 100%) !important;
   border: 1px solid rgba(220, 228, 238, 0.98) !important;
   border-radius: 24px !important;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
   padding: 32px 30px !important;
 }
-.st-key-respondent_info_card > div[data-testid="stVerticalBlock"] {
+.respondent-info-card [data-testid="stVerticalBlock"] {
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -318,42 +318,42 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 18px;
 }
-.st-key-respondent_info_card [data-testid="stHorizontalBlock"] {
+.respondent-info-card [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
-.st-key-respondent_info_card [data-testid="column"] {
+.respondent-info-card [data-testid="column"] {
   padding: 0;
   background: transparent;
   border: none;
 }
-.st-key-respondent_info_card [data-testid="stTextInput"],
-.st-key-respondent_info_card [data-testid="stSelectbox"] {
+.respondent-info-card [data-testid="stTextInput"],
+.respondent-info-card [data-testid="stSelectbox"] {
   width: 100%;
   margin-bottom: 2px;
 }
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] *,
-.st-key-respondent_info_card label[data-testid="stWidgetLabel"] p,
-.st-key-respondent_info_card label[data-testid="stWidgetLabel"] span,
-.st-key-respondent_info_card [data-testid="stTextInput"] label,
-.st-key-respondent_info_card [data-testid="stSelectbox"] label,
-.st-key-respondent_info_card [data-testid="stTextInput"] p,
-.st-key-respondent_info_card [data-testid="stSelectbox"] p,
-.st-key-respondent_info_card [data-testid="stMarkdownContainer"] label,
-.st-key-respondent_info_card [data-testid="stMarkdownContainer"] p {
+.respondent-info-card label[data-testid="stWidgetLabel"] p,
+.respondent-info-card label[data-testid="stWidgetLabel"] span,
+.respondent-info-card [data-testid="stTextInput"] label,
+.respondent-info-card [data-testid="stSelectbox"] label,
+.respondent-info-card [data-testid="stTextInput"] p,
+.respondent-info-card [data-testid="stSelectbox"] p,
+.respondent-info-card [data-testid="stMarkdownContainer"] label,
+.respondent-info-card [data-testid="stMarkdownContainer"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
   line-height: 1.5 !important;
   opacity: 1 !important;
 }
-.st-key-respondent_info_card [data-testid="stWidgetLabel"] {
+.respondent-info-card [data-testid="stWidgetLabel"] {
   margin-bottom: 8px !important;
 }
-.st-key-respondent_info_card input,
-.st-key-respondent_info_card textarea,
-.st-key-respondent_info_card [data-baseweb="input"] > div,
-.st-key-respondent_info_card [data-baseweb="select"] > div {
+.respondent-info-card input,
+.respondent-info-card textarea,
+.respondent-info-card [data-baseweb="input"] > div,
+.respondent-info-card [data-baseweb="select"] > div {
   min-height: var(--control-height) !important;
   height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
@@ -363,40 +363,40 @@ body, p, div, span, li, button, label, input, textarea {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
 }
-.st-key-respondent_info_card input,
-.st-key-respondent_info_card textarea {
+.respondent-info-card input,
+.respondent-info-card textarea {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
 }
-.st-key-respondent_info_card input::placeholder,
-.st-key-respondent_info_card textarea::placeholder {
+.respondent-info-card input::placeholder,
+.respondent-info-card textarea::placeholder {
   color: var(--muted-2) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--muted-2) !important;
 }
-.st-key-respondent_info_card input:focus,
-.st-key-respondent_info_card input:focus-visible,
-.st-key-respondent_info_card textarea:focus,
-.st-key-respondent_info_card textarea:focus-visible,
-.st-key-respondent_info_card [data-baseweb="input"] > div:focus-within,
-.st-key-respondent_info_card [data-baseweb="select"] > div:focus-within {
+.respondent-info-card input:focus,
+.respondent-info-card input:focus-visible,
+.respondent-info-card textarea:focus,
+.respondent-info-card textarea:focus-visible,
+.respondent-info-card [data-baseweb="input"] > div:focus-within,
+.respondent-info-card [data-baseweb="select"] > div:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
 }
-.st-key-respondent_info_card [data-baseweb="select"] span,
-.st-key-respondent_info_card [data-baseweb="select"] input,
-.st-key-respondent_info_card [data-baseweb="select"] svg,
-.st-key-respondent_info_card [data-baseweb="select"] *[aria-hidden="true"],
-.st-key-respondent_info_card [data-baseweb="input"] span,
-.st-key-respondent_info_card [data-baseweb="input"] input {
+.respondent-info-card [data-baseweb="select"] span,
+.respondent-info-card [data-baseweb="select"] input,
+.respondent-info-card [data-baseweb="select"] svg,
+.respondent-info-card [data-baseweb="select"] *[aria-hidden="true"],
+.respondent-info-card [data-baseweb="input"] span,
+.respondent-info-card [data-baseweb="input"] input {
   color: var(--ink) !important;
   fill: var(--ink) !important;
   stroke: var(--ink) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--ink) !important;
 }
-.st-key-respondent_info_card [data-baseweb="select"] > div > div,
-.st-key-respondent_info_card [data-baseweb="input"] > div {
+.respondent-info-card [data-baseweb="select"] > div > div,
+.respondent-info-card [data-baseweb="input"] > div {
   background: transparent !important;
 }
 .examinee-warning-area {
@@ -575,7 +575,7 @@ body, p, div, span, li, button, label, input, textarea {
   .gauge-circle { width: 180px; height: 180px; }
   .domain-row { grid-template-columns: 1fr; }
   .domain-score { justify-self: start; }
-  .st-key-respondent_info_card { padding: 24px 20px !important; border-radius: 18px !important; }
+  .respondent-info-card { padding: 24px 20px !important; border-radius: 18px !important; }
 }
 </style>
 """,
@@ -1125,7 +1125,8 @@ def render_examinee_page() -> None:
     with st.container():
         st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
 
-        with st.container(border=True, key="respondent_info_card"):
+        st.markdown('<div class="respondent-info-card">', unsafe_allow_html=True)
+        with st.container(border=True):
             st.markdown(
                 dedent(
                     """
@@ -1241,7 +1242,7 @@ def render_examinee_page() -> None:
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        st.markdown('</div></div></div>', unsafe_allow_html=True)
 
 
 def render_survey_page() -> None:
