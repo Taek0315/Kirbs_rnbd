@@ -127,7 +127,7 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
 /* Layout containers */
-.app-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 56px; }
+.app-wrap { max-width: 960px; margin: 0 auto; padding: 18px 24px 56px; }
 .stack { display: flex; flex-direction: column; gap: 18px; }
 .examinee-layout { display: flex; flex-direction: column; gap: 24px; }
 .examinee-form { display: flex; flex-direction: column; gap: 22px; }
@@ -295,25 +295,30 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-intro {
   padding: 24px 28px;
 }
-.examinee-form-shell > div[data-testid="stVerticalBlock"] {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow);
-  padding: 28px;
-  gap: 18px;
+.examinee-form-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #FFFFFF 100%);
+  border: 1px solid rgba(220, 228, 238, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  padding: 32px 30px;
+}
+.examinee-form-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 .examinee-form-header {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 2px;
 }
 .examinee-form-grid {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-.examinee-form-shell [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+.examinee-form-shell > [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
 .examinee-form-shell [data-testid="column"] {
@@ -324,13 +329,18 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-form-shell [data-testid="stTextInput"],
 .examinee-form-shell [data-testid="stSelectbox"] {
   width: 100%;
+  margin-bottom: 2px;
 }
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] *,
 .examinee-form-shell label[data-testid="stWidgetLabel"] p,
 .examinee-form-shell label[data-testid="stWidgetLabel"] span,
 .examinee-form-shell [data-testid="stTextInput"] label,
 .examinee-form-shell [data-testid="stSelectbox"] label,
 .examinee-form-shell [data-testid="stTextInput"] p,
-.examinee-form-shell [data-testid="stSelectbox"] p {
+.examinee-form-shell [data-testid="stSelectbox"] p,
+.examinee-form-shell [data-testid="stMarkdownContainer"] label,
+.examinee-form-shell [data-testid="stMarkdownContainer"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
@@ -350,7 +360,8 @@ body, p, div, span, li, button, label, input, textarea {
   background: #FFFFFF !important;
   color: var(--ink) !important;
   border: 1px solid var(--border-strong) !important;
-  box-shadow: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
 }
 .examinee-form-shell input,
 .examinee-form-shell textarea {
@@ -365,6 +376,9 @@ body, p, div, span, li, button, label, input, textarea {
 }
 .examinee-form-shell input:focus,
 .examinee-form-shell input:focus-visible,
+.examinee-form-shell textarea:focus,
+.examinee-form-shell textarea:focus-visible,
+.examinee-form-shell [data-baseweb="input"] > div:focus-within,
 .examinee-form-shell [data-baseweb="select"] > div:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
@@ -444,7 +458,7 @@ body, p, div, span, li, button, label, input, textarea {
   white-space: nowrap !important;
   word-break: keep-all !important;
   box-shadow: none !important;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
 }
 .stButton > button:focus-visible {
   outline: none !important;
@@ -462,6 +476,8 @@ body, p, div, span, li, button, label, input, textarea {
 .stButton > button[kind="primary"]:hover {
   background: var(--brand-600) !important;
   border-color: var(--brand-600) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22) !important;
 }
 .stButton > button:not([kind="primary"]) {
   background: var(--surface) !important;
@@ -475,6 +491,8 @@ body, p, div, span, li, button, label, input, textarea {
 .stButton > button:not([kind="primary"]):hover {
   border-color: var(--brand) !important;
   background: var(--surface-2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08) !important;
 }
 .stButton > button:disabled {
   background: var(--surface-3) !important;
@@ -557,6 +575,7 @@ body, p, div, span, li, button, label, input, textarea {
   .gauge-circle { width: 180px; height: 180px; }
   .domain-row { grid-template-columns: 1fr; }
   .domain-score { justify-self: start; }
+  .examinee-form-card { padding: 24px 20px; border-radius: 18px; }
 }
 </style>
 """,
@@ -1104,7 +1123,10 @@ def render_intro_page() -> None:
 
 def render_examinee_page() -> None:
     with st.container():
-        st.markdown('<div class="app-wrap"><div class="stack examinee-layout"><div class="examinee-form-shell">', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="app-wrap"><div class="stack examinee-layout"><div class="card examinee-form-card"><div class="examinee-form-shell">',
+            unsafe_allow_html=True,
+        )
 
         with st.container():
             st.markdown(
@@ -1222,7 +1244,7 @@ def render_examinee_page() -> None:
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('</div></div></div>', unsafe_allow_html=True)
+        st.markdown('</div></div></div></div>', unsafe_allow_html=True)
 
 
 def render_survey_page() -> None:
