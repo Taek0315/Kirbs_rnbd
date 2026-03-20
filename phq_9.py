@@ -301,6 +301,11 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 18px;
 }
+.examinee-form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .examinee-form-grid {
   display: flex;
   flex-direction: column;
@@ -321,7 +326,9 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-form-card label[data-testid="stWidgetLabel"] p,
 .examinee-form-card label[data-testid="stWidgetLabel"] span,
 .examinee-form-card [data-testid="stTextInput"] label,
-.examinee-form-card [data-testid="stSelectbox"] label {
+.examinee-form-card [data-testid="stSelectbox"] label,
+.examinee-form-card [data-testid="stTextInput"] p,
+.examinee-form-card [data-testid="stSelectbox"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
@@ -363,10 +370,12 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-form-card [data-baseweb="select"] span,
 .examinee-form-card [data-baseweb="select"] input,
 .examinee-form-card [data-baseweb="select"] svg,
+.examinee-form-card [data-baseweb="select"] *[aria-hidden="true"],
 .examinee-form-card [data-baseweb="input"] span,
 .examinee-form-card [data-baseweb="input"] input {
   color: var(--ink) !important;
   fill: var(--ink) !important;
+  stroke: var(--ink) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--ink) !important;
 }
@@ -1098,21 +1107,12 @@ def render_examinee_page() -> None:
         st.markdown(
             dedent(
                 """
-                <div class="card examinee-intro">
-                  <div class="card-header">
+                <div class="card examinee-form-card">
+                  <div class="examinee-form-header">
                     <div class="title-lg">응답자 정보</div>
                     <div class="text">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
                   </div>
-                </div>
-                """
-            ),
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            dedent(
-                """
-                <div class="card examinee-form-card">
+                  <div class="divider"></div>
                   <div class="examinee-form-grid">
                 """
             ),
