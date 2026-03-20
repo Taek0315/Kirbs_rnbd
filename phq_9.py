@@ -295,10 +295,12 @@ body, p, div, span, li, button, label, input, textarea {
 .examinee-intro {
   padding: 24px 28px;
 }
-.examinee-form-card {
+.examinee-form-shell > div[data-testid="stVerticalBlock"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
   padding: 28px;
-  display: flex;
-  flex-direction: column;
   gap: 18px;
 }
 .examinee-form-header {
@@ -311,37 +313,37 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 18px;
 }
-.examinee-form-card [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+.examinee-form-shell [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
-.examinee-form-card [data-testid="column"] {
+.examinee-form-shell [data-testid="column"] {
   padding: 0;
   background: transparent;
   border: none;
 }
-.examinee-form-card [data-testid="stTextInput"],
-.examinee-form-card [data-testid="stSelectbox"] {
+.examinee-form-shell [data-testid="stTextInput"],
+.examinee-form-shell [data-testid="stSelectbox"] {
   width: 100%;
 }
-.examinee-form-card label[data-testid="stWidgetLabel"] p,
-.examinee-form-card label[data-testid="stWidgetLabel"] span,
-.examinee-form-card [data-testid="stTextInput"] label,
-.examinee-form-card [data-testid="stSelectbox"] label,
-.examinee-form-card [data-testid="stTextInput"] p,
-.examinee-form-card [data-testid="stSelectbox"] p {
+.examinee-form-shell label[data-testid="stWidgetLabel"] p,
+.examinee-form-shell label[data-testid="stWidgetLabel"] span,
+.examinee-form-shell [data-testid="stTextInput"] label,
+.examinee-form-shell [data-testid="stSelectbox"] label,
+.examinee-form-shell [data-testid="stTextInput"] p,
+.examinee-form-shell [data-testid="stSelectbox"] p {
   color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 0.96rem !important;
   line-height: 1.5 !important;
   opacity: 1 !important;
 }
-.examinee-form-card [data-testid="stWidgetLabel"] {
+.examinee-form-shell [data-testid="stWidgetLabel"] {
   margin-bottom: 8px !important;
 }
-.examinee-form-card input,
-.examinee-form-card textarea,
-.examinee-form-card [data-baseweb="input"] > div,
-.examinee-form-card [data-baseweb="select"] > div {
+.examinee-form-shell input,
+.examinee-form-shell textarea,
+.examinee-form-shell [data-baseweb="input"] > div,
+.examinee-form-shell [data-baseweb="select"] > div {
   min-height: var(--control-height) !important;
   height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
@@ -350,37 +352,37 @@ body, p, div, span, li, button, label, input, textarea {
   border: 1px solid var(--border-strong) !important;
   box-shadow: none !important;
 }
-.examinee-form-card input,
-.examinee-form-card textarea {
+.examinee-form-shell input,
+.examinee-form-shell textarea {
   -webkit-text-fill-color: var(--ink) !important;
   caret-color: var(--ink) !important;
 }
-.examinee-form-card input::placeholder,
-.examinee-form-card textarea::placeholder {
+.examinee-form-shell input::placeholder,
+.examinee-form-shell textarea::placeholder {
   color: var(--muted-2) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--muted-2) !important;
 }
-.examinee-form-card input:focus,
-.examinee-form-card input:focus-visible,
-.examinee-form-card [data-baseweb="select"] > div:focus-within {
+.examinee-form-shell input:focus,
+.examinee-form-shell input:focus-visible,
+.examinee-form-shell [data-baseweb="select"] > div:focus-within {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
 }
-.examinee-form-card [data-baseweb="select"] span,
-.examinee-form-card [data-baseweb="select"] input,
-.examinee-form-card [data-baseweb="select"] svg,
-.examinee-form-card [data-baseweb="select"] *[aria-hidden="true"],
-.examinee-form-card [data-baseweb="input"] span,
-.examinee-form-card [data-baseweb="input"] input {
+.examinee-form-shell [data-baseweb="select"] span,
+.examinee-form-shell [data-baseweb="select"] input,
+.examinee-form-shell [data-baseweb="select"] svg,
+.examinee-form-shell [data-baseweb="select"] *[aria-hidden="true"],
+.examinee-form-shell [data-baseweb="input"] span,
+.examinee-form-shell [data-baseweb="input"] input {
   color: var(--ink) !important;
   fill: var(--ink) !important;
   stroke: var(--ink) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--ink) !important;
 }
-.examinee-form-card [data-baseweb="select"] > div > div,
-.examinee-form-card [data-baseweb="input"] > div {
+.examinee-form-shell [data-baseweb="select"] > div > div,
+.examinee-form-shell [data-baseweb="input"] > div {
   background: transparent !important;
 }
 .examinee-warning-area {
@@ -1102,125 +1104,124 @@ def render_intro_page() -> None:
 
 def render_examinee_page() -> None:
     with st.container():
-        st.markdown('<div class="app-wrap"><div class="stack examinee-layout">', unsafe_allow_html=True)
+        st.markdown('<div class="app-wrap"><div class="stack examinee-layout"><div class="examinee-form-shell">', unsafe_allow_html=True)
 
-        st.markdown(
-            dedent(
-                """
-                <div class="card examinee-form-card">
-                  <div class="examinee-form-header">
-                    <div class="title-lg">응답자 정보</div>
-                    <div class="text">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
-                  </div>
-                  <div class="divider"></div>
-                  <div class="examinee-form-grid">
-                """
-            ),
-            unsafe_allow_html=True,
-        )
-
-        identity_col, gender_col = st.columns(2, gap="medium")
-        with identity_col:
-            name = st.text_input(
-                "이름",
-                value=st.session_state.examinee.get("name", ""),
-            )
-        with gender_col:
-            gender = st.selectbox(
-                "성별",
-                options=[""] + GENDER_OPTIONS,
-                index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
-                if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
-                else 0,
+        with st.container():
+            st.markdown(
+                dedent(
+                    """
+                    <div class="examinee-form-header">
+                      <div class="title-lg">응답자 정보</div>
+                      <div class="text">검사 진행과 결과 확인을 위해 필요한 정보를 입력해 주세요. 이름, 성별, 연령, 거주지역은 필수이며 휴대폰번호와 이메일은 선택 입력입니다.</div>
+                    </div>
+                    <div class="divider"></div>
+                    """
+                ),
+                unsafe_allow_html=True,
             )
 
-        age_col, region_col = st.columns(2, gap="medium")
-        with age_col:
-            age = st.text_input(
-                "연령",
-                value=st.session_state.examinee.get("age", ""),
+            identity_col, gender_col = st.columns(2, gap="medium")
+            with identity_col:
+                name = st.text_input(
+                    "이름",
+                    value=st.session_state.examinee.get("name", ""),
+                )
+            with gender_col:
+                gender = st.selectbox(
+                    "성별",
+                    options=[""] + GENDER_OPTIONS,
+                    index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
+                    if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
+                    else 0,
+                )
+
+            age_col, region_col = st.columns(2, gap="medium")
+            with age_col:
+                age = st.text_input(
+                    "연령",
+                    value=st.session_state.examinee.get("age", ""),
+                )
+            with region_col:
+                region = st.selectbox(
+                    "거주지역",
+                    options=[""] + REGION_OPTIONS,
+                    index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
+                    if st.session_state.examinee.get("region", "") in REGION_OPTIONS
+                    else 0,
+                )
+
+            phone = st.text_input(
+                "휴대폰번호 (선택)",
+                value=st.session_state.examinee.get("phone", ""),
             )
-        with region_col:
-            region = st.selectbox(
-                "거주지역",
-                options=[""] + REGION_OPTIONS,
-                index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
-                if st.session_state.examinee.get("region", "") in REGION_OPTIONS
-                else 0,
+            email = st.text_input(
+                "이메일 (선택)",
+                value=st.session_state.examinee.get("email", ""),
             )
 
-        phone = st.text_input(
-            "휴대폰번호 (선택)",
-            value=st.session_state.examinee.get("phone", ""),
-        )
-        email = st.text_input(
-            "이메일 (선택)",
-            value=st.session_state.examinee.get("email", ""),
-        )
+            normalized_phone = normalize_phone(phone)
+            st.session_state.examinee.update({
+                "name": name.strip(),
+                "gender": gender,
+                "age": age.strip(),
+                "region": region,
+                "phone": normalized_phone,
+                "email": email.strip(),
+            })
 
-        st.markdown('</div></div>', unsafe_allow_html=True)
+            name_error = validate_name(name)
+            gender_error = validate_gender(gender)
+            age_error = validate_age(age)
+            region_error = validate_region(region)
+            phone_error = validate_phone(normalized_phone)
+            email_error = validate_email(email)
 
-        normalized_phone = normalize_phone(phone)
-        st.session_state.examinee.update({
-            "name": name.strip(),
-            "gender": gender,
-            "age": age.strip(),
-            "region": region,
-            "phone": normalized_phone,
-            "email": email.strip(),
-        })
+            missing_fields = []
+            if not name.strip():
+                missing_fields.append("이름")
+            if not gender.strip():
+                missing_fields.append("성별")
+            if not age.strip():
+                missing_fields.append("연령")
+            if not region.strip():
+                missing_fields.append("거주지역")
 
-        name_error = validate_name(name)
-        gender_error = validate_gender(gender)
-        age_error = validate_age(age)
-        region_error = validate_region(region)
-        phone_error = validate_phone(normalized_phone)
-        email_error = validate_email(email)
+            required_errors = []
+            if name_error and name.strip():
+                required_errors.append(name_error)
+            if gender_error and gender.strip():
+                required_errors.append(gender_error)
+            if age_error and age.strip():
+                required_errors.append(age_error)
+            if region_error and region.strip():
+                required_errors.append(region_error)
 
-        missing_fields = []
-        if not name.strip():
-            missing_fields.append("이름")
-        if not gender.strip():
-            missing_fields.append("성별")
-        if not age.strip():
-            missing_fields.append("연령")
-        if not region.strip():
-            missing_fields.append("거주지역")
+            if missing_fields or required_errors or phone_error or email_error:
+                st.markdown('<div class="examinee-warning-area">', unsafe_allow_html=True)
+                if missing_fields:
+                    st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
+                for error in required_errors:
+                    st.warning(error, icon="⚠️")
+                if phone_error:
+                    st.warning(phone_error, icon="⚠️")
+                if email_error:
+                    st.warning(email_error, icon="⚠️")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        required_errors = []
-        if name_error and name.strip():
-            required_errors.append(name_error)
-        if gender_error and gender.strip():
-            required_errors.append(gender_error)
-        if age_error and age.strip():
-            required_errors.append(age_error)
-        if region_error and region.strip():
-            required_errors.append(region_error)
+            all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
 
-        if missing_fields or required_errors or phone_error or email_error:
-            st.markdown('<div class="examinee-warning-area">', unsafe_allow_html=True)
-            if missing_fields:
-                st.warning(f"{', '.join(missing_fields)}을 입력해주세요.", icon="⚠️")
-            for error in required_errors:
-                st.warning(error, icon="⚠️")
-            if phone_error:
-                st.warning(phone_error, icon="⚠️")
-            if email_error:
-                st.warning(email_error, icon="⚠️")
+            st.markdown('<div class="examinee-actions">', unsafe_allow_html=True)
+            actions = st.columns([1, 1], gap="medium")
+            with actions[0]:
+                if st.button("이전", use_container_width=True):
+                    st.session_state.page = "intro"
+                    st.rerun()
+            with actions[1]:
+                if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
+                    st.session_state.page = "survey"
+                    st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
-
-        st.markdown('<div class="examinee-actions">', unsafe_allow_html=True)
-        actions = st.columns([1, 1], gap="medium")
-        with actions[0]:
-            if st.button("이전", use_container_width=True):
-                st.session_state.page = "intro"
-                st.rerun()
-        with actions[1]:
-            if st.button("다음", type="primary", use_container_width=True, disabled=not all_valid):
-                st.session_state.page = "survey"
-                st.rerun()
         st.markdown('</div></div></div>', unsafe_allow_html=True)
 
 
