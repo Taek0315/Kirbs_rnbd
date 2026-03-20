@@ -2,6 +2,7 @@
 #   streamlit run cad_7.py
 
 # -*- coding: utf-8 -*-
+import html
 import json
 import os
 import re
@@ -67,6 +68,28 @@ QUESTIONS = [
     "쉽게 짜증이 나거나 성가심을 느낌",
     "끔찍한 일이 생길 것처럼 두려움",
 ]
+
+# 최종 문구 교체 예정: intro 화면 문구는 아래 상수만 수정하면 쉽게 교체할 수 있습니다.
+INTRO_CARD_TITLE = "불안검사 (Generalized Anxiety Disorder-7)"
+INTRO_BADGES = ["GAD-7", "최근 2주"]
+INTRO_DESC_BULLETS = [
+    "이 검사는 최근 2주 동안 경험한 불안 관련 증상의 빈도를 살펴보기 위한 자기보고식 검사입니다.",
+    "검사 목적은 현재의 불안 정도를 참고용으로 확인하고, 필요한 경우 추가적인 도움을 고려할 수 있도록 돕는 데 있습니다.",
+    "총 7개 문항으로 구성되어 있으며, 보통 2~3분 정도면 완료할 수 있습니다.",
+]
+INTRO_NOTICE_TITLE = "참고용 안내"
+INTRO_NOTICE_BULLETS = [
+    "응답은 최근 2주를 기준으로, 자신에게 가장 가까운 빈도를 선택해 주세요.",
+    "결과는 참고용 안내이며 의료적 진단이나 치료 판단을 대체하지 않습니다.",
+    "불안으로 인한 불편감이 지속되거나 일상 기능 저하가 느껴진다면 전문가 상담을 권장합니다.",
+]
+PRIVACY_CARD_TITLE = "개인정보 수집 및 검사 진행 동의"
+PRIVACY_BULLETS = [
+    "검사 진행과 결과 산출을 위해 이름, 성별, 연령, 거주지역 등 기본 정보를 수집합니다.",
+    "휴대폰번호와 이메일은 선택 입력 항목이며, 입력한 정보와 응답 내용은 검사 진행 및 결과 확인에 사용됩니다.",
+    "안내 내용을 확인하고 동의한 뒤 검사를 시작하면 동의 시점과 검사 시작 시점이 기록됩니다.",
+]
+CONSENT_CHECKBOX_LABEL = "예, 개인정보 수집·이용 및 검사 진행 안내를 확인하였으며 이에 동의합니다."
 
 
 def gad7_level(total: int):
@@ -612,6 +635,11 @@ def render_stepper(current_page: str):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def render_bullet_list(items: list[str], css_class: str = "intro-bullets") -> str:
+    list_items = "".join(f"<li>{html.escape(item)}</li>" for item in items)
+    return f'<ul class="{html.escape(css_class, quote=True)}">{list_items}</ul>'
+
+
 def render_answer_segments(q_key: str, selected_score: int | None):
     st.markdown(f"<div id='seg-{q_key}' class='answer-segments'>", unsafe_allow_html=True)
     cols = st.columns(4, gap="small")
@@ -879,6 +907,48 @@ def inject_css():
             padding: 12px;
         }
 
+        .intro-section {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .intro-bullets {
+            margin: 0;
+            padding-left: 1.15rem;
+            display: grid;
+            gap: .7rem;
+            color: var(--muted);
+        }
+
+        .intro-bullets li {
+            padding-left: .1rem;
+            line-height: 1.72;
+            word-break: keep-all;
+        }
+
+        .intro-note {
+            margin-top: .25rem;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px dashed color-mix(in srgb, var(--line), var(--primary) 18%);
+            background: color-mix(in srgb, var(--surface-2), var(--primary-soft) 24%);
+            display: grid;
+            gap: .7rem;
+        }
+
+        .privacy-card {
+            background: color-mix(in srgb, var(--surface), var(--surface-2) 60%);
+        }
+
+        .intro-action {
+            margin-top: .9rem;
+        }
+
+        .intro-action div[data-testid="column"]:last-child {
+            display: flex;
+            align-items: end;
+        }
+
         [data-testid="stTextInput"] label,
         [data-testid="stSelectbox"] label {
             color: var(--muted) !important;
@@ -917,6 +987,11 @@ def inject_css():
         @media (max-width: 768px) {
             .block-container { padding-left: .8rem; padding-right: .8rem; }
             .card { padding: 16px; border-radius: 16px; }
+            .intro-section { gap: .85rem; }
+            .intro-bullets { gap: .58rem; padding-left: 1rem; }
+            .intro-bullets li { line-height: 1.65; word-break: break-word; }
+            .intro-note { padding: 13px 14px; }
+            .intro-action { margin-top: .7rem; }
             .answer-segments div[data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap;
             }
@@ -955,24 +1030,25 @@ def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
+    intro_desc_html = render_bullet_list(INTRO_DESC_BULLETS)
+    intro_notice_html = render_bullet_list(INTRO_NOTICE_BULLETS)
+    privacy_html = render_bullet_list(PRIVACY_BULLETS)
+    intro_badges_html = "".join(f'<span class="badge">{html.escape(badge)}</span>' for badge in INTRO_BADGES)
+
     st.markdown(
-        """
-        <section class="card">
-            <span class="badge">GAD-7</span>
-            <span class="badge">최근 2주</span>
-            <h1 class="title-lg">불안검사 (Generalized Anxiety Disorder-7)</h1>
-            <p class="text" style="margin-top:8px;">
-                본 검사는 최근 2주 동안 경험한 불안 관련 증상의 빈도를 확인하기 위한 자기보고식 척도입니다.
-                약 2~3분 내에 완료하실 수 있습니다.
-            </p>
-            <div class="note-box" style="margin-top:12px;">
-                <p class="text" style="margin:0;">
-                    <strong>안내:</strong> 본 결과는 참고용이며 의학적 진단을 대체하지 않습니다.
-                    불편감이 지속되거나 일상 기능 저하가 있다면 전문가 상담을 권장드립니다.
-                </p>
-                <p class="muted" style="margin:8px 0 0;">
-                    입력하신 응답은 현재 세션에서 결과 산출을 위해 사용되며, 별도 저장은 연동 환경에 따라 달라질 수 있습니다.
-                </p>
+        f"""
+        <section class="card intro-section">
+            <div>
+                {intro_badges_html}
+                <h1 class="title-lg">{html.escape(INTRO_CARD_TITLE)}</h1>
+            </div>
+            <div>
+                <h2 class="title-md">검사 설명</h2>
+                {intro_desc_html}
+            </div>
+            <div class="note-box intro-note">
+                <h3 class="title-md" style="font-size:1rem !important; margin:0;">{html.escape(INTRO_NOTICE_TITLE)}</h3>
+                {intro_notice_html}
             </div>
         </section>
         """,
@@ -980,18 +1056,24 @@ def page_intro():
     )
 
     st.markdown(
-        """
-        <section class="card soft">
-            <h2 class="title-md">검사 진행 동의</h2>
-            <p class="text">검사 진행과 결과 산출을 위해 이름·성별·연령·거주지역을 수집하며, 휴대폰번호·이메일은 선택 입력 항목입니다. 아래를 확인 후 동의해 주세요.</p>
+        f"""
+        <section class="card soft intro-section privacy-card">
+            <div>
+                <h2 class="title-md">{html.escape(PRIVACY_CARD_TITLE)}</h2>
+                <p class="muted" style="margin:6px 0 0;">안내 내용을 확인하신 뒤 동의 체크 후 검사를 진행해 주세요.</p>
+            </div>
+            <div>
+                {privacy_html}
+            </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    consent = st.checkbox("예, 위 안내를 확인하였고 검사 진행에 동의합니다.", value=st.session_state.meta["consent"])
+    consent = st.checkbox(CONSENT_CHECKBOX_LABEL, value=st.session_state.meta["consent"])
     st.session_state.meta["consent"] = consent
 
+    st.markdown("<div class='intro-action'>", unsafe_allow_html=True)
     c1, c2 = st.columns([3, 1])
     with c2:
         if st.button("검사 시작", type="primary", disabled=not consent, use_container_width=True):
@@ -1000,6 +1082,7 @@ def page_intro():
             st.session_state.meta["started_ts"] = now
             st.session_state.page = "info"
             st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
