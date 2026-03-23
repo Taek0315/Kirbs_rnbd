@@ -962,21 +962,21 @@ def inject_css():
         }
 
         .score-hero {
-            display: flex;
-            align-items: flex-end;
-            justify-content: flex-start;
-            gap: 14px;
+            display: grid;
+            grid-template-columns: max-content minmax(0, 1fr);
+            align-items: end;
+            column-gap: 22px;
+            row-gap: 10px;
             margin-top: 18px;
             margin-bottom: 18px;
-            flex-wrap: wrap;
         }
 
         .score-stack {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            min-width: max-content;
-            flex: 0 0 auto;
+            min-width: 0;
+            width: max-content;
         }
 
         .score-hero > * {
@@ -1029,8 +1029,8 @@ def inject_css():
             color: var(--text);
             margin: 0;
             text-align: left;
-            align-self: flex-end;
-            flex: 1 1 320px;
+            align-self: end;
+            width: 100%;
             max-width: 100%;
             opacity: 1;
             -webkit-text-fill-color: currentColor;
@@ -1470,24 +1470,25 @@ def inject_css():
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] {
-            display: flex !important;
-            flex-wrap: nowrap !important;
+            display: grid !important;
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
             gap: 12px !important;
             width: 100% !important;
-            margin: 0 auto !important;
+            margin: 0 !important;
             align-items: stretch !important;
-            justify-content: center !important;
+            justify-items: stretch !important;
         }
 
+        div[data-testid="stRadio"] [role="radiogroup"] > *,
         div[data-testid="stRadio"] [role="radiogroup"] > label,
         div[data-testid="stRadio"] [role="radiogroup"] > div {
-            flex: 1 1 0 !important;
             width: 100% !important;
             min-width: 0 !important;
             max-width: none !important;
             display: flex !important;
             align-items: stretch !important;
             justify-content: stretch !important;
+            margin: 0 !important;
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] > div > label,
@@ -1643,12 +1644,11 @@ def inject_css():
             }
 
             .score-hero {
-                flex-direction: column;
+                grid-template-columns: 1fr;
                 align-items: flex-start;
             }
 
             .result-summary {
-                flex-basis: auto;
                 width: 100%;
             }
         }
