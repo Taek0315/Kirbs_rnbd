@@ -1,5 +1,5 @@
 # 실행 방법:
-#   streamlit run cad_7.py
+#   streamlit run gad_7.py
 
 # -*- coding: utf-8 -*-
 import html
@@ -69,7 +69,6 @@ QUESTIONS = [
     "끔찍한 일이 생길 것처럼 두려움",
 ]
 
-# 최종 문구 교체 예정: intro 화면 문구는 아래 상수만 수정하면 쉽게 교체할 수 있습니다.
 INTRO_CARD_TITLE = "불안검사 (Generalized Anxiety Disorder-7)"
 INTRO_BADGES = ["GAD-7", "최근 2주"]
 INTRO_DESC_BULLETS = [
@@ -129,6 +128,10 @@ def score_from_label(label: str):
         return int(label.split("(")[-1].split(")")[0])
     except Exception:
         return None
+
+
+def format_select_option(value: str) -> str:
+    return "선택해 주세요" if value == "" else value
 
 
 def init_state():
@@ -194,6 +197,7 @@ def select_answer(q_key: str, score: int):
     st.session_state.answers[q_key] = score
     st.session_state.last_q = q_key
 
+
 def _sanitize_csv_value(v) -> str:
     if v is None:
         return ""
@@ -201,6 +205,7 @@ def _sanitize_csv_value(v) -> str:
     s = s.replace("\n", " ").replace("\r", " ")
     s = s.replace(",", " ")
     return s.strip()
+
 
 def dict_to_kv_csv(d: dict) -> str:
     if not isinstance(d, dict):
@@ -210,10 +215,8 @@ def dict_to_kv_csv(d: dict) -> str:
         parts.append(f"{_sanitize_csv_value(k)}={_sanitize_csv_value(v)}")
     return ",".join(parts)
 
+
 def build_exam_data_gad7(payload: dict) -> dict:
-    """
-    PHQ-9와 동일한 5컬럼 형태로 통일
-    """
     exam_name = payload.get("instrument", "GAD_7")
 
     consent_meta = {
@@ -227,17 +230,14 @@ def build_exam_data_gad7(payload: dict) -> dict:
 
     examinee = payload.get("examinee", {}) or {}
 
-    # ✅ 응답 데이터는 "점수" 기준으로 통일 권장
-    # payload["items"]["scores"]는 {"q1":0..3 ...}
     items = payload.get("items", {}) or {}
-    scores = (items.get("scores", {}) or {})
-    answers = dict(scores)  # q1..q7
+    scores = items.get("scores", {}) or {}
+    answers = dict(scores)
 
     result_raw = payload.get("result", {}) or {}
-    # PHQ-9와 키 이름까지 최대한 정합화: severity 사용
     result_flat = {
         "total": result_raw.get("total"),
-        "severity": result_raw.get("level"),  # ← level을 severity로 저장
+        "severity": result_raw.get("level"),
         "interpretation": result_raw.get("interpretation"),
         "rule_of_thumb_ge10": ((result_raw.get("rule_of_thumb", {}) or {}).get(">=10")),
         "rule_of_thumb_ge15": ((result_raw.get("rule_of_thumb", {}) or {}).get(">=15")),
@@ -252,6 +252,7 @@ def build_exam_data_gad7(payload: dict) -> dict:
         "answers_col": dict_to_kv_csv(answers),
         "result_col": dict_to_kv_csv(result_flat),
     }
+
 
 def build_payload():
     item_scores = {}
@@ -682,6 +683,19 @@ def inject_css():
             --radius-lg: 14px;
             --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
             --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
+
+            --select-surface: #ffffff;
+            --select-text: #0f172a;
+            --select-muted: #64748b;
+            --select-border: #cbd5e1;
+            --select-hover-bg: #f8fbff;
+            --select-hover-border: #60a5fa;
+            --select-focus-ring: rgba(37, 99, 235, 0.18);
+            --select-menu-bg: #ffffff;
+            --select-menu-border: #cbd5e1;
+            --select-menu-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+            --select-option-hover: #eff6ff;
+            --select-option-selected: #dbeafe;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -702,6 +716,19 @@ def inject_css():
                 --danger-soft: rgba(248,113,113,.16);
                 --shadow-sm: none;
                 --shadow-md: none;
+
+                --select-surface: #0f2747;
+                --select-text: #f8fafc;
+                --select-muted: #c7d2fe;
+                --select-border: #4a8cff;
+                --select-hover-bg: #13335d;
+                --select-hover-border: #78adff;
+                --select-focus-ring: rgba(96, 165, 250, 0.28);
+                --select-menu-bg: #102a4c;
+                --select-menu-border: #2e5f9b;
+                --select-menu-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
+                --select-option-hover: #183a68;
+                --select-option-selected: #35527a;
             }
         }
 
@@ -718,15 +745,16 @@ def inject_css():
             padding-bottom: 3.2rem;
         }
 
-        /* === Stepper iframe wrapper: same width/margins as main content === */
         .stepper-wrap {
             width: min(100%, var(--content-max-width));
             margin: 0 auto 6px;
             padding: 0 1.25rem;
         }
+
         .stepper-wrap > div[data-testid="stHtml"] {
             width: 100%;
         }
+
         .stepper-wrap > div[data-testid="stHtml"] > iframe,
         .stepper-wrap > div[data-testid="stHtml"] iframe {
             display: block;
@@ -737,7 +765,6 @@ def inject_css():
             border: 0 !important;
         }
 
-        /* === Fix Streamlit components.html iframe alignment === */
         div[data-testid="stHtml"] {
             width: 100% !important;
             max-width: var(--content-max-width) !important;
@@ -812,9 +839,20 @@ def inject_css():
             overflow: hidden;
             border: 1px solid var(--line);
         }
-        .meter > span { display:block; height:100%; background: linear-gradient(90deg, var(--primary), #60a5fa); transition: width .25s ease; }
 
-        .question-title { font-size: 1rem; font-weight: 750; color: var(--text); margin-bottom: .45rem; }
+        .meter > span {
+            display:block;
+            height:100%;
+            background: linear-gradient(90deg, var(--primary), #60a5fa);
+            transition: width .25s ease;
+        }
+
+        .question-title {
+            font-size: 1rem;
+            font-weight: 750;
+            color: var(--text);
+            margin-bottom: .45rem;
+        }
 
         .answer-segments {
             margin-top: .45rem;
@@ -867,12 +905,20 @@ def inject_css():
             margin-right: 6px;
             margin-bottom: 6px;
         }
+
         .chip-danger { color: var(--danger); background: var(--danger-soft); }
         .chip-warning { color: var(--warning); background: var(--warning-soft); }
         .chip-success { color: var(--success); background: var(--success-soft); }
 
-        .result-score { font-size: clamp(2.4rem, 7vw, 3.3rem); font-weight: 900; line-height: 1.05; color: var(--text); }
+        .result-score {
+            font-size: clamp(2.4rem, 7vw, 3.3rem);
+            font-weight: 900;
+            line-height: 1.05;
+            color: var(--text);
+        }
+
         .result-sub { color: var(--muted); font-size: .95rem; }
+
         .level-badge {
             display:inline-block;
             margin-top: 8px;
@@ -897,6 +943,7 @@ def inject_css():
             background: linear-gradient(90deg, #22c55e 0%, #eab308 45%, #f59e0b 70%, #ef4444 100%);
             margin: 12px 0 6px;
         }
+
         .score-cover { height:100%; background: rgba(255,255,255,.78); }
         .score-marks { display:flex; justify-content:space-between; font-size:.78rem; color: var(--muted); }
 
@@ -951,37 +998,140 @@ def inject_css():
 
         [data-testid="stTextInput"] label,
         [data-testid="stSelectbox"] label {
-            color: var(--muted) !important;
+            color: var(--text) !important;
             font-weight: 700 !important;
+            opacity: 1 !important;
         }
 
-        [data-testid="stTextInput"] input,
-        [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        [data-testid="stTextInput"] input {
             background: var(--surface) !important;
             color: var(--text) !important;
             border: 1px solid var(--line) !important;
             border-radius: 12px !important;
             min-height: 44px !important;
             box-shadow: none !important;
-        }
-
-        [data-testid="stTextInput"] input {
             padding: 12px 14px !important;
         }
 
+        [data-testid="stTextInput"] input::placeholder {
+            color: var(--muted) !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stTextInput"] input:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%) !important;
+        }
+
+        /* ===== Selectbox control ===== */
+        [data-testid="stSelectbox"] [data-baseweb="select"] {
+            width: 100% !important;
+        }
+
         [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            background: var(--select-surface) !important;
+            color: var(--select-text) !important;
+            border: 1px solid var(--select-border) !important;
+            border-radius: 12px !important;
+            min-height: 46px !important;
+            box-shadow: none !important;
+            transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease !important;
             padding: 2px 10px !important;
         }
 
-        [data-testid="stSelectbox"] [data-baseweb="select"] span,
-        [data-testid="stSelectbox"] [data-baseweb="select"] input {
-            color: var(--text) !important;
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {
+            background: var(--select-hover-bg) !important;
+            border-color: var(--select-hover-border) !important;
         }
 
-        [data-testid="stTextInput"] input:focus,
         [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
-            border-color: var(--primary) !important;
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%) !important;
+            background: var(--select-surface) !important;
+            border-color: var(--select-hover-border) !important;
+            box-shadow: 0 0 0 3px var(--select-focus-ring) !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div * {
+            color: var(--select-text) !important;
+            -webkit-text-fill-color: var(--select-text) !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] span,
+        [data-testid="stSelectbox"] [data-baseweb="select"] input,
+        [data-testid="stSelectbox"] [data-baseweb="select"] div {
+            color: var(--select-text) !important;
+            -webkit-text-fill-color: var(--select-text) !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder {
+            color: var(--select-muted) !important;
+            -webkit-text-fill-color: var(--select-muted) !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stSelectbox"] [data-baseweb="select"] svg,
+        [data-testid="stSelectbox"] [data-baseweb="select"] path {
+            fill: var(--select-text) !important;
+            color: var(--select-text) !important;
+            opacity: 1 !important;
+        }
+
+        /* ===== Dropdown menu rendered in portal ===== */
+        div[data-baseweb="popover"] {
+            z-index: 99999 !important;
+        }
+
+        div[data-baseweb="popover"] [data-baseweb="menu"],
+        div[data-baseweb="popover"] [role="listbox"],
+        div[data-baseweb="popover"] ul {
+            background: var(--select-menu-bg) !important;
+            border: 1px solid var(--select-menu-border) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--select-menu-shadow) !important;
+            overflow: hidden !important;
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
+        }
+
+        div[data-baseweb="popover"] [role="option"],
+        div[data-baseweb="popover"] li,
+        div[data-baseweb="popover"] [data-baseweb="menu"] > div,
+        div[data-baseweb="popover"] [data-baseweb="menu"] li {
+            background: transparent !important;
+            color: var(--select-text) !important;
+            -webkit-text-fill-color: var(--select-text) !important;
+            opacity: 1 !important;
+            min-height: 42px !important;
+        }
+
+        div[data-baseweb="popover"] [role="option"] *,
+        div[data-baseweb="popover"] li *,
+        div[data-baseweb="popover"] [data-baseweb="menu"] > div *,
+        div[data-baseweb="popover"] [data-baseweb="menu"] li * {
+            color: var(--select-text) !important;
+            -webkit-text-fill-color: var(--select-text) !important;
+            opacity: 1 !important;
+        }
+
+        div[data-baseweb="popover"] [role="option"]:hover,
+        div[data-baseweb="popover"] li:hover,
+        div[data-baseweb="popover"] [data-baseweb="menu"] > div:hover,
+        div[data-baseweb="popover"] [data-baseweb="menu"] li:hover {
+            background: var(--select-option-hover) !important;
+        }
+
+        div[data-baseweb="popover"] [aria-selected="true"],
+        div[data-baseweb="popover"] [data-highlighted="true"] {
+            background: var(--select-option-selected) !important;
+            color: var(--select-text) !important;
+        }
+
+        /* 빈 값일 때도 글자/placeholder가 안 묻히도록 */
+        [data-testid="stSelectbox"] div[aria-expanded] > div,
+        [data-testid="stSelectbox"] div[aria-expanded="true"] > div,
+        [data-testid="stSelectbox"] div[aria-expanded="false"] > div {
+            color: var(--select-text) !important;
+            -webkit-text-fill-color: var(--select-text) !important;
         }
 
         @media (max-width: 768px) {
@@ -992,33 +1142,35 @@ def inject_css():
             .intro-bullets li { line-height: 1.65; word-break: break-word; }
             .intro-note { padding: 13px 14px; }
             .intro-action { margin-top: .7rem; }
+
             .answer-segments div[data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap;
             }
+
             .answer-segments div[data-testid="column"] {
                 flex: 1 1 calc(50% - .3rem);
             }
+
             .answer-segments div[data-testid="stButton"] > button {
                 min-height: 44px;
                 font-size: .93rem;
             }
         }
 
-        /* === FORCE components.html iframe to match content width === */
-        div[data-testid="stHtml"], 
+        div[data-testid="stHtml"],
         div[data-testid="stHtml"] > div,
         div[data-testid="stHtml"] > div > iframe,
         div[data-testid="stHtml"] iframe {
-          width: 100% !important;
-          max-width: var(--content-max-width) !important;
-          margin-left: auto !important;
-          margin-right: auto !important;
-          display: block !important;
-          padding: 0 !important;
-          border: 0 !important;
-          left: auto !important;
-          right: auto !important;
-          transform: none !important;
+            width: 100% !important;
+            max-width: var(--content-max-width) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            display: block !important;
+            padding: 0 !important;
+            border: 0 !important;
+            left: auto !important;
+            right: auto !important;
+            transform: none !important;
         }
         </style>
         """,
@@ -1164,25 +1316,29 @@ def page_info():
     row1_col1, row1_col2 = st.columns(2, gap="medium")
     with row1_col1:
         name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+
     with row1_col2:
+        gender_options = [""] + GENDER_OPTIONS
+        current_gender = st.session_state.examinee.get("gender", "")
         gender = st.selectbox(
             "성별",
-            options=[""] + GENDER_OPTIONS,
-            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
-            if st.session_state.examinee.get("gender", "") in GENDER_OPTIONS
-            else 0,
+            options=gender_options,
+            index=gender_options.index(current_gender) if current_gender in gender_options else 0,
+            format_func=format_select_option,
         )
 
     row2_col1, row2_col2 = st.columns(2, gap="medium")
     with row2_col1:
         age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
+
     with row2_col2:
+        region_options = [""] + REGION_OPTIONS
+        current_region = st.session_state.examinee.get("region", "")
         region = st.selectbox(
             "거주지역",
-            options=[""] + REGION_OPTIONS,
-            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
-            if st.session_state.examinee.get("region", "") in REGION_OPTIONS
-            else 0,
+            options=region_options,
+            index=region_options.index(current_region) if current_region in region_options else 0,
+            format_func=format_select_option,
         )
 
     phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
@@ -1236,6 +1392,7 @@ def page_info():
         st.error(email_error)
 
     all_valid = not any([name_error, gender_error, age_error, region_error, phone_error, email_error])
+
     c1, c2 = st.columns([3, 1])
     with c2:
         if st.button("다음", type="primary", disabled=not all_valid, use_container_width=True):
@@ -1462,7 +1619,6 @@ def main():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
 def _is_db_insert_enabled() -> bool:
     raw = os.getenv("ENABLE_DB_INSERT", "false")
@@ -1474,10 +1630,11 @@ ENABLE_DB_INSERT = _is_db_insert_enabled()
 if ENABLE_DB_INSERT:
     from utils.database import Database
 
+
 def safe_db_insert(exam_data: dict) -> bool:
     """
     dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
-    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(exam_data) 수행
+    운영/병합: ENABLE_DB_INSERT=true → Database().insert(exam_data) 수행
     """
     if not ENABLE_DB_INSERT:
         return False
@@ -1489,13 +1646,13 @@ def safe_db_insert(exam_data: dict) -> bool:
         print(f"[DB INSERT ERROR] {e}")
         return False
 
+
 def auto_db_insert(exam_data: dict) -> None:
     """
     결과 저장 자동 호출
     - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + exam_data expander로 노출
     - 활성 환경: 이름 검증 후 DB 저장 1회 시도 (성공 시 중복 방지 플래그 ON)
     """
-    # 중복 방지(성공 시에만 잠금)
     if "db_insert_done" not in st.session_state:
         st.session_state.db_insert_done = False
     if st.session_state.db_insert_done:
@@ -1517,9 +1674,6 @@ def auto_db_insert(exam_data: dict) -> None:
         st.success("검사 완료")
     else:
         st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 끝
 
 
 if __name__ == "__main__":
