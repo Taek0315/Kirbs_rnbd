@@ -24,7 +24,7 @@ st.set_page_config(
 
 KST = timezone(timedelta(hours=9))
 
-EXAM_NAME = "RSES_5"
+EXAM_NAME = "RSES"
 EXAM_TITLE = "자아존중감 자기평가 검사"
 EXAM_SUBTITLE = "Rosenberg Self-Esteem Scale 기반"
 EXAM_VERSION = "streamlit_1.0"
