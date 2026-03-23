@@ -623,11 +623,15 @@ def inject_css():
             --muted: #4F6B85;
             --green: #2E8B57;
             --green-soft: #EAF7F0;
-            --widget-bg: rgba(10, 27, 48, 0.72);
-            --widget-border: rgba(214, 226, 236, 0.42);
+            --widget-bg: rgba(13, 39, 71, 0.78);
+            --widget-bg-soft: rgba(13, 39, 71, 0.92);
+            --widget-border: rgba(214, 226, 236, 0.48);
             --widget-text: #F5FBFF;
-            --widget-label: #EDF5FF;
-            --widget-placeholder: rgba(222, 236, 248, 0.78);
+            --widget-label: #F4F8FD;
+            --widget-placeholder: rgba(225, 236, 246, 0.78);
+            --widget-menu-bg: #0f3158;
+            --widget-menu-hover: rgba(255, 255, 255, 0.10);
+            --widget-menu-selected: rgba(255, 255, 255, 0.18);
         }
 
         html, body, .stApp,
@@ -635,14 +639,11 @@ def inject_css():
             background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%);
         }
 
-        .stApp [data-testid="stMainBlockContainer"] {
+        .stApp [data-testid="stMainBlockContainer"],
+        .block-container {
             max-width: 980px;
             padding-top: 2rem;
             padding-bottom: 3rem;
-        }
-
-        .block-container {
-            max-width: 980px;
         }
 
         .page-wrap {
@@ -873,7 +874,7 @@ def inject_css():
             font-size: 18px;
             font-weight: 700;
             line-height: 1.55;
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
 
         .progress-row {
@@ -962,9 +963,9 @@ def inject_css():
 
         .score-hero {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 16px;
-            align-items: end;
+            grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+            gap: 20px;
+            align-items: center;
             margin-top: 18px;
             margin-bottom: 18px;
         }
@@ -1019,6 +1020,9 @@ def inject_css():
             line-height: 1.75;
             color: var(--text);
             margin: 0;
+            text-align: left;
+            align-self: center;
+            max-width: 100%;
             opacity: 1;
             -webkit-text-fill-color: currentColor;
         }
@@ -1271,8 +1275,8 @@ def inject_css():
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 22px;
-            padding: 22px 22px 14px;
-            margin-bottom: 16px;
+            padding: 22px;
+            margin-bottom: 14px;
             box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
         }
 
@@ -1282,51 +1286,50 @@ def inject_css():
             margin-bottom: 18px;
         }
 
-        .survey-payload-bridge {
-            display: none;
-        }
-
+        .survey-payload-bridge,
         div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
             display: none;
         }
 
-        /* Streamlit widget labels */
-        .stApp [data-testid="stWidgetLabel"],
+        /* ---------- widget labels ---------- */
         .stApp [data-testid="stWidgetLabel"] p,
-        .stApp div[data-testid="stTextInput"] label,
         .stApp div[data-testid="stTextInput"] label p,
-        .stApp div[data-testid="stSelectbox"] label,
         .stApp div[data-testid="stSelectbox"] label p,
-        .stApp div[data-testid="stCheckbox"] label,
         .stApp div[data-testid="stCheckbox"] label p,
-        .stApp div[data-testid="stCheckbox"] label span {
+        .stApp div[data-testid="stCheckbox"] label span,
+        .stApp div[data-testid="stNumberInput"] label p {
             color: var(--widget-label) !important;
             opacity: 1 !important;
             text-shadow: none !important;
             filter: none !important;
             -webkit-text-fill-color: var(--widget-label) !important;
             font-weight: 700 !important;
+            line-height: 1.55 !important;
         }
 
         .stApp div[data-testid="stCheckbox"] label {
-            gap: 0.55rem;
-            align-items: flex-start;
+            gap: 0.6rem !important;
+            align-items: flex-start !important;
         }
 
-        .stApp div[data-testid="stCheckbox"] label p,
-        .stApp div[data-testid="stCheckbox"] label span {
-            line-height: 1.65;
+        .stApp div[data-testid="stCheckbox"] input {
+            accent-color: #FF6B6B;
         }
 
-        /* Text inputs */
-        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] {
+        /* ---------- text input ---------- */
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"],
+        .stApp div[data-testid="stTextInput"] > div {
             background: transparent !important;
         }
 
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div,
+        .stApp div[data-testid="stTextInput"] input {
+            border-radius: 16px !important;
+        }
+
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div {
-            background: var(--widget-bg) !important;
+            background: var(--widget-bg-soft) !important;
             border: 1px solid var(--widget-border) !important;
-            border-radius: 14px !important;
             min-height: 46px !important;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
         }
@@ -1344,20 +1347,22 @@ def inject_css():
             -webkit-text-fill-color: var(--widget-placeholder) !important;
         }
 
-        /* Selectbox */
+        /* ---------- selectbox control ---------- */
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] {
             background: transparent !important;
         }
 
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
-            background: var(--widget-bg) !important;
+            background: var(--widget-bg-soft) !important;
             border: 1px solid var(--widget-border) !important;
-            border-radius: 14px !important;
+            border-radius: 16px !important;
             min-height: 46px !important;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
         }
 
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] * {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] span,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div {
             color: var(--widget-text) !important;
             opacity: 1 !important;
             -webkit-text-fill-color: var(--widget-text) !important;
@@ -1375,7 +1380,44 @@ def inject_css():
             color: #D7E8F7 !important;
         }
 
-        /* Captions and alerts */
+        /* ---------- selectbox dropdown menu ---------- */
+        body [data-baseweb="popover"],
+        body [data-baseweb="popover"] > div,
+        body ul[role="listbox"],
+        body div[role="listbox"] {
+            background: var(--widget-menu-bg) !important;
+            border: 1px solid rgba(214, 226, 236, 0.18) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 16px 30px rgba(4, 18, 34, 0.32) !important;
+        }
+
+        body li[role="option"],
+        body div[role="option"] {
+            color: #F6FBFF !important;
+            -webkit-text-fill-color: #F6FBFF !important;
+            background: transparent !important;
+        }
+
+        body li[role="option"] *,
+        body div[role="option"] * {
+            color: inherit !important;
+            -webkit-text-fill-color: inherit !important;
+            opacity: 1 !important;
+        }
+
+        body li[role="option"]:hover,
+        body div[role="option"]:hover {
+            background: var(--widget-menu-hover) !important;
+        }
+
+        body li[role="option"][aria-selected="true"],
+        body div[role="option"][aria-selected="true"] {
+            background: var(--widget-menu-selected) !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+        }
+
+        /* ---------- captions / alerts ---------- */
         .stApp div[data-testid="stCaptionContainer"] p {
             color: #DCEAF8 !important;
             opacity: 1 !important;
@@ -1387,36 +1429,42 @@ def inject_css():
             opacity: 1 !important;
         }
 
-        /* Radio cards */
+        /* ---------- radio cards ---------- */
         div[data-testid="stRadio"] > label {
-            display: none;
+            display: none !important;
         }
 
         div[data-testid="stRadio"] {
             width: 100%;
+            margin: 0 0 22px;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] {
+        div[data-testid="stRadio"] [role="radiogroup"] {
             display: grid !important;
             grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
             gap: 12px !important;
             width: 100% !important;
             align-items: stretch !important;
+            justify-items: stretch !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > * {
-            min-width: 0 !important;
+        div[data-testid="stRadio"] [role="radiogroup"] > label,
+        div[data-testid="stRadio"] [role="radiogroup"] > div {
             width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            display: flex !important;
+            align-items: stretch !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > label,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label,
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label,
+        div[data-testid="stRadio"] [role="radiogroup"] > label,
         div[data-testid="stRadio"] [data-baseweb="radio"] {
             position: relative !important;
             margin: 0 !important;
             min-height: 68px !important;
-            height: 100% !important;
             width: 100% !important;
+            height: 100% !important;
             border: 1px solid rgba(165, 188, 212, 0.9) !important;
             border-radius: 16px !important;
             background: linear-gradient(180deg, #FFFFFF 0%, #F6FBFF 100%) !important;
@@ -1430,18 +1478,20 @@ def inject_css():
             transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:hover {
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label:hover,
+        div[data-testid="stRadio"] [role="radiogroup"] > label:hover,
+        div[data-testid="stRadio"] [data-baseweb="radio"]:hover {
             border-color: rgba(30, 78, 121, 0.58) !important;
             background: linear-gradient(180deg, #FFFFFF 0%, #EDF6FF 100%) !important;
             transform: translateY(-1px);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09) !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"],
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked),
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"],
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked) {
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label[data-selected="true"],
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label:has(input[type="radio"]:checked),
+        div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"],
+        div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked),
+        div[data-testid="stRadio"] [data-baseweb="radio"]:has(input[type="radio"]:checked) {
             border-color: #1F6FB2 !important;
             background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%) !important;
             transform: translateY(-1px);
@@ -1451,30 +1501,24 @@ def inject_css():
                 0 14px 28px rgba(19, 74, 120, 0.18) !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"]:hover,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked):hover,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"]:hover,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked):hover {
-            border-color: #16659F !important;
-            background: linear-gradient(135deg, rgba(210, 235, 255, 1) 0%, rgba(224, 244, 234, 1) 100%) !important;
-            box-shadow:
-                inset 0 0 0 2px rgba(31, 111, 178, 0.26),
-                inset 0 1px 0 rgba(255, 255, 255, 0.98),
-                0 16px 30px rgba(19, 74, 120, 0.2) !important;
-        }
-
-        div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"],
-        div[data-testid="stRadio"] div[role="radiogroup"] svg {
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label > div:first-child:not([data-testid="stMarkdownContainer"]),
+        div[data-testid="stRadio"] [role="radiogroup"] > label > div:first-child:not([data-testid="stMarkdownContainer"]),
+        div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child,
+        div[data-testid="stRadio"] input[type="radio"],
+        div[data-testid="stRadio"] svg {
             position: absolute !important;
             opacity: 0 !important;
             pointer-events: none !important;
             width: 0 !important;
             height: 0 !important;
             margin: 0 !important;
+            display: none !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] [data-testid="stMarkdownContainer"] {
-            position: relative !important;
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label > div:last-child,
+        div[data-testid="stRadio"] [role="radiogroup"] > label > div:last-child,
+        div[data-testid="stRadio"] [data-baseweb="radio"] > div:last-child,
+        div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] {
             display: flex !important;
             align-items: stretch !important;
             justify-content: stretch !important;
@@ -1482,15 +1526,16 @@ def inject_css():
             min-width: 0 !important;
             min-height: 68px !important;
             margin: 0 !important;
+            flex: 1 1 auto !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] p {
+        div[data-testid="stRadio"] [role="radiogroup"] p {
             margin: 0 !important;
             width: 100% !important;
             min-width: 0 !important;
             min-height: 68px !important;
             height: 100% !important;
-            padding: 14px 10px !important;
+            padding: 14px 12px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -1501,21 +1546,22 @@ def inject_css():
             color: var(--text) !important;
             font-size: 13px !important;
             font-weight: 700 !important;
-            line-height: 1.2 !important;
+            line-height: 1.25 !important;
             -webkit-text-fill-color: var(--text) !important;
             transition: color 0.16s ease, font-weight 0.16s ease !important;
         }
 
-        div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) p,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"] p,
-        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked) p {
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label[data-selected="true"] p,
+        div[data-testid="stRadio"] [role="radiogroup"] > div > label:has(input[type="radio"]:checked) p,
+        div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] p,
+        div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) p,
+        div[data-testid="stRadio"] [data-baseweb="radio"]:has(input[type="radio"]:checked) p {
             color: #0D3F68 !important;
             font-weight: 800 !important;
             -webkit-text-fill-color: #0D3F68 !important;
         }
 
-        /* Buttons */
+        /* ---------- buttons ---------- */
         div[data-testid="stButton"] {
             width: 100%;
         }
@@ -1548,7 +1594,7 @@ def inject_css():
         }
 
         @media (max-width: 900px) {
-            div[data-testid="stRadio"] div[role="radiogroup"] {
+            div[data-testid="stRadio"] [role="radiogroup"] {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
 
@@ -1563,7 +1609,10 @@ def inject_css():
         }
 
         @media (max-width: 640px) {
-            .card {
+            .card,
+            .question-card,
+            .result-card,
+            .support-card {
                 padding: 20px 18px;
             }
 
@@ -1585,7 +1634,6 @@ def inject_css():
         """,
         unsafe_allow_html=True,
     )
-
 
 def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
