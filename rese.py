@@ -606,12 +606,14 @@ def render_stepper(current_page: str):
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
+
 def inject_css():
     st.markdown(
         """
         <style>
         :root {
             --navy: #0F2747;
+            --navy-deep: #0B1F38;
             --blue: #1E4E79;
             --surface: #F5FAFF;
             --surface-soft: #F8FBFF;
@@ -621,23 +623,34 @@ def inject_css():
             --muted: #4F6B85;
             --green: #2E8B57;
             --green-soft: #EAF7F0;
+            --widget-bg: rgba(10, 27, 48, 0.72);
+            --widget-border: rgba(214, 226, 236, 0.42);
+            --widget-text: #F5FBFF;
+            --widget-label: #EDF5FF;
+            --widget-placeholder: rgba(222, 236, 248, 0.78);
         }
-        .stApp {
-            background: linear-gradient(180deg, #0b1f38 0%, var(--navy) 22%, #163b63 100%);
-        }
+
+        html, body, .stApp,
         .stApp [data-testid="stAppViewContainer"] {
-            background: transparent;
+            background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%);
         }
+
         .stApp [data-testid="stMainBlockContainer"] {
             max-width: 980px;
             padding-top: 2rem;
             padding-bottom: 3rem;
         }
+
+        .block-container {
+            max-width: 980px;
+        }
+
         .page-wrap {
             max-width: 920px;
             margin: 0 auto;
             padding: 0 0 88px;
         }
+
         .card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -645,14 +658,12 @@ def inject_css():
             padding: 24px;
             box-shadow: 0 18px 42px rgba(8, 32, 58, 0.18);
             margin-bottom: 18px;
-            opacity: 1;
-            filter: none;
         }
+
         .card.soft {
             background: var(--surface-soft);
-            opacity: 1;
-            filter: none;
         }
+
         .badge {
             display: inline-block;
             padding: 6px 12px;
@@ -665,112 +676,84 @@ def inject_css():
             margin-bottom: 8px;
             border: 1px solid rgba(30, 78, 121, 0.18);
         }
-        .title-lg, .title-md, .question-title, .result-score {
+
+        .title-lg,
+        .title-md,
+        .question-title,
+        .result-score {
             color: var(--text);
-        }
-        .page-wrap .card .title-lg,
-        .page-wrap .card .title-md,
-        .page-wrap .card .text,
-        .page-wrap .card .muted,
-        .page-wrap .card .intro-subtitle,
-        .page-wrap .card .intro-bullets li,
-        .page-wrap .card .intro-note,
-        .page-wrap .card .privacy-note,
-        .page-wrap .question-card .question-title,
-        .page-wrap .support-card .support-title,
-        .page-wrap .support-card .support-copy,
-        .page-wrap .result-card .title-lg,
-        .page-wrap .result-card .result-subcopy,
-        .page-wrap .result-card .result-summary,
-        .page-wrap .progress-row .progress-label {
             opacity: 1;
             text-shadow: none;
             filter: none;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .card .title-lg,
-        .page-wrap .card .title-md,
-        .page-wrap .question-card .question-title,
-        .page-wrap .support-card .support-title,
-        .page-wrap .result-card .title-lg {
-            color: var(--text);
-            -webkit-text-fill-color: var(--text);
-        }
+
         .title-lg {
             font-size: 28px;
             font-weight: 800;
             line-height: 1.3;
             margin: 6px 0 0;
         }
+
         .title-md {
             font-size: 20px;
             font-weight: 700;
             line-height: 1.35;
             margin: 0 0 8px;
         }
+
         .text {
             font-size: 15px;
             line-height: 1.7;
             color: var(--text);
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .card .text,
-        .page-wrap .result-card .text,
-        .page-wrap .result-card .result-subcopy,
-        .page-wrap .result-card .result-summary {
-            color: var(--text);
-            -webkit-text-fill-color: var(--text);
-        }
-        .page-wrap .support-card .support-copy {
-            color: var(--muted);
-            -webkit-text-fill-color: var(--muted);
-        }
-        .muted, .footer-note, .progress-label {
+
+        .muted,
+        .footer-note,
+        .progress-label {
             font-size: 13px;
             line-height: 1.7;
             color: var(--muted);
-        }
-        .page-wrap .card .muted,
-        .page-wrap .step-label,
-        .page-wrap .step-circle,
-        .page-wrap .step-line {
             opacity: 1;
-            text-shadow: none;
-            filter: none;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .card .muted {
-            color: var(--muted);
-            -webkit-text-fill-color: var(--muted);
-        }
+
         .note-box {
             background: var(--green-soft);
             border: 1px solid rgba(46, 139, 87, 0.2);
             border-radius: 18px;
             padding: 14px 16px;
         }
+
         .intro-section {
             display: flex;
             flex-direction: column;
             gap: 18px;
         }
+
         .intro-section + .intro-section {
             margin-top: 8px;
         }
+
         .intro-subtitle {
             font-size: 14px;
             font-weight: 800;
             color: var(--blue);
             letter-spacing: 0.01em;
             margin: 0 0 10px;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .card .intro-subtitle {
-            color: var(--blue);
-            -webkit-text-fill-color: var(--blue);
-        }
+
         .intro-bullets {
             margin: 0;
             padding-left: 1.2rem;
             display: grid;
             gap: 10px;
         }
+
         .intro-bullets li {
             color: var(--text);
             font-size: 15px;
@@ -778,44 +761,44 @@ def inject_css():
             padding-left: 0.1rem;
             word-break: keep-all;
             overflow-wrap: anywhere;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .card .intro-bullets li {
-            color: var(--text);
-            -webkit-text-fill-color: var(--text);
-        }
-        .intro-note, .privacy-note {
+
+        .intro-note,
+        .privacy-note {
             border-radius: 18px;
             padding: 14px 16px;
             font-size: 13px;
             line-height: 1.7;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
+
         .intro-note {
             background: rgba(30, 78, 121, 0.06);
             border: 1px solid rgba(30, 78, 121, 0.12);
             color: var(--muted);
         }
-        .page-wrap .card .intro-note {
-            color: var(--muted);
-            -webkit-text-fill-color: var(--muted);
-        }
+
         .privacy-note {
             background: rgba(46, 139, 87, 0.08);
             border: 1px solid rgba(46, 139, 87, 0.16);
-            color: #245f49;
+            color: #245F49;
         }
-        .page-wrap .card .privacy-note {
-            color: #245f49;
-            -webkit-text-fill-color: #245f49;
-        }
+
         .result-detail-box {
             margin-top: 24px;
         }
+
         .result-detail-title {
             margin-bottom: 8px;
         }
+
         .result-detail-copy {
             margin: 0;
         }
+
         .stepper {
             display: flex;
             align-items: center;
@@ -824,12 +807,14 @@ def inject_css():
             margin: 10px 0 22px;
             flex-wrap: wrap;
         }
+
         .step-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             min-width: 72px;
         }
+
         .step-circle {
             width: 34px;
             height: 34px;
@@ -840,60 +825,57 @@ def inject_css():
             font-weight: 700;
             font-size: 14px;
             border: 1px solid rgba(214, 226, 236, 0.55);
-            background: rgba(255,255,255,0.1);
-            color: #d8e7f5;
+            background: rgba(255, 255, 255, 0.1);
+            color: #D8E7F5;
             backdrop-filter: blur(6px);
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .step-circle {
-            color: #d8e7f5;
-            -webkit-text-fill-color: #d8e7f5;
-        }
+
         .step-item.active .step-circle {
-            background: #ffffff;
-            border-color: #ffffff;
+            background: #FFFFFF;
+            border-color: #FFFFFF;
             color: var(--blue);
-            -webkit-text-fill-color: var(--blue);
         }
+
         .step-item.done .step-circle {
             background: var(--green);
             border-color: var(--green);
-            color: #fff;
-            -webkit-text-fill-color: #fff;
+            color: #FFFFFF;
         }
+
         .step-label {
             margin-top: 6px;
             font-size: 12px;
-            color: #d8e7f5;
+            color: #D8E7F5;
             font-weight: 700;
             text-align: center;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
-        .page-wrap .step-label {
-            color: #d8e7f5;
-            -webkit-text-fill-color: #d8e7f5;
-        }
+
         .step-item.active .step-label,
         .step-item.done .step-label {
-            color: #ffffff;
-            -webkit-text-fill-color: #ffffff;
+            color: #FFFFFF;
         }
+
         .step-line {
             width: 42px;
             height: 2px;
             background: rgba(214, 226, 236, 0.45);
             border-radius: 999px;
         }
-        .page-wrap .step-line {
-            background: rgba(214, 226, 236, 0.45);
-        }
+
         .step-line.done {
             background: var(--green);
         }
+
         .question-title {
             font-size: 18px;
             font-weight: 700;
             line-height: 1.55;
             margin-bottom: 12px;
         }
+
         .progress-row {
             display: flex;
             justify-content: space-between;
@@ -901,35 +883,42 @@ def inject_css():
             margin-top: 12px;
             margin-bottom: 8px;
         }
+
         .meter {
             width: 100%;
             height: 10px;
-            background: #dbe8f4;
+            background: #DBE8F4;
             border-radius: 999px;
             overflow: hidden;
         }
+
         .meter > span {
             display: block;
             height: 100%;
             background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
             border-radius: 999px;
         }
+
         .result-level {
             font-size: 18px;
             font-weight: 700;
             color: var(--green);
             margin: 6px 0 0;
         }
+
         .result-stack {
             display: flex;
             flex-direction: column;
         }
+
         .result-section {
             margin-bottom: 24px;
         }
+
         .result-stack > .result-section:last-child {
             margin-bottom: 0;
         }
+
         .result-card {
             position: relative;
             overflow: hidden;
@@ -940,9 +929,8 @@ def inject_css():
             border-radius: 28px;
             padding: 26px;
             box-shadow: 0 22px 48px rgba(8, 32, 58, 0.2);
-            opacity: 1;
-            filter: none;
         }
+
         .result-card::after {
             content: "";
             position: absolute;
@@ -953,6 +941,7 @@ def inject_css():
             background: radial-gradient(circle, rgba(30, 78, 121, 0.08), transparent 70%);
             pointer-events: none;
         }
+
         .result-topline {
             display: flex;
             align-items: flex-start;
@@ -961,12 +950,16 @@ def inject_css():
             margin-bottom: 6px;
             flex-wrap: wrap;
         }
+
         .result-subcopy {
             color: var(--muted);
             font-size: 14px;
             line-height: 1.7;
             margin: 8px 0 0;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
+
         .score-hero {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
@@ -975,17 +968,20 @@ def inject_css():
             margin-top: 18px;
             margin-bottom: 18px;
         }
+
         .score-stack {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
+
         .score-kicker {
             font-size: 13px;
             font-weight: 800;
             color: var(--green);
             letter-spacing: 0.01em;
         }
+
         .score-big {
             font-size: clamp(52px, 9vw, 78px);
             line-height: 0.95;
@@ -993,13 +989,17 @@ def inject_css():
             color: var(--navy);
             letter-spacing: -0.04em;
             margin: 0;
+            -webkit-text-fill-color: currentColor;
         }
+
         .score-unit {
             font-size: 24px;
             color: var(--blue);
             font-weight: 800;
             margin-left: 6px;
+            -webkit-text-fill-color: currentColor;
         }
+
         .result-label-chip {
             display: inline-flex;
             align-items: center;
@@ -1011,22 +1011,29 @@ def inject_css():
             color: var(--green);
             font-size: 14px;
             font-weight: 800;
+            -webkit-text-fill-color: currentColor;
         }
+
         .result-summary {
             font-size: 16px;
             line-height: 1.75;
             color: var(--text);
             margin: 0;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
+
         .result-highlight-line {
             margin: 24px 0 0;
             padding-left: 14px;
             border-left: 4px solid rgba(46, 139, 87, 0.65);
-            color: #245f49;
+            color: #245F49;
             font-size: 15px;
             line-height: 1.75;
             font-weight: 700;
+            -webkit-text-fill-color: currentColor;
         }
+
         .bullet-graph-card {
             margin: 24px 0 0;
             padding: 18px 18px 14px;
@@ -1034,6 +1041,7 @@ def inject_css():
             background: linear-gradient(180deg, rgba(242, 248, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
             border: 1px solid rgba(214, 226, 236, 0.95);
         }
+
         .bullet-graph-head {
             display: flex;
             align-items: center;
@@ -1042,17 +1050,20 @@ def inject_css():
             flex-wrap: wrap;
             margin-bottom: 18px;
         }
+
         .bullet-graph-title {
             color: var(--text);
             font-size: 16px;
             font-weight: 800;
             margin-bottom: 2px;
         }
+
         .bullet-graph-caption {
             color: var(--muted);
             font-size: 13px;
             line-height: 1.6;
         }
+
         .bullet-graph-chip {
             padding: 8px 12px;
             border-radius: 999px;
@@ -1061,11 +1072,13 @@ def inject_css():
             font-size: 13px;
             font-weight: 800;
         }
+
         .bullet-scale {
             position: relative;
             height: 18px;
             margin-bottom: 8px;
         }
+
         .bullet-scale-label {
             position: absolute;
             transform: translateX(-50%);
@@ -1074,10 +1087,12 @@ def inject_css():
             color: var(--muted);
             white-space: nowrap;
         }
+
         .bullet-track-wrap {
             position: relative;
             padding-top: 26px;
         }
+
         .bullet-track {
             position: relative;
             height: 20px;
@@ -1086,6 +1101,7 @@ def inject_css():
             overflow: visible;
             box-shadow: inset 0 1px 2px rgba(15, 39, 71, 0.08);
         }
+
         .band {
             position: absolute;
             top: 0;
@@ -1094,11 +1110,13 @@ def inject_css():
             background: transparent;
             pointer-events: none;
         }
+
         .band-low,
         .band-mid,
         .band-high {
             background: transparent;
         }
+
         .bullet-fill {
             position: absolute;
             inset: 3px auto 3px 3px;
@@ -1109,12 +1127,14 @@ def inject_css():
             box-shadow: 0 10px 18px rgba(46, 139, 87, 0.18);
             animation: bulletGrow 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
         }
+
         .bullet-marker {
             position: absolute;
             top: -20px;
             transform: translateX(-50%);
             animation: markerAppear 0.7s ease-out forwards;
         }
+
         .bullet-marker::after {
             content: "";
             position: absolute;
@@ -1125,16 +1145,18 @@ def inject_css():
             height: 34px;
             background: rgba(15, 39, 71, 0.28);
         }
+
         .bullet-marker-dot {
             display: block;
             width: 14px;
             height: 14px;
             margin: 0 auto 6px;
             border-radius: 999px;
-            background: #ffffff;
+            background: #FFFFFF;
             border: 4px solid var(--green);
             box-shadow: 0 8px 14px rgba(15, 39, 71, 0.14);
         }
+
         .bullet-marker-pill {
             display: inline-flex;
             align-items: center;
@@ -1142,22 +1164,25 @@ def inject_css():
             padding: 6px 10px;
             border-radius: 999px;
             background: var(--navy);
-            color: #ffffff;
+            color: #FFFFFF;
             font-size: 12px;
             font-weight: 800;
             white-space: nowrap;
         }
+
         .bullet-ticks {
             position: relative;
             height: 26px;
             margin-top: 10px;
         }
+
         .bullet-tick {
             position: absolute;
             top: 0;
             transform: translateX(-50%);
             text-align: center;
         }
+
         .bullet-tick-line {
             display: block;
             width: 1px;
@@ -1165,27 +1190,29 @@ def inject_css():
             background: rgba(15, 39, 71, 0.18);
             margin: 0 auto 4px;
         }
+
         .bullet-tick-text {
             display: block;
             color: var(--muted);
             font-size: 11px;
             font-weight: 700;
         }
+
         .support-card {
             background: linear-gradient(180deg, rgba(248, 251, 255, 1) 0%, rgba(242, 248, 255, 1) 100%);
             border: 1px solid rgba(214, 226, 236, 0.96);
             border-radius: 24px;
             padding: 22px;
             box-shadow: 0 12px 28px rgba(8, 32, 58, 0.12);
-            opacity: 1;
-            filter: none;
         }
+
         .support-card-head {
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 10px;
         }
+
         .support-icon {
             width: 42px;
             height: 42px;
@@ -1197,28 +1224,38 @@ def inject_css():
             color: var(--green);
             font-size: 20px;
         }
+
         .support-title {
             color: var(--text);
             font-size: 18px;
             font-weight: 800;
             margin: 0;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
+
         .support-copy {
             color: var(--muted);
             font-size: 14px;
             line-height: 1.85;
             margin: 0;
+            opacity: 1;
+            -webkit-text-fill-color: currentColor;
         }
+
         .support-copy-secondary {
             margin-top: 10px;
         }
+
         .result-actions {
             padding-top: 0;
         }
+
         @keyframes bulletGrow {
             from { width: 0; }
             to { width: min(var(--target-width), calc(100% - 6px)); }
         }
+
         @keyframes markerAppear {
             from {
                 opacity: 0;
@@ -1229,6 +1266,7 @@ def inject_css():
                 transform: translateX(-50%) translateY(0);
             }
         }
+
         .question-card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -1236,272 +1274,308 @@ def inject_css():
             padding: 22px 22px 14px;
             margin-bottom: 16px;
             box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
-            opacity: 1;
-            filter: none;
         }
-        .page-wrap .question-card .question-title {
-            color: var(--text);
-            opacity: 1;
-            text-shadow: none;
-            filter: none;
-            -webkit-text-fill-color: var(--text);
-        }
+
         .survey-actions {
             padding-top: 8px;
             margin-top: 8px;
             margin-bottom: 18px;
         }
+
         .survey-payload-bridge {
             display: none;
         }
+
         div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
             display: none;
         }
-        .page-wrap label[data-testid="stWidgetLabel"],
-        .page-wrap label[data-testid="stWidgetLabel"] p,
-        .page-wrap div[data-testid="stTextInput"] label,
-        .page-wrap div[data-testid="stTextInput"] label p,
-        .page-wrap div[data-testid="stSelectbox"] label,
-        .page-wrap div[data-testid="stSelectbox"] label p,
-        .page-wrap div[data-testid="stCheckbox"] label,
-        .page-wrap div[data-testid="stCheckbox"] p,
-        .page-wrap div[data-testid="stCheckbox"] span,
-        .page-wrap .stCheckbox label,
-        .page-wrap .stSelectbox label,
-        .page-wrap .stTextInput label {
-            color: #edf5ff;
-            opacity: 1;
-            text-shadow: none;
-            filter: none;
-            -webkit-text-fill-color: #edf5ff;
-            font-weight: 700;
+
+        /* Streamlit widget labels */
+        .stApp [data-testid="stWidgetLabel"],
+        .stApp [data-testid="stWidgetLabel"] p,
+        .stApp div[data-testid="stTextInput"] label,
+        .stApp div[data-testid="stTextInput"] label p,
+        .stApp div[data-testid="stSelectbox"] label,
+        .stApp div[data-testid="stSelectbox"] label p,
+        .stApp div[data-testid="stCheckbox"] label,
+        .stApp div[data-testid="stCheckbox"] label p,
+        .stApp div[data-testid="stCheckbox"] label span {
+            color: var(--widget-label) !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            filter: none !important;
+            -webkit-text-fill-color: var(--widget-label) !important;
+            font-weight: 700 !important;
         }
-        .page-wrap div[data-testid="stCheckbox"] label,
-        .page-wrap .stCheckbox label {
+
+        .stApp div[data-testid="stCheckbox"] label {
             gap: 0.55rem;
             align-items: flex-start;
         }
-        .page-wrap div[data-testid="stCheckbox"] p,
-        .page-wrap div[data-testid="stCheckbox"] span {
+
+        .stApp div[data-testid="stCheckbox"] label p,
+        .stApp div[data-testid="stCheckbox"] label span {
             line-height: 1.65;
         }
-        .page-wrap div[data-testid="stTextInput"] input,
-        .page-wrap div[data-testid="stTextInput"] > div input {
-            background: rgba(10, 27, 48, 0.72);
-            color: #f5fbff;
-            border: 1px solid rgba(214, 226, 236, 0.42);
-            border-radius: 14px;
-            min-height: 46px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+
+        /* Text inputs */
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] {
+            background: transparent !important;
         }
-        .page-wrap div[data-testid="stTextInput"] > div {
-            border-radius: 14px;
+
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div {
+            background: var(--widget-bg) !important;
+            border: 1px solid var(--widget-border) !important;
+            border-radius: 14px !important;
+            min-height: 46px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
         }
-        .page-wrap div[data-testid="stTextInput"] input::placeholder {
-            color: rgba(222, 236, 248, 0.72);
-            -webkit-text-fill-color: rgba(222, 236, 248, 0.72);
-            opacity: 1;
+
+        .stApp div[data-testid="stTextInput"] input {
+            color: var(--widget-text) !important;
+            caret-color: var(--widget-text) !important;
+            -webkit-text-fill-color: var(--widget-text) !important;
+            background: transparent !important;
         }
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] {
-            background: transparent;
+
+        .stApp div[data-testid="stTextInput"] input::placeholder {
+            color: var(--widget-placeholder) !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--widget-placeholder) !important;
         }
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div {
-            background: rgba(10, 27, 48, 0.72);
-            color: #f5fbff;
-            border-color: rgba(214, 226, 236, 0.42);
-            border-radius: 14px;
-            min-height: 46px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+
+        /* Selectbox */
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] {
+            background: transparent !important;
         }
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] * {
-            color: #f5fbff;
-            -webkit-text-fill-color: #f5fbff;
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            background: var(--widget-bg) !important;
+            border: 1px solid var(--widget-border) !important;
+            border-radius: 14px !important;
+            min-height: 46px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
         }
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
-        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
-            color: rgba(222, 236, 248, 0.78);
-            -webkit-text-fill-color: rgba(222, 236, 248, 0.78);
-            opacity: 1;
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] * {
+            color: var(--widget-text) !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--widget-text) !important;
         }
-        .page-wrap div[data-testid="stSelectbox"] svg {
-            fill: #d7e8f7;
-            color: #d7e8f7;
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
+            color: var(--widget-placeholder) !important;
+            -webkit-text-fill-color: var(--widget-placeholder) !important;
+            opacity: 1 !important;
         }
-        .page-wrap div[data-testid="stCaptionContainer"] p,
-        .page-wrap div[data-testid="stAlertContainer"] p,
-        .page-wrap div[data-testid="stAlertContainer"] div[role="alert"] {
-            color: #edf5ff;
-            opacity: 1;
-            -webkit-text-fill-color: #edf5ff;
+
+        .stApp div[data-testid="stSelectbox"] svg {
+            fill: #D7E8F7 !important;
+            color: #D7E8F7 !important;
         }
+
+        /* Captions and alerts */
+        .stApp div[data-testid="stCaptionContainer"] p {
+            color: #DCEAF8 !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: #DCEAF8 !important;
+        }
+
+        .stApp div[data-testid="stAlertContainer"] p,
+        .stApp div[data-testid="stAlertContainer"] [role="alert"] {
+            opacity: 1 !important;
+        }
+
+        /* Radio cards */
         div[data-testid="stRadio"] > label {
             display: none;
         }
+
         div[data-testid="stRadio"] {
             width: 100%;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"],
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-            width: 100%;
-            align-items: stretch;
+
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: grid !important;
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+            width: 100% !important;
+            align-items: stretch !important;
         }
+
+        div[data-testid="stRadio"] div[role="radiogroup"] > * {
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+
         div[data-testid="stRadio"] div[role="radiogroup"] > label,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label,
-        .page-wrap div[data-testid="stRadio"] label {
-            position: relative;
-            margin: 0;
-            min-height: 68px;
-            height: 100%;
-            width: 100%;
-            border: 1px solid rgba(165, 188, 212, 0.9);
-            border-radius: 16px;
-            background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
-            padding: 0;
-            display: flex;
-            align-items: stretch;
-            justify-content: stretch;
-            overflow: hidden;
-            cursor: pointer;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
-            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label,
+        div[data-testid="stRadio"] [data-baseweb="radio"] {
+            position: relative !important;
+            margin: 0 !important;
+            min-height: 68px !important;
+            height: 100% !important;
+            width: 100% !important;
+            border: 1px solid rgba(165, 188, 212, 0.9) !important;
+            border-radius: 16px !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F6FBFF 100%) !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+            overflow: hidden !important;
+            cursor: pointer !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease !important;
         }
+
         div[data-testid="stRadio"] div[role="radiogroup"] > label:hover,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:hover {
-            border-color: rgba(30, 78, 121, 0.58);
-            background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:hover {
+            border-color: rgba(30, 78, 121, 0.58) !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #EDF6FF 100%) !important;
             transform: translateY(-1px);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09) !important;
         }
+
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"],
         div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked),
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"],
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) {
-            border-color: #1f6fb2;
-            background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%);
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"],
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked) {
+            border-color: #1F6FB2 !important;
+            background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%) !important;
             transform: translateY(-1px);
             box-shadow:
                 inset 0 0 0 2px rgba(31, 111, 178, 0.22),
                 inset 0 1px 0 rgba(255, 255, 255, 0.96),
-                0 14px 28px rgba(19, 74, 120, 0.18);
+                0 14px 28px rgba(19, 74, 120, 0.18) !important;
         }
+
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"]:hover,
         div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked):hover,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"]:hover,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked):hover {
-            border-color: #16659f;
-            background: linear-gradient(135deg, rgba(210, 235, 255, 1) 0%, rgba(224, 244, 234, 1) 100%);
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"]:hover,
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked):hover {
+            border-color: #16659F !important;
+            background: linear-gradient(135deg, rgba(210, 235, 255, 1) 0%, rgba(224, 244, 234, 1) 100%) !important;
             box-shadow:
                 inset 0 0 0 2px rgba(31, 111, 178, 0.26),
                 inset 0 1px 0 rgba(255, 255, 255, 0.98),
-                0 16px 30px rgba(19, 74, 120, 0.2);
+                0 16px 30px rgba(19, 74, 120, 0.2) !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label > div,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label > div {
-            width: 100%;
-            height: 100%;
+
+        div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"],
+        div[data-testid="stRadio"] div[role="radiogroup"] svg {
+            position: absolute !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label input[type="radio"],
-        div[data-testid="stRadio"] div[role="radiogroup"] > label svg {
-            position: absolute;
-            opacity: 0;
-            pointer-events: none;
-            width: 0;
-            height: 0;
-            margin: 0;
+
+        div[data-testid="stRadio"] div[role="radiogroup"] [data-testid="stMarkdownContainer"] {
+            position: relative !important;
+            display: flex !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 68px !important;
+            margin: 0 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"],
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label [data-testid="stMarkdownContainer"] {
-            position: relative;
-            display: flex;
-            align-items: stretch;
-            justify-content: stretch;
-            width: 100%;
-            min-width: 0;
-            min-height: 68px;
-            opacity: 1;
-            visibility: visible;
-            margin: 0;
+
+        div[data-testid="stRadio"] div[role="radiogroup"] p {
+            margin: 0 !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 68px !important;
+            height: 100% !important;
+            padding: 14px 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            white-space: normal !important;
+            word-break: keep-all !important;
+            overflow-wrap: anywhere !important;
+            color: var(--text) !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+            -webkit-text-fill-color: var(--text) !important;
+            transition: color 0.16s ease, font-weight 0.16s ease !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label p,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label p,
-        .page-wrap div[data-testid="stRadio"] p {
-            margin: 0;
-            width: 100%;
-            min-width: 0;
-            min-height: 68px;
-            height: 100%;
-            padding: 14px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            white-space: normal;
-            word-break: keep-all;
-            overflow-wrap: anywhere;
-            color: var(--text);
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.2;
-            transition: color 0.16s ease, font-weight 0.16s ease;
-        }
+
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p,
         div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) p,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] p,
-        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) p {
-            color: #0d3f68;
-            font-weight: 800;
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label[data-selected="true"] p,
+        div[data-testid="stRadio"] div[role="radiogroup"] > div > label:has(input[type="radio"]:checked) p {
+            color: #0D3F68 !important;
+            font-weight: 800 !important;
+            -webkit-text-fill-color: #0D3F68 !important;
         }
+
+        /* Buttons */
+        div[data-testid="stButton"] {
+            width: 100%;
+        }
+
         div[data-testid="stButton"] > button {
+            width: 100%;
             border-radius: 14px;
             min-height: 46px;
             border: 1px solid var(--border);
-            background: #ffffff;
+            background: #FFFFFF;
             color: var(--text);
             font-weight: 700;
         }
+
         div[data-testid="stButton"] > button[kind="primary"] {
             background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
-            color: #ffffff;
+            color: #FFFFFF;
             border: none;
             box-shadow: 0 14px 24px rgba(30, 78, 121, 0.2);
         }
+
         div[data-testid="stButton"] > button:hover {
             border-color: rgba(30, 78, 121, 0.6);
             color: var(--blue);
         }
+
         div[data-testid="stButton"] > button[kind="primary"]:hover {
-            color: #ffffff;
+            color: #FFFFFF;
             filter: brightness(1.03);
         }
+
         @media (max-width: 900px) {
-            div[data-testid="stRadio"] div[role="radiogroup"],
-            .page-wrap div[data-testid="stRadio"] [role="radiogroup"] {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            div[data-testid="stRadio"] div[role="radiogroup"] {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
+
             .page-wrap {
                 padding-bottom: 96px;
             }
+
             .score-hero {
                 grid-template-columns: 1fr;
                 align-items: start;
             }
         }
+
         @media (max-width: 640px) {
             .card {
                 padding: 20px 18px;
             }
+
             .intro-section {
                 gap: 16px;
             }
+
             .intro-bullets {
                 padding-left: 1.05rem;
                 gap: 8px;
             }
+
             .intro-bullets li {
                 font-size: 14px;
                 line-height: 1.68;
