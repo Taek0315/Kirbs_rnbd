@@ -936,6 +936,153 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ===== Cloud-safe fallback for basic info input/select =====
+   Streamlit Cloud may render different wrapper nodes, so do not rely on :has() scoping here.
+   Apply robust global selectors for text inputs and select boxes.
+*/
+
+/* widget labels */
+div[data-testid="stTextInput"] label,
+div[data-testid="stSelectbox"] label,
+div[data-testid="stTextInput"] [data-testid="stMarkdownContainer"] p,
+div[data-testid="stSelectbox"] [data-testid="stMarkdownContainer"] p,
+div[data-testid="stTextInput"] [data-testid="stWidgetLabel"] *,
+div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] * {
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* outer shell */
+div[data-testid="stTextInput"],
+div[data-testid="stSelectbox"] {
+  width: 100% !important;
+}
+
+/* input/select visible field */
+div[data-testid="stTextInput"] > div > div,
+div[data-testid="stSelectbox"] > div > div,
+div[data-testid="stTextInput"] [data-baseweb="base-input"],
+div[data-testid="stSelectbox"] [data-baseweb="select"],
+div[data-testid="stTextInput"] [data-baseweb="base-input"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div {
+  min-height: var(--control-height) !important;
+  background: #FFFFFF !important;
+  border: 1.5px solid #9AAEC2 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 18px rgba(15, 23, 42, 0.05) !important;
+  overflow: hidden !important;
+}
+
+/* remove duplicated inner borders */
+div[data-testid="stTextInput"] [data-baseweb="base-input"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* text + icon */
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextInput"] textarea,
+div[data-testid="stSelectbox"] input,
+div[data-testid="stSelectbox"] span,
+div[data-testid="stSelectbox"] svg {
+  color: #0F172A !important;
+  fill: #0F172A !important;
+  stroke: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+  caret-color: transparent !important;
+  opacity: 1 !important;
+}
+
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextInput"] textarea {
+  caret-color: #0F172A !important;
+}
+
+/* hover + focus */
+div[data-testid="stTextInput"] > div > div:hover,
+div[data-testid="stSelectbox"] > div > div:hover,
+div[data-testid="stTextInput"] [data-baseweb="base-input"]:hover,
+div[data-testid="stSelectbox"] [data-baseweb="select"]:hover {
+  border-color: #6C839A !important;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07), 0 10px 22px rgba(15, 23, 42, 0.08) !important;
+}
+
+div[data-testid="stTextInput"] > div > div:focus-within,
+div[data-testid="stSelectbox"] > div > div:focus-within,
+div[data-testid="stTextInput"] [data-baseweb="base-input"]:focus-within,
+div[data-testid="stSelectbox"] [data-baseweb="select"]:focus-within {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 8px 18px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* dropdown panel rendered in portal */
+div[role="listbox"],
+ul[role="listbox"] {
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16) !important;
+  padding: 6px 0 !important;
+  overflow: hidden !important;
+}
+
+/* some streamlit/baseweb builds wrap the listbox in an extra surface */
+div[role="listbox"] > div,
+ul[role="listbox"] > li,
+[data-baseweb="popover"] [role="listbox"] {
+  background: #FFFFFF !important;
+}
+
+/* options */
+div[role="option"],
+li[role="option"] {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-height: 44px !important;
+}
+
+/* make option inner text dark as well */
+div[role="option"] *,
+li[role="option"] * {
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* subtle separators without pill cards */
+div[role="option"] + div[role="option"],
+li[role="option"] + li[role="option"] {
+  border-top: 1px solid #EEF2F7 !important;
+}
+
+div[role="option"]:hover,
+li[role="option"]:hover,
+div[role="option"][aria-selected="true"],
+li[role="option"][aria-selected="true"] {
+  background: #EFF6FF !important;
+}
+
+/* scrollbar track/thumb so the right side does not look like a navy strip */
+[role="listbox"]::-webkit-scrollbar {
+  width: 10px;
+}
+[role="listbox"]::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+[role="listbox"]::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+  border: 2px solid #F8FAFC;
+}
+
 </style>
 """,
         unsafe_allow_html=True,
