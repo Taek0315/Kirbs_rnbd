@@ -1,6 +1,6 @@
 # 실행 방법:
 #   set ENABLE_DB_INSERT=false
-#   streamlit run rses_5.py
+#   streamlit run rses.py
 #
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
@@ -962,19 +962,21 @@ def inject_css():
         }
 
         .score-hero {
-            display: grid;
-            grid-template-columns: max-content minmax(0, 1fr);
-            gap: 12px 20px;
-            align-items: end;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            gap: 14px;
             margin-top: 18px;
             margin-bottom: 18px;
+            flex-wrap: wrap;
         }
 
         .score-stack {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            min-width: 0;
+            min-width: max-content;
+            flex: 0 0 auto;
         }
 
         .score-hero > * {
@@ -1027,8 +1029,8 @@ def inject_css():
             color: var(--text);
             margin: 0;
             text-align: left;
-            align-self: end;
-            justify-self: start;
+            align-self: flex-end;
+            flex: 1 1 320px;
             max-width: 100%;
             opacity: 1;
             -webkit-text-fill-color: currentColor;
@@ -1436,6 +1438,18 @@ def inject_css():
             opacity: 1 !important;
         }
 
+        .answer-options-wrap {
+            width: 100%;
+            margin: 0 0 22px;
+        }
+
+        .answer-options-wrap > div[data-testid="stRadio"],
+        .answer-options-wrap > div[data-testid="stElementContainer"],
+        .answer-options-wrap > div {
+            width: 100%;
+            max-width: 100%;
+        }
+
         /* ---------- radio cards ---------- */
         div[data-testid="stRadio"] > label {
             display: none !important;
@@ -1443,7 +1457,8 @@ def inject_css():
 
         div[data-testid="stRadio"] {
             width: 100%;
-            margin: 0 0 22px;
+            margin: 0;
+            display: block !important;
         }
 
         div[data-testid="stRadio"] > div,
@@ -1451,6 +1466,7 @@ def inject_css():
         div[data-testid="stRadio"] [role="radiogroup"] {
             width: 100% !important;
             max-width: 100% !important;
+            min-width: 100% !important;
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] {
@@ -1458,18 +1474,20 @@ def inject_css():
             flex-wrap: nowrap !important;
             gap: 12px !important;
             width: 100% !important;
+            margin: 0 auto !important;
             align-items: stretch !important;
-            justify-content: stretch !important;
+            justify-content: center !important;
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] > label,
         div[data-testid="stRadio"] [role="radiogroup"] > div {
             flex: 1 1 0 !important;
-            width: 0 !important;
+            width: 100% !important;
             min-width: 0 !important;
             max-width: none !important;
             display: flex !important;
             align-items: stretch !important;
+            justify-content: stretch !important;
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] > div > label,
@@ -1625,8 +1643,13 @@ def inject_css():
             }
 
             .score-hero {
-                grid-template-columns: 1fr;
-                align-items: start;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .result-summary {
+                flex-basis: auto;
+                width: 100%;
             }
         }
 
@@ -1861,7 +1884,8 @@ def page_survey(dev_mode: bool = False):
         if radio_key not in st.session_state:
             st.session_state[radio_key] = label_from_score(selected_score)
 
-        st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div>", unsafe_allow_html=True)
+        st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div></section>", unsafe_allow_html=True)
+        st.markdown("<div class='answer-options-wrap'>", unsafe_allow_html=True)
         selected_label = st.radio(
             f"{i}. {question}",
             options=SCALE_LABELS,
@@ -1870,7 +1894,7 @@ def page_survey(dev_mode: bool = False):
             horizontal=True,
             label_visibility="collapsed",
         )
-        st.markdown("</section>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         score = score_from_label(selected_label)
         if score is None:
