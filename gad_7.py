@@ -18,6 +18,12 @@ st.set_page_config(
     layout="centered",
 )
 
+# 상단 기본 툴바 최소화/뷰어 모드
+try:
+    st.set_option("client.toolbarMode", "viewer")
+except Exception:
+    pass
+
 KST = timezone(timedelta(hours=9))
 
 SCALE_LABELS = [
@@ -379,11 +385,11 @@ def render_stepper(current_page: str):
             width: 100%;
             margin: 0;
             padding: 0;
-            background: var(--bg);
+            background: transparent;
             display: flex;
             justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-            color: var(--text);
+            color: #f8fbff;
           }}
 
           .app-stepper .stepper-inner {{
@@ -393,16 +399,13 @@ def render_stepper(current_page: str):
             padding: 0;
           }}
 
-          @media (prefers-color-scheme: dark) {{
-            .app-stepper {{
-              --card: rgba(17,24,39,0.9);
-              --border: rgba(100,116,139,0.45);
-              --text: #e5e7eb;
-              --muted: #94a3b8;
-              --primary: #60a5fa;
-              --success: #4ade80;
-              --danger: #f87171;
-            }}
+          .app-stepper {{
+            --card: #0d2140;
+            --border: rgba(148, 163, 184, 0.26);
+            --text: #f8fbff;
+            --muted: #c7d3e3;
+            --primary: #4f9cff;
+            --success: #56e39a;
           }}
 
           .app-stepper .step-track {{
@@ -464,7 +467,7 @@ def render_stepper(current_page: str):
             font-weight: 800;
             line-height: 1;
             color: var(--muted);
-            background: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.08);
             transition: transform .24s ease, background-color .24s ease, border-color .24s ease, color .24s ease, box-shadow .24s ease;
           }}
 
@@ -475,7 +478,7 @@ def render_stepper(current_page: str):
             text-align: center;
             color: var(--muted);
             transform: translateY(2px);
-            opacity: .82;
+            opacity: .9;
             transition: color .24s ease, opacity .24s ease, transform .24s ease;
             word-break: keep-all;
           }}
@@ -485,7 +488,7 @@ def render_stepper(current_page: str):
             min-width: 70px;
             height: 2px;
             border-radius: 999px;
-            background: rgba(148,163,184,0.2);
+            background: rgba(148,163,184,0.20);
             overflow: hidden;
             align-self: center;
           }}
@@ -500,20 +503,20 @@ def render_stepper(current_page: str):
           }}
 
           .app-stepper .connector-fill.filled {{
-            background: linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success), white 16%));
+            background: linear-gradient(90deg, var(--success), #79ecb4);
             transform: scaleX(1);
             opacity: .95;
           }}
 
           .app-stepper .connector-fill.todo {{
-            background: linear-gradient(90deg, color-mix(in srgb, var(--primary), transparent 55%), color-mix(in srgb, var(--primary), transparent 40%));
+            background: linear-gradient(90deg, rgba(79,156,255,.45), rgba(79,156,255,.30));
             transform: scaleX(.18);
             opacity: .35;
           }}
 
           .app-stepper .step-item.active .step-main {{
-            border-color: color-mix(in srgb, var(--primary), white 28%);
-            box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary), transparent 62%);
+            border-color: rgba(120, 173, 255, 0.9);
+            box-shadow: 0 0 0 1px rgba(79,156,255,0.38);
           }}
 
           .app-stepper .step-item.active .step-main::after {{
@@ -525,51 +528,28 @@ def render_stepper(current_page: str):
             background: var(--primary);
             border-color: var(--primary);
             color: #fff;
-            animation: app-stepper-dot-pulse 2s ease-in-out infinite;
           }}
 
           .app-stepper .step-item.active .step-label {{
             color: var(--text);
             opacity: 1;
             transform: translateY(0);
-            animation: app-stepper-label-in .32s ease both;
           }}
 
           .app-stepper .step-item.completed .step-main {{
-            border-color: color-mix(in srgb, var(--success), white 30%);
+            border-color: rgba(86,227,154,.75);
           }}
 
           .app-stepper .step-item.completed .step-dot {{
             background: var(--success);
             border-color: var(--success);
             color: #fff;
-            animation: app-stepper-check-pop .3s cubic-bezier(.2,.8,.2,1.3);
           }}
 
           .app-stepper .step-item.completed .step-label {{
             color: var(--text);
             opacity: .95;
             transform: translateY(0);
-          }}
-
-          .app-stepper .step-item.todo .step-main {{
-            border-color: var(--border);
-          }}
-
-          @keyframes app-stepper-dot-pulse {{
-            0%, 100% {{ transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary), transparent 62%); }}
-            50% {{ transform: scale(1.06); box-shadow: 0 0 0 9px color-mix(in srgb, var(--primary), transparent 88%); }}
-          }}
-
-          @keyframes app-stepper-check-pop {{
-            0% {{ transform: scale(.74); }}
-            70% {{ transform: scale(1.15); }}
-            100% {{ transform: scale(1); }}
-          }}
-
-          @keyframes app-stepper-label-in {{
-            from {{ opacity: 0; transform: translateY(4px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
           }}
 
           @media (max-width: 640px) {{
@@ -600,21 +580,6 @@ def render_stepper(current_page: str):
               font-size: .72rem;
               text-align: center;
               white-space: normal;
-            }}
-          }}
-
-          @media (prefers-reduced-motion: reduce) {{
-            .app-stepper .step-main,
-            .app-stepper .step-main::after,
-            .app-stepper .step-dot,
-            .app-stepper .step-label,
-            .app-stepper .connector-fill {{
-              transition: none !important;
-            }}
-
-            .app-stepper .step-dot,
-            .app-stepper .step-label {{
-              animation: none !important;
             }}
           }}
         </style>
@@ -665,75 +630,47 @@ def inject_css():
         <style>
         :root {
             --content-max-width: 860px;
-            --bg: #f6f8fc;
-            --surface: #ffffff;
-            --surface-2: #f8fafc;
-            --text: #0f172a;
-            --muted: #475569;
-            --line: #e2e8f0;
-            --primary: #2563eb;
-            --primary-soft: #dbeafe;
-            --success: #16a34a;
-            --success-soft: #dcfce7;
-            --warning: #d97706;
-            --warning-soft: #ffedd5;
-            --danger: #dc2626;
-            --danger-soft: #fee2e2;
+
+            /* Unified dark palette */
+            --bg: #071225;
+            --surface: #0b1a33;
+            --surface-2: #0d2140;
+            --surface-3: #10284c;
+
+            --text: #f8fbff;
+            --muted: #c7d3e3;
+
+            --line: rgba(148, 163, 184, 0.28);
+            --line-strong: rgba(96, 165, 250, 0.68);
+
+            --primary: #4f9cff;
+            --primary-soft: rgba(79, 156, 255, 0.16);
+
+            --success: #56e39a;
+            --success-soft: rgba(86, 227, 154, 0.14);
+
+            --warning: #ffb454;
+            --warning-soft: rgba(255, 180, 84, 0.14);
+
+            --danger: #ff7373;
+            --danger-soft: rgba(255, 115, 115, 0.14);
+
+            --field-bg: #10284c;
+            --field-bg-hover: #13315d;
+            --field-border: rgba(96, 165, 250, 0.52);
+            --field-border-strong: rgba(120, 173, 255, 0.9);
+            --field-shadow: 0 0 0 3px rgba(79, 156, 255, 0.16);
+
             --radius-xl: 20px;
             --radius-lg: 14px;
-            --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-            --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
-
-            --select-surface: #ffffff;
-            --select-text: #0f172a;
-            --select-muted: #64748b;
-            --select-border: #cbd5e1;
-            --select-hover-bg: #f8fbff;
-            --select-hover-border: #60a5fa;
-            --select-focus-ring: rgba(37, 99, 235, 0.18);
-            --select-menu-bg: #ffffff;
-            --select-menu-border: #cbd5e1;
-            --select-menu-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
-            --select-option-hover: #eff6ff;
-            --select-option-selected: #dbeafe;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #0b1220;
-                --surface: #111827;
-                --surface-2: #172033;
-                --text: #e5e7eb;
-                --muted: #cbd5e1;
-                --line: #334155;
-                --primary: #60a5fa;
-                --primary-soft: rgba(96,165,250,.15);
-                --success: #4ade80;
-                --success-soft: rgba(74,222,128,.15);
-                --warning: #fbbf24;
-                --warning-soft: rgba(251,191,36,.16);
-                --danger: #f87171;
-                --danger-soft: rgba(248,113,113,.16);
-                --shadow-sm: none;
-                --shadow-md: none;
-
-                --select-surface: #0f2747;
-                --select-text: #f8fafc;
-                --select-muted: #c7d2fe;
-                --select-border: #4a8cff;
-                --select-hover-bg: #13335d;
-                --select-hover-border: #78adff;
-                --select-focus-ring: rgba(96, 165, 250, 0.28);
-                --select-menu-bg: #102a4c;
-                --select-menu-border: #2e5f9b;
-                --select-menu-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
-                --select-option-hover: #183a68;
-                --select-option-selected: #35527a;
-            }
+            --shadow-sm: 0 8px 24px rgba(2, 8, 23, 0.28);
+            --shadow-md: 0 18px 40px rgba(2, 8, 23, 0.38);
         }
 
         .stApp {
-            background: radial-gradient(circle at top left, rgba(37,99,235,.08), transparent 35%), var(--bg);
+            background:
+                radial-gradient(circle at top left, rgba(79,156,255,.08), transparent 30%),
+                linear-gradient(180deg, #06101f 0%, #071225 100%);
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
             letter-spacing: -0.01em;
@@ -741,13 +678,33 @@ def inject_css():
 
         .block-container {
             max-width: var(--content-max-width);
-            padding-top: 1.6rem;
+            padding-top: 0.75rem !important;
             padding-bottom: 3.2rem;
+        }
+
+        /* Streamlit default chrome hide */
+        header[data-testid="stHeader"] {
+            display: none !important;
+            height: 0 !important;
+        }
+
+        [data-testid="stToolbar"] {
+            display: none !important;
+        }
+
+        #MainMenu,
+        footer {
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        div[data-testid="stDecoration"] {
+            display: none !important;
         }
 
         .stepper-wrap {
             width: min(100%, var(--content-max-width));
-            margin: 0 auto 6px;
+            margin: 0 auto 8px;
             padding: 0 1.25rem;
         }
 
@@ -756,39 +713,25 @@ def inject_css():
         }
 
         .stepper-wrap > div[data-testid="stHtml"] > iframe,
-        .stepper-wrap > div[data-testid="stHtml"] iframe {
-            display: block;
-            width: 100% !important;
-            max-width: var(--content-max-width) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            border: 0 !important;
-        }
-
-        div[data-testid="stHtml"] {
-            width: 100% !important;
-            max-width: var(--content-max-width) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-
-        div[data-testid="stHtml"] > iframe,
+        .stepper-wrap > div[data-testid="stHtml"] iframe,
+        div[data-testid="stHtml"],
+        div[data-testid="stHtml"] > div,
+        div[data-testid="stHtml"] > div > iframe,
         div[data-testid="stHtml"] iframe {
-            display: block !important;
             width: 100% !important;
             max-width: var(--content-max-width) !important;
             margin-left: auto !important;
             margin-right: auto !important;
+            display: block !important;
             padding: 0 !important;
             border: 0 !important;
             left: auto !important;
             right: auto !important;
+            transform: none !important;
         }
 
         .page-wrap {
-            animation: fadeIn .35s ease;
+            animation: fadeIn .25s ease;
         }
 
         @keyframes fadeIn {
@@ -797,7 +740,7 @@ def inject_css():
         }
 
         .card {
-            background: var(--surface);
+            background: linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,.005)), var(--surface);
             border: 1px solid var(--line);
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-sm);
@@ -805,26 +748,61 @@ def inject_css():
             margin-bottom: 12px;
         }
 
-        .card.soft { background: var(--surface-2); }
+        .card.soft {
+            background: linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.004)), var(--surface-2);
+        }
 
-        .title-lg { font-size: clamp(22px, 2.8vw, 29px) !important; font-weight: 800; line-height: 1.3; color: var(--text); }
-        .title-md { font-size: clamp(17px, 2.2vw, 19px) !important; font-weight: 750; line-height: 1.35; color: var(--text); }
-        .text     { font-size: clamp(15px, 1.9vw, 16px) !important; line-height: 1.72; color: var(--muted); }
-        .muted    { font-size: 14px !important; line-height: 1.6; color: var(--muted); }
+        .title-lg {
+            font-size: clamp(22px, 2.8vw, 29px) !important;
+            font-weight: 800;
+            line-height: 1.3;
+            color: var(--text);
+        }
+
+        .title-md {
+            font-size: clamp(17px, 2.2vw, 19px) !important;
+            font-weight: 750;
+            line-height: 1.35;
+            color: var(--text);
+        }
+
+        .text {
+            font-size: clamp(15px, 1.9vw, 16px) !important;
+            line-height: 1.72;
+            color: var(--muted);
+        }
+
+        .muted {
+            font-size: 14px !important;
+            line-height: 1.6;
+            color: var(--muted);
+        }
 
         .badge {
             display: inline-block;
             background: var(--primary-soft);
-            color: var(--primary);
+            color: #89beff;
             font-weight: 700;
             font-size: .8rem;
             border-radius: 999px;
             padding: 6px 10px;
             margin: 0 6px 8px 0;
+            border: 1px solid rgba(79, 156, 255, 0.22);
         }
 
-        .progress-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 10px; }
-        .progress-label { font-size:.88rem; font-weight:700; color: var(--muted); }
+        .progress-row {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom: 10px;
+        }
+
+        .progress-label {
+            font-size:.88rem;
+            font-weight:700;
+            color: var(--muted);
+        }
 
         .survey-shell {
             width: min(100%, var(--content-max-width));
@@ -835,7 +813,7 @@ def inject_css():
             width: 100%;
             height: 10px;
             border-radius: 999px;
-            background: var(--surface-2);
+            background: rgba(255,255,255,0.04);
             overflow: hidden;
             border: 1px solid var(--line);
         }
@@ -843,7 +821,7 @@ def inject_css():
         .meter > span {
             display:block;
             height:100%;
-            background: linear-gradient(90deg, var(--primary), #60a5fa);
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
             transition: width .25s ease;
         }
 
@@ -867,32 +845,42 @@ def inject_css():
             min-width: 0;
         }
 
-        .answer-segments div[data-testid="stButton"] > button {
-            border-radius: 12px;
-            min-height: 48px;
-            border: 1px solid var(--line);
-            font-weight: 700;
+        /* Global button tone unify */
+        div[data-testid="stButton"] > button {
+            border-radius: 12px !important;
+            min-height: 46px;
+            border: 1px solid var(--line) !important;
+            background: var(--surface-3) !important;
+            color: var(--text) !important;
+            font-weight: 700 !important;
             letter-spacing: -0.01em;
             transition: all .18s ease;
+            box-shadow: none !important;
+        }
+
+        div[data-testid="stButton"] > button:hover {
+            border-color: var(--field-border-strong) !important;
+            background: #163864 !important;
+            box-shadow: 0 0 0 2px rgba(79, 156, 255, 0.10) !important;
+        }
+
+        div[data-testid="stButton"] > button:focus-visible {
+            outline: none !important;
+            border-color: var(--field-border-strong) !important;
+            box-shadow: var(--field-shadow) !important;
+        }
+
+        div[data-testid="stButton"] > button[kind="primary"] {
+            border-color: var(--field-border-strong) !important;
+            background: linear-gradient(180deg, #1d4f8d, #163f73) !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(79, 156, 255, 0.28), 0 8px 18px rgba(79, 156, 255, 0.18) !important;
+        }
+
+        .answer-segments div[data-testid="stButton"] > button {
+            min-height: 48px !important;
             white-space: normal;
             line-height: 1.35;
-        }
-
-        .answer-segments div[data-testid="stButton"] > button:hover {
-            border-color: color-mix(in srgb, var(--primary), transparent 35%);
-            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary), transparent 82%);
-        }
-
-        .answer-segments div[data-testid="stButton"] > button:focus-visible {
-            outline: 2px solid color-mix(in srgb, var(--primary), transparent 35%);
-            outline-offset: 1px;
-            box-shadow: none;
-        }
-
-        .answer-segments div[data-testid="stButton"] > button[kind="primary"] {
-            border-color: color-mix(in srgb, var(--primary), black 6%);
-            box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary), transparent 35%), 0 6px 14px color-mix(in srgb, var(--primary), transparent 78%);
-            background: linear-gradient(180deg, color-mix(in srgb, var(--primary), white 8%), var(--primary));
         }
 
         .status-chip {
@@ -906,9 +894,9 @@ def inject_css():
             margin-bottom: 6px;
         }
 
-        .chip-danger { color: var(--danger); background: var(--danger-soft); }
-        .chip-warning { color: var(--warning); background: var(--warning-soft); }
-        .chip-success { color: var(--success); background: var(--success-soft); }
+        .chip-danger { color: #ffd1d1; background: rgba(255,115,115,.15); }
+        .chip-warning { color: #ffe3b4; background: rgba(255,180,84,.14); }
+        .chip-success { color: #c8ffe5; background: rgba(86,227,154,.14); }
 
         .result-score {
             font-size: clamp(2.4rem, 7vw, 3.3rem);
@@ -928,10 +916,10 @@ def inject_css():
             font-weight: 750;
         }
 
-        .level-minimal { color: #065f46; background: #d1fae5; }
-        .level-mild { color: #92400e; background: #fef3c7; }
-        .level-moderate { color: #1d4ed8; background: #dbeafe; }
-        .level-severe { color: #991b1b; background: #fee2e2; }
+        .level-minimal { color: #bfffe0; background: rgba(86,227,154,.14); }
+        .level-mild { color: #ffe0a8; background: rgba(255,180,84,.14); }
+        .level-moderate { color: #cfe3ff; background: rgba(79,156,255,.16); }
+        .level-severe { color: #ffd1d1; background: rgba(255,115,115,.15); }
 
         .score-track {
             position: relative;
@@ -977,14 +965,14 @@ def inject_css():
             margin-top: .25rem;
             padding: 14px 16px;
             border-radius: 14px;
-            border: 1px dashed color-mix(in srgb, var(--line), var(--primary) 18%);
-            background: color-mix(in srgb, var(--surface-2), var(--primary-soft) 24%);
+            border: 1px dashed rgba(96,165,250,.22);
+            background: linear-gradient(180deg, rgba(79,156,255,.04), rgba(79,156,255,.02)), var(--surface-2);
             display: grid;
             gap: .7rem;
         }
 
         .privacy-card {
-            background: color-mix(in srgb, var(--surface), var(--surface-2) 60%);
+            background: linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.004)), var(--surface-2);
         }
 
         .intro-action {
@@ -1003,14 +991,20 @@ def inject_css():
             opacity: 1 !important;
         }
 
+        /* text input */
         [data-testid="stTextInput"] input {
-            background: var(--surface) !important;
+            background: var(--field-bg) !important;
             color: var(--text) !important;
-            border: 1px solid var(--line) !important;
+            border: 1px solid var(--field-border) !important;
             border-radius: 12px !important;
-            min-height: 44px !important;
+            min-height: 46px !important;
             box-shadow: none !important;
             padding: 12px 14px !important;
+        }
+
+        [data-testid="stTextInput"] input:hover {
+            background: var(--field-bg-hover) !important;
+            border-color: var(--field-border-strong) !important;
         }
 
         [data-testid="stTextInput"] input::placeholder {
@@ -1019,19 +1013,20 @@ def inject_css():
         }
 
         [data-testid="stTextInput"] input:focus {
-            border-color: var(--primary) !important;
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary), transparent 82%) !important;
+            border-color: var(--field-border-strong) !important;
+            box-shadow: var(--field-shadow) !important;
+            background: var(--field-bg) !important;
         }
 
-        /* ===== Selectbox control ===== */
+        /* selectbox */
         [data-testid="stSelectbox"] [data-baseweb="select"] {
             width: 100% !important;
         }
 
         [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-            background: var(--select-surface) !important;
-            color: var(--select-text) !important;
-            border: 1px solid var(--select-border) !important;
+            background: var(--field-bg) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--field-border) !important;
             border-radius: 12px !important;
             min-height: 46px !important;
             box-shadow: none !important;
@@ -1040,43 +1035,39 @@ def inject_css():
         }
 
         [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover {
-            background: var(--select-hover-bg) !important;
-            border-color: var(--select-hover-border) !important;
+            background: var(--field-bg-hover) !important;
+            border-color: var(--field-border-strong) !important;
         }
 
         [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
-            background: var(--select-surface) !important;
-            border-color: var(--select-hover-border) !important;
-            box-shadow: 0 0 0 3px var(--select-focus-ring) !important;
+            background: var(--field-bg) !important;
+            border-color: var(--field-border-strong) !important;
+            box-shadow: var(--field-shadow) !important;
         }
 
-        [data-testid="stSelectbox"] [data-baseweb="select"] > div * {
-            color: var(--select-text) !important;
-            -webkit-text-fill-color: var(--select-text) !important;
-            opacity: 1 !important;
-        }
-
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div *,
         [data-testid="stSelectbox"] [data-baseweb="select"] span,
         [data-testid="stSelectbox"] [data-baseweb="select"] input,
         [data-testid="stSelectbox"] [data-baseweb="select"] div {
-            color: var(--select-text) !important;
-            -webkit-text-fill-color: var(--select-text) !important;
+            color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
+            opacity: 1 !important;
         }
 
         [data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder {
-            color: var(--select-muted) !important;
-            -webkit-text-fill-color: var(--select-muted) !important;
+            color: var(--muted) !important;
+            -webkit-text-fill-color: var(--muted) !important;
             opacity: 1 !important;
         }
 
         [data-testid="stSelectbox"] [data-baseweb="select"] svg,
         [data-testid="stSelectbox"] [data-baseweb="select"] path {
-            fill: var(--select-text) !important;
-            color: var(--select-text) !important;
+            fill: var(--text) !important;
+            color: var(--text) !important;
             opacity: 1 !important;
         }
 
-        /* ===== Dropdown menu rendered in portal ===== */
+        /* dropdown portal */
         div[data-baseweb="popover"] {
             z-index: 99999 !important;
         }
@@ -1084,10 +1075,10 @@ def inject_css():
         div[data-baseweb="popover"] [data-baseweb="menu"],
         div[data-baseweb="popover"] [role="listbox"],
         div[data-baseweb="popover"] ul {
-            background: var(--select-menu-bg) !important;
-            border: 1px solid var(--select-menu-border) !important;
+            background: var(--surface-2) !important;
+            border: 1px solid var(--field-border) !important;
             border-radius: 12px !important;
-            box-shadow: var(--select-menu-shadow) !important;
+            box-shadow: var(--shadow-md) !important;
             overflow: hidden !important;
             padding-top: 6px !important;
             padding-bottom: 6px !important;
@@ -1098,8 +1089,8 @@ def inject_css():
         div[data-baseweb="popover"] [data-baseweb="menu"] > div,
         div[data-baseweb="popover"] [data-baseweb="menu"] li {
             background: transparent !important;
-            color: var(--select-text) !important;
-            -webkit-text-fill-color: var(--select-text) !important;
+            color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
             opacity: 1 !important;
             min-height: 42px !important;
         }
@@ -1108,8 +1099,8 @@ def inject_css():
         div[data-baseweb="popover"] li *,
         div[data-baseweb="popover"] [data-baseweb="menu"] > div *,
         div[data-baseweb="popover"] [data-baseweb="menu"] li * {
-            color: var(--select-text) !important;
-            -webkit-text-fill-color: var(--select-text) !important;
+            color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
             opacity: 1 !important;
         }
 
@@ -1117,26 +1108,43 @@ def inject_css():
         div[data-baseweb="popover"] li:hover,
         div[data-baseweb="popover"] [data-baseweb="menu"] > div:hover,
         div[data-baseweb="popover"] [data-baseweb="menu"] li:hover {
-            background: var(--select-option-hover) !important;
+            background: rgba(79,156,255,.12) !important;
         }
 
         div[data-baseweb="popover"] [aria-selected="true"],
         div[data-baseweb="popover"] [data-highlighted="true"] {
-            background: var(--select-option-selected) !important;
-            color: var(--select-text) !important;
+            background: rgba(79,156,255,.18) !important;
+            color: var(--text) !important;
         }
 
-        /* 빈 값일 때도 글자/placeholder가 안 묻히도록 */
-        [data-testid="stSelectbox"] div[aria-expanded] > div,
-        [data-testid="stSelectbox"] div[aria-expanded="true"] > div,
-        [data-testid="stSelectbox"] div[aria-expanded="false"] > div {
-            color: var(--select-text) !important;
-            -webkit-text-fill-color: var(--select-text) !important;
+        /* alerts */
+        div[data-testid="stAlert"] {
+            background: rgba(255,115,115,.14) !important;
+            border: 1px solid rgba(255,115,115,.24) !important;
+            border-radius: 14px !important;
+            color: #ffd6d6 !important;
+        }
+
+        div[data-testid="stAlert"] * {
+            color: #ffd6d6 !important;
+        }
+
+        /* caption */
+        [data-testid="stCaptionContainer"] {
+            color: var(--muted) !important;
         }
 
         @media (max-width: 768px) {
-            .block-container { padding-left: .8rem; padding-right: .8rem; }
-            .card { padding: 16px; border-radius: 16px; }
+            .block-container {
+                padding-left: .8rem;
+                padding-right: .8rem;
+            }
+
+            .card {
+                padding: 16px;
+                border-radius: 16px;
+            }
+
             .intro-section { gap: .85rem; }
             .intro-bullets { gap: .58rem; padding-left: 1rem; }
             .intro-bullets li { line-height: 1.65; word-break: break-word; }
@@ -1152,25 +1160,9 @@ def inject_css():
             }
 
             .answer-segments div[data-testid="stButton"] > button {
-                min-height: 44px;
+                min-height: 44px !important;
                 font-size: .93rem;
             }
-        }
-
-        div[data-testid="stHtml"],
-        div[data-testid="stHtml"] > div,
-        div[data-testid="stHtml"] > div > iframe,
-        div[data-testid="stHtml"] iframe {
-            width: 100% !important;
-            max-width: var(--content-max-width) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            display: block !important;
-            padding: 0 !important;
-            border: 0 !important;
-            left: auto !important;
-            right: auto !important;
-            transform: none !important;
         }
         </style>
         """,
@@ -1316,7 +1308,6 @@ def page_info():
     row1_col1, row1_col2 = st.columns(2, gap="medium")
     with row1_col1:
         name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
-
     with row1_col2:
         gender_options = [""] + GENDER_OPTIONS
         current_gender = st.session_state.examinee.get("gender", "")
@@ -1330,7 +1321,6 @@ def page_info():
     row2_col1, row2_col2 = st.columns(2, gap="medium")
     with row2_col1:
         age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
-
     with row2_col2:
         region_options = [""] + REGION_OPTIONS
         current_region = st.session_state.examinee.get("region", "")
@@ -1452,7 +1442,7 @@ def page_survey(dev_mode: bool = False):
             f"""
             <script>
               const el = parent.document.getElementById("q-anchor-{last_q}");
-              if (el) el.scrollIntoView({{behavior: "auto", block: "center"}});
+              if (el) el.scrollIntoView({behavior: "auto", block: "center"});
             </script>
             """,
             height=0,
