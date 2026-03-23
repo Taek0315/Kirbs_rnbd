@@ -87,9 +87,12 @@ def inject_css() -> None:
   /* input/select 라이트 톤 */
   --field-bg: #FFFFFF;
   --field-bg-hover: #FFFFFF;
-  --field-border: #94A3B8;
-  --field-border-hover: #64748B;
+  --field-border: #8FA3B8;
+  --field-border-hover: #5F748C;
   --field-border-focus: #2563EB;
+  --field-shadow: 0 2px 10px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(143, 163, 184, 0.22);
+  --field-shadow-hover: 0 4px 16px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(95, 116, 140, 0.26);
+  --field-shadow-focus: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 4px 16px rgba(37, 99, 235, 0.12);
   --field-text: #0F172A;
   --field-placeholder: transparent;
 }
@@ -472,22 +475,26 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   min-height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
-  background: #FFFFFF !important;
+  background: var(--field-bg) !important;
   border: 1.5px solid var(--field-border) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(148, 163, 184, 0.08) !important;
+  box-shadow: var(--field-shadow) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
   overflow: hidden !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"] > div,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div > div {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] > div > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div > div {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -537,17 +544,21 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) tex
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:hover {
-  background: #FFFFFF !important;
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div:hover {
+  background: var(--field-bg-hover) !important;
   border-color: var(--field-border-hover) !important;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(100, 116, 139, 0.10) !important;
+  box-shadow: var(--field-shadow-hover) !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:focus-within,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:focus-within {
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] > div > div:focus-within,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] > div > div:focus-within {
   border-color: var(--field-border-focus) !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 2px 12px rgba(37, 99, 235, 0.10) !important;
-  background: #FFFFFF !important;
+  box-shadow: var(--field-shadow-focus) !important;
+  background: var(--field-bg) !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input:focus,
@@ -556,6 +567,13 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) tex
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] input,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stTextInput"] [data-baseweb="base-input"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stSelectbox"] [data-baseweb="select"] {
+  background: transparent !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] span,
