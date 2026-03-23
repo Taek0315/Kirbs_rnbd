@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
-import shutil
-import platform
 import uuid
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List
 from textwrap import dedent
+from typing import Dict, List, Optional
 
-import io
 import streamlit as st
-import streamlit.components.v1 as components  # 창 닫기용
-import plotly.graph_objects as go
-import plotly.io as pio
-from PIL import Image, ImageDraw, ImageFont  # PNG 합성용 (현재 파일 내에서 직접 사용하지 않아도 유지)
+import streamlit.components.v1 as components
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 앱 상태 초기화
-def _reset_to_survey():
+# ──────────────────────────────────────────────────────────────────────────────
+def _reset_to_survey() -> None:
     """앱 상태 초기화 후 인트로로 이동"""
     st.session_state.page = "intro"
     st.session_state.consent = False
@@ -43,41 +38,23 @@ def _reset_to_survey():
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 페이지 설정
+# ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="PHQ-9 자기보고 검사", page_icon="📝", layout="centered")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# ORCA 초기화 (필수: ORCA만 사용)
-def _init_orca():
-    """
-    ORCA 실행파일을 환경변수 PLOTLY_ORCA 또는 PATH에서 찾고 plotly에 등록한다.
-    리눅스/맥 헤드리스 환경은 xvfb 사용을 활성화한다.
-    """
-    orca_path = os.environ.get("PLOTLY_ORCA", "").strip() or shutil.which("orca")
-    if orca_path:
-        pio.orca.config.executable = orca_path
-    if platform.system() != "Windows":
-        try:
-            pio.orca.config.use_xvfb = True
-        except Exception:
-            pass
-    return orca_path
-
-
-_ORCA_PATH = _init_orca()
-
 # 색상 토큰
-INK     = "#0F172A"
-SUBTLE  = "#475569"
+INK = "#0F172A"
+SUBTLE = "#475569"
 CARD_BG = "#FFFFFF"
-APP_BG  = "#F6F8FB"
-BORDER  = "#E2E8F0"
-BRAND   = "#2563EB"
-ACCENT  = "#DC2626"
+APP_BG = "#F6F8FB"
+BORDER = "#E2E8F0"
+BRAND = "#2563EB"
+ACCENT = "#DC2626"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 전역 스타일
+# ──────────────────────────────────────────────────────────────────────────────
 def inject_css() -> None:
     st.markdown(
         """
@@ -115,7 +92,6 @@ def inject_css() -> None:
   --field-placeholder: transparent;
 }
 
-/* Global / reset */
 * { box-sizing: border-box; }
 
 html, body {
@@ -135,7 +111,6 @@ body, p, div, span, li, button, label, input, textarea {
 [data-testid="block-container"] { max-width: 100%; padding: 0; margin: 0; }
 [data-testid="stToolbar"], #MainMenu, header, footer { display: none !important; }
 
-/* Layout containers */
 .app-wrap {
   max-width: 960px;
   margin: 0 auto;
@@ -151,27 +126,6 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 24px;
 }
-.examinee-form {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 20px;
-}
-.unified-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 20px;
-}
-.form-actions { margin-top: 8px; }
 .actions {
   display: flex;
   gap: 12px;
@@ -182,7 +136,6 @@ body, p, div, span, li, button, label, input, textarea {
 .actions .stButton { margin: 0 !important; }
 .actions-row { display: flex; gap: 12px; }
 
-/* Card system */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -208,17 +161,7 @@ body, p, div, span, li, button, label, input, textarea {
   flex-direction: column;
   gap: 10px;
 }
-.section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 2px;
-}
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 2px 0 0;
-}
+
 .badge {
   display: inline-flex;
   padding: 4px 12px;
@@ -231,7 +174,6 @@ body, p, div, span, li, button, label, input, textarea {
   width: fit-content;
 }
 
-/* Typography */
 .title-xl {
   font-size: 1.6rem;
   font-weight: 900;
@@ -247,11 +189,6 @@ body, p, div, span, li, button, label, input, textarea {
   font-size: 0.98rem;
   font-weight: 800;
   color: var(--ink);
-}
-.section-caption {
-  font-size: 0.88rem;
-  color: var(--muted-2);
-  line-height: 1.6;
 }
 .text {
   color: var(--muted);
@@ -297,7 +234,6 @@ body, p, div, span, li, button, label, input, textarea {
 .result-danger { margin-top: 36px !important; }
 .result-actions { margin-top: 32px !important; }
 
-/* Result / visualization cards */
 .summary-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -430,32 +366,7 @@ body, p, div, span, li, button, label, input, textarea {
   background: var(--brand);
 }
 .domain-score { justify-self: end; font-weight: 700; }
-.severity-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.legend-chip {
-  display: flex;
-  flex-direction: column;
-  padding: 10px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  min-width: 140px;
-}
-.legend-chip strong { font-size: 0.95rem; }
-.legend-chip small {
-  color: var(--muted-2);
-  font-size: 0.8rem;
-}
 
-/* Examinee page */
-.examinee-intro {
-  padding: 24px 28px;
-}
-
-/* marker */
 .respondent-card-marker {
   width: 0;
   height: 0;
@@ -483,7 +394,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) > d
   padding: 0 !important;
 }
 
-/* header text wrapper */
 .respondent-form-shell,
 .respondent-form-header {
   width: 100%;
@@ -534,7 +444,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) > d
   background: var(--border);
 }
 
-/* layout / width control */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stHorizontalBlock"] {
   gap: 18px;
 }
@@ -581,7 +490,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   min-height: calc(var(--control-height) - 2px) !important;
 }
 
-/* labels */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stWidgetLabel"],
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-testid="stWidgetLabel"] *,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) label[data-testid="stWidgetLabel"] p,
@@ -605,7 +513,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   margin-bottom: 8px !important;
 }
 
-/* input text */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
@@ -619,21 +526,18 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   opacity: 1 !important;
 }
 
-/* remove placeholder only */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) input::placeholder,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) textarea::placeholder {
   color: transparent !important;
   opacity: 0 !important;
 }
 
-/* hover */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:hover,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:hover {
   background: var(--field-bg-hover) !important;
   border-color: #C5D0DD !important;
 }
 
-/* focus */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:focus-within,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:focus-within {
   border-color: var(--brand) !important;
@@ -649,7 +553,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) tex
   box-shadow: none !important;
 }
 
-/* select text/icon */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] span,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] input,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"] svg,
@@ -662,7 +565,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   -webkit-text-fill-color: var(--field-text) !important;
 }
 
-/* warnings */
 .examinee-warning-area {
   display: flex;
   flex-direction: column;
@@ -684,7 +586,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   max-width: 100%;
 }
 
-/* Alerts */
 .warn {
   background: var(--danger-soft);
   border: 1px solid var(--danger-border);
@@ -707,12 +608,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   font-weight: 600 !important;
   line-height: 1.6 !important;
 }
-.alert-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
-}
 
 .safety-card {
   background: rgba(220, 38, 38, 0.10);
@@ -724,7 +619,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
 }
 .safety-card .title-lg { color: var(--danger); }
 
-/* Buttons */
 .stButton { width: 100%; }
 .stButton > button {
   width: 100% !important;
@@ -782,7 +676,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   box-shadow: none !important;
 }
 
-/* Checkbox */
 [data-testid="stCheckbox"] label,
 [data-testid="stCheckbox"] p,
 [data-testid="stCheckbox"] span {
@@ -797,7 +690,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   border-radius: 6px;
 }
 
-/* Radio controls */
 [data-testid="stRadio"] { margin-top: 6px; }
 [data-testid="stRadio"] > div[role="radiogroup"] {
   display: flex !important;
@@ -840,7 +732,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .form-grid,
   .optional-grid {
@@ -874,6 +765,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 상태 관리
+# ──────────────────────────────────────────────────────────────────────────────
 def init_state() -> None:
     if "page" not in st.session_state:
         st.session_state.page = "intro"
@@ -882,7 +774,7 @@ def init_state() -> None:
     if "consent_ts" not in st.session_state:
         st.session_state.consent_ts = None
     if "answers" not in st.session_state:
-        st.session_state.answers: Dict[int, str] = {}
+        st.session_state.answers = {}
     if "functional" not in st.session_state:
         st.session_state.functional = None
     if "summary" not in st.session_state:
@@ -903,6 +795,7 @@ def init_state() -> None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 문항/선택지
+# ──────────────────────────────────────────────────────────────────────────────
 REGION_OPTIONS = [
     "수도권",
     "충청권",
@@ -933,7 +826,52 @@ QUESTIONS = [
 LABELS = ["전혀 아님 (0)", "며칠 동안 (1)", "절반 이상 (2)", "거의 매일 (3)"]
 LABEL2SCORE = {LABELS[0]: 0, LABELS[1]: 1, LABELS[2]: 2, LABELS[3]: 3}
 
+COG_AFF = [1, 2, 6, 7, 9]
+SOMATIC = [3, 4, 5, 8]
 
+SEVERITY_PILL = {
+    "정상": ("#DBEAFE", "#1E3A8A"),
+    "경미": ("#FEF3C7", "#92400E"),
+    "중등도": ("#FFE4E6", "#9F1239"),
+    "중증": ("#FED7AA", "#9A3412"),
+    "심각": ("#FECACA", "#7F1D1D"),
+}
+
+SEVERITY_ARC_COLOR = {
+    "정상": "#16a34a",
+    "경미": "#f59e0b",
+    "중등도": "#f97316",
+    "중증": "#f43f5e",
+    "심각": "#b91c1c",
+}
+
+SEVERITY_GUIDANCE = {
+    "정상": "현재 보고된 주관적 우울 증상은 정상 범위에 해당하며, 기본적인 자기 관리와 모니터링을 이어가시면 됩니다.",
+    "경미": "경미 수준의 우울감이 보고되었습니다. 생활리듬 조정과 상담 자원 안내 등 예방적 개입을 고려할 수 있습니다.",
+    "중등도": "임상적으로 의미 있는 중등도 수준으로, 정신건강 전문인의 평가와 치료적 개입을 권장합니다.",
+    "중증": "중증 수준의 우울 증상이 보고되어, 신속한 전문 평가와 적극적인 치료 계획 수립이 필요합니다.",
+    "심각": "심각 수준의 우울 증상이 보고되었습니다. 안전 평가를 포함한 즉각적인 전문 개입이 권고됩니다.",
+}
+
+DOMAIN_META = [
+    {
+        "name": "신체/생리 증상",
+        "desc": "(수면, 피곤함, 식욕, 정신운동 문제)",
+        "items": SOMATIC,
+        "max": 12,
+    },
+    {
+        "name": "인지/정서 증상",
+        "desc": "(흥미저하, 우울감, 죄책감, 집중력, 자살사고)",
+        "items": COG_AFF,
+        "max": 15,
+    },
+]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 유틸
+# ──────────────────────────────────────────────────────────────────────────────
 def _sanitize_csv_value(v) -> str:
     if v is None:
         return ""
@@ -952,13 +890,13 @@ def dict_to_kv_csv(d: dict) -> str:
     return ",".join(parts)
 
 
-def validate_name(name: str) -> str | None:
+def validate_name(name: str) -> Optional[str]:
     if not name.strip():
         return "이름을 입력해 주세요."
     return None
 
 
-def validate_gender(gender: str) -> str | None:
+def validate_gender(gender: str) -> Optional[str]:
     if not gender.strip():
         return "성별을 선택해 주세요."
     if gender not in GENDER_OPTIONS:
@@ -966,7 +904,7 @@ def validate_gender(gender: str) -> str | None:
     return None
 
 
-def validate_age(age: str) -> str | None:
+def validate_age(age: str) -> Optional[str]:
     value = age.strip()
     if not value:
         return "연령을 입력해 주세요."
@@ -978,7 +916,7 @@ def validate_age(age: str) -> str | None:
     return None
 
 
-def validate_region(region: str) -> str | None:
+def validate_region(region: str) -> Optional[str]:
     if not region.strip():
         return "거주지역을 선택해 주세요."
     if region not in REGION_OPTIONS:
@@ -986,7 +924,7 @@ def validate_region(region: str) -> str | None:
     return None
 
 
-def validate_phone(phone: str) -> str | None:
+def validate_phone(phone: str) -> Optional[str]:
     value = phone.strip()
     if not value:
         return None
@@ -995,7 +933,7 @@ def validate_phone(phone: str) -> str | None:
     return None
 
 
-def validate_email(email: str) -> str | None:
+def validate_email(email: str) -> Optional[str]:
     value = email.strip()
     if not value:
         return None
@@ -1050,8 +988,6 @@ def build_exam_data_phq9(payload: dict) -> dict:
     }
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 유틸
 def phq_severity(total: int) -> str:
     return (
         "정상" if total <= 4 else
@@ -1059,152 +995,6 @@ def phq_severity(total: int) -> str:
         "중등도" if total <= 14 else
         "중증" if total <= 19 else
         "심각"
-    )
-
-
-COG_AFF = [1, 2, 6, 7, 9]
-SOMATIC = [3, 4, 5, 8]
-
-SEVERITY_SEGMENTS = [
-    {"label": "정상", "display": "0–4", "start": 0, "end": 5, "color": "#CDEED6"},
-    {"label": "경미", "display": "5–9", "start": 5, "end": 10, "color": "#F8F1C7"},
-    {"label": "중등도", "display": "10–14", "start": 10, "end": 15, "color": "#FFE0B2"},
-    {"label": "중증", "display": "15–19", "start": 15, "end": 20, "color": "#FBC0A8"},
-    {"label": "심각", "display": "20–27", "start": 20, "end": 27, "color": "#F6A6A6"},
-]
-
-SEVERITY_PILL = {
-    "정상": ("#DBEAFE", "#1E3A8A"),
-    "경미": ("#FEF3C7", "#92400E"),
-    "중등도": ("#FFE4E6", "#9F1239"),
-    "중증": ("#FED7AA", "#9A3412"),
-    "심각": ("#FECACA", "#7F1D1D"),
-}
-
-SEVERITY_ARC_COLOR = {
-    "정상": "#16a34a",
-    "경미": "#f59e0b",
-    "중등도": "#f97316",
-    "중증": "#f43f5e",
-    "심각": "#b91c1c",
-}
-
-SEVERITY_GUIDANCE = {
-    "정상": "현재 보고된 주관적 우울 증상은 정상 범위에 해당하며, 기본적인 자기 관리와 모니터링을 이어가시면 됩니다.",
-    "경미": "경미 수준의 우울감이 보고되었습니다. 생활리듬 조정과 상담 자원 안내 등 예방적 개입을 고려할 수 있습니다.",
-    "중등도": "임상적으로 의미 있는 중등도 수준으로, 정신건강 전문인의 평가와 치료적 개입을 권장합니다.",
-    "중증": "중증 수준의 우울 증상이 보고되어, 신속한 전문 평가와 적극적인 치료 계획 수립이 필요합니다.",
-    "심각": "심각 수준의 우울 증상이 보고되었습니다. 안전 평가를 포함한 즉각적인 전문 개입이 권고됩니다.",
-}
-
-DOMAIN_META = [
-    {
-        "name": "신체/생리 증상",
-        "desc": "(수면, 피곤함, 식욕, 정신운동 문제)",
-        "items": SOMATIC,
-        "max": 12,
-    },
-    {
-        "name": "인지/정서 증상",
-        "desc": "(흥미저하, 우울감, 죄책감, 집중력, 자살사고)",
-        "items": COG_AFF,
-        "max": 15,
-    },
-]
-
-
-def build_total_severity_bar(total: int) -> go.Figure:
-    total = max(0, min(total, 27))
-    fig = go.Figure()
-    annotations = []
-
-    for seg in SEVERITY_SEGMENTS:
-        width = seg["end"] - seg["start"]
-        fig.add_trace(
-            go.Bar(
-                x=[width],
-                y=["총점"],
-                base=seg["start"],
-                orientation="h",
-                marker=dict(color=seg["color"], line=dict(width=0)),
-                hovertemplate=f"{seg['label']} · {seg['display']}점<extra></extra>",
-                showlegend=False,
-            )
-        )
-        midpoint = seg["start"] + width / 2
-        annotations.append(
-            dict(
-                x=midpoint,
-                y=-0.12,
-                xref="x",
-                yref="paper",
-                text=f"<b>{seg['label']}</b><br><span style='font-size:11px;'>{seg['display']}점</span>",
-                showarrow=False,
-                align="center",
-                font=dict(size=12, color=INK),
-            )
-        )
-
-    fig.add_shape(
-        type="line",
-        x0=total,
-        x1=total,
-        y0=-0.05,
-        y1=1.05,
-        xref="x",
-        yref="paper",
-        line=dict(color=BRAND, width=3),
-    )
-    annotations.append(
-        dict(
-            x=total,
-            y=1.08,
-            xref="x",
-            yref="paper",
-            text=f"{total}점",
-            showarrow=False,
-            font=dict(size=14, color=BRAND, family="Inter, 'Noto Sans KR', sans-serif"),
-            bgcolor="#e0ecff",
-            bordercolor=BRAND,
-            borderwidth=1,
-            borderpad=6,
-        )
-    )
-
-    fig.update_layout(
-        barmode="stack",
-        xaxis=dict(
-            range=[0, 27],
-            showgrid=False,
-            zeroline=False,
-            tickvals=[0, 5, 10, 15, 20, 27],
-            ticks="outside",
-            tickfont=dict(size=11),
-        ),
-        yaxis=dict(showticklabels=False),
-        margin=dict(l=30, r=30, t=50, b=60),
-        height=260,
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#ffffff",
-        font=dict(color=INK, family="Inter, 'Noto Sans KR', Arial, sans-serif"),
-        annotations=annotations,
-    )
-    return fig
-
-
-def render_severity_legend():
-    spans = "".join(
-        f"<div class='legend-chip'><strong>{seg['label']}</strong><small>{seg['display']}점</small></div>"
-        for seg in SEVERITY_SEGMENTS
-    )
-    st.markdown(
-        f"""
-<div class="app-wrap">
-  <div class="card compact">
-    <div class="severity-legend">{spans}</div>
-  </div>
-</div>""",
-        unsafe_allow_html=True,
     )
 
 
@@ -1244,7 +1034,7 @@ def build_domain_profile_html(scores: List[int]) -> str:
     )
 
 
-def compose_narrative(total: int, severity: str, functional: str | None, item9: int) -> str:
+def compose_narrative(total: int, severity: str, functional: Optional[str], item9: int) -> str:
     base = f"총점 {total}점(27점 만점)으로, [{severity}] 수준의 우울 증상이 보고되었습니다. {SEVERITY_GUIDANCE[severity]}"
     functional_text = (
         f" 응답자 보고에 따르면, 이러한 증상으로 인한 일·집안일·대인관계의 어려움은 ‘{functional}’ 수준입니다."
@@ -1262,9 +1052,23 @@ def kst_iso_now() -> str:
     return datetime.now(kst).isoformat(timespec="seconds")
 
 
+def get_dev_mode() -> bool:
+    try:
+        params = st.query_params
+        return str(params.get("dev", "0")) == "1"
+    except Exception:
+        try:
+            params = st.experimental_get_query_params()
+            values = params.get("dev", ["0"])
+            return str(values[0]) == "1"
+        except Exception:
+            return False
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # UI 헬퍼
-def render_question_item(question: Dict[str, str | int]) -> None:
+# ──────────────────────────────────────────────────────────────────────────────
+def render_question_item(question: Dict[str, object]) -> None:
     with st.container():
         st.markdown(
             dedent(
@@ -1761,6 +1565,7 @@ def render_result_page(dev_mode: bool = False) -> None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
+# ──────────────────────────────────────────────────────────────────────────────
 def _is_db_insert_enabled() -> bool:
     raw = os.getenv("ENABLE_DB_INSERT", "false")
     return str(raw).strip().lower() == "true"
@@ -1775,7 +1580,7 @@ if ENABLE_DB_INSERT:
 def safe_db_insert(exam_data: dict) -> bool:
     """
     dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
-    운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(exam_data) 수행
+    운영/병합: ENABLE_DB_INSERT=true → Database().insert(exam_data) 수행
     """
     if not ENABLE_DB_INSERT:
         return False
@@ -1818,12 +1623,13 @@ def auto_db_insert(exam_data: dict) -> None:
         st.warning("DB 저장이 수행되지 않았습니다. 환경/모듈 상태를 확인해 주세요.")
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 메인
+# ──────────────────────────────────────────────────────────────────────────────
 def main() -> None:
     inject_css()
     init_state()
-
-    params = st.query_params
-    dev_mode = str(params.get("dev", "0")) == "1"
+    dev_mode = get_dev_mode()
 
     if st.session_state.page == "intro":
         render_intro_page()
