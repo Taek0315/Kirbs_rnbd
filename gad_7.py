@@ -18,12 +18,6 @@ st.set_page_config(
     layout="centered",
 )
 
-# 상단 기본 툴바 최소화/뷰어 모드
-try:
-    st.set_option("client.toolbarMode", "viewer")
-except Exception:
-    pass
-
 KST = timezone(timedelta(hours=9))
 
 SCALE_LABELS = [
@@ -631,7 +625,6 @@ def inject_css():
         :root {
             --content-max-width: 860px;
 
-            /* Unified dark palette */
             --bg: #071225;
             --surface: #0b1a33;
             --surface-2: #0d2140;
@@ -641,19 +634,12 @@ def inject_css():
             --muted: #c7d3e3;
 
             --line: rgba(148, 163, 184, 0.28);
-            --line-strong: rgba(96, 165, 250, 0.68);
-
             --primary: #4f9cff;
             --primary-soft: rgba(79, 156, 255, 0.16);
 
             --success: #56e39a;
-            --success-soft: rgba(86, 227, 154, 0.14);
-
             --warning: #ffb454;
-            --warning-soft: rgba(255, 180, 84, 0.14);
-
             --danger: #ff7373;
-            --danger-soft: rgba(255, 115, 115, 0.14);
 
             --field-bg: #10284c;
             --field-bg-hover: #13315d;
@@ -662,7 +648,6 @@ def inject_css():
             --field-shadow: 0 0 0 3px rgba(79, 156, 255, 0.16);
 
             --radius-xl: 20px;
-            --radius-lg: 14px;
             --shadow-sm: 0 8px 24px rgba(2, 8, 23, 0.28);
             --shadow-md: 0 18px 40px rgba(2, 8, 23, 0.38);
         }
@@ -682,7 +667,6 @@ def inject_css():
             padding-bottom: 3.2rem;
         }
 
-        /* Streamlit default chrome hide */
         header[data-testid="stHeader"] {
             display: none !important;
             height: 0 !important;
@@ -845,7 +829,6 @@ def inject_css():
             min-width: 0;
         }
 
-        /* Global button tone unify */
         div[data-testid="stButton"] > button {
             border-radius: 12px !important;
             min-height: 46px;
@@ -991,7 +974,6 @@ def inject_css():
             opacity: 1 !important;
         }
 
-        /* text input */
         [data-testid="stTextInput"] input {
             background: var(--field-bg) !important;
             color: var(--text) !important;
@@ -1018,7 +1000,6 @@ def inject_css():
             background: var(--field-bg) !important;
         }
 
-        /* selectbox */
         [data-testid="stSelectbox"] [data-baseweb="select"] {
             width: 100% !important;
         }
@@ -1067,7 +1048,6 @@ def inject_css():
             opacity: 1 !important;
         }
 
-        /* dropdown portal */
         div[data-baseweb="popover"] {
             z-index: 99999 !important;
         }
@@ -1117,7 +1097,6 @@ def inject_css():
             color: var(--text) !important;
         }
 
-        /* alerts */
         div[data-testid="stAlert"] {
             background: rgba(255,115,115,.14) !important;
             border: 1px solid rgba(255,115,115,.24) !important;
@@ -1129,7 +1108,6 @@ def inject_css():
             color: #ffd6d6 !important;
         }
 
-        /* caption */
         [data-testid="stCaptionContainer"] {
             color: var(--muted) !important;
         }
@@ -1442,7 +1420,7 @@ def page_survey(dev_mode: bool = False):
             f"""
             <script>
               const el = parent.document.getElementById("q-anchor-{last_q}");
-              if (el) el.scrollIntoView({behavior: "auto", block: "center"});
+              if (el) el.scrollIntoView({{behavior: "auto", block: "center"}});
             </script>
             """,
             height=0,
@@ -1581,6 +1559,8 @@ def main():
 
     params = st.query_params
     dev_mode = str(params.get("dev", "0")) == "1"
+
+    st.caption("GAD-7 (Spitzer et al., 2006) · Streamlit 웹 인터페이스")
 
     if st.session_state.page == "intro":
         page_intro()
