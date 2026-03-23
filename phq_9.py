@@ -87,8 +87,8 @@ def inject_css() -> None:
   /* input/select 라이트 톤 */
   --field-bg: #FFFFFF;
   --field-bg-hover: #FFFFFF;
-  --field-border: #B8C5D6;
-  --field-border-hover: #93A6BC;
+  --field-border: #94A3B8;
+  --field-border-hover: #64748B;
   --field-border-focus: #2563EB;
   --field-text: #0F172A;
   --field-placeholder: transparent;
@@ -478,9 +478,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [da
   min-width: 0 !important;
   min-height: var(--control-height) !important;
   border-radius: var(--radius-md) !important;
-  background: var(--field-bg) !important;
+  background: #FFFFFF !important;
   border: 1.5px solid var(--field-border) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), inset 0 0 0 1px rgba(255,255,255,0.25) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(148, 163, 184, 0.08) !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
   overflow: hidden !important;
 }
@@ -538,15 +538,15 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) tex
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:hover,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:hover {
-  background: var(--field-bg-hover) !important;
+  background: #FFFFFF !important;
   border-color: var(--field-border-hover) !important;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06) !important;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(100, 116, 139, 0.10) !important;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="base-input"]:focus-within,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.respondent-card-marker) [data-baseweb="select"]:focus-within {
   border-color: var(--field-border-focus) !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), 0 2px 12px rgba(37, 99, 235, 0.10) !important;
   background: #FFFFFF !important;
 }
 
@@ -589,47 +589,64 @@ div[data-baseweb="popover"] {
 
 div[data-baseweb="popover"] [role="dialog"],
 div[data-baseweb="popover"] [role="presentation"],
+div[data-baseweb="popover"] [data-baseweb="menu"],
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] li {
+  background: #FFFFFF !important;
+  border-radius: 14px !important;
+}
+
 div[data-baseweb="popover"] [data-baseweb="menu"] {
-  background: transparent !important;
+  border: 1px solid #C9D6E4 !important;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14) !important;
+  overflow: hidden !important;
 }
 
 div[data-baseweb="popover"] [role="listbox"],
 div[role="listbox"] {
   background: #FFFFFF !important;
-  border: 1px solid #C9D6E4 !important;
+  border: none !important;
   border-radius: 14px !important;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14) !important;
-  padding: 6px !important;
-  scrollbar-color: #C7D2E1 #FFFFFF !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-color: #CBD5E1 #FFFFFF !important;
   scrollbar-width: thin !important;
 }
 
 div[data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar,
 div[role="listbox"]::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 div[data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-track,
 div[role="listbox"]::-webkit-scrollbar-track {
   background: #FFFFFF;
-  border-radius: 999px;
 }
 
 div[data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-thumb,
 div[role="listbox"]::-webkit-scrollbar-thumb {
-  background: #C7D2E1;
-  border: 2px solid #FFFFFF;
+  background: #CBD5E1;
   border-radius: 999px;
+  border: 1px solid #FFFFFF;
 }
 
 div[data-baseweb="popover"] [role="option"],
 div[role="option"] {
-  background: #FFFFFF !important;
+  background: transparent !important;
   color: #0F172A !important;
-  border-radius: 10px !important;
-  min-height: 42px !important;
-  padding: 10px 12px !important;
+  border-radius: 0 !important;
+  min-height: 46px !important;
+  padding: 12px 14px !important;
   font-weight: 600 !important;
+  border-bottom: 1px solid #E5E7EB !important;
+  box-shadow: none !important;
+}
+
+div[data-baseweb="popover"] [role="option"]:last-child,
+div[role="option"]:last-child {
+  border-bottom: none !important;
 }
 
 div[data-baseweb="popover"] [role="option"] *,
@@ -639,25 +656,25 @@ div[role="option"] * {
   fill: #0F172A !important;
   stroke: #0F172A !important;
   opacity: 1 !important;
+  box-shadow: none !important;
 }
 
 div[data-baseweb="popover"] [role="option"]:hover,
 div[data-baseweb="popover"] [role="option"][aria-selected="true"],
 div[role="option"]:hover,
 div[role="option"][aria-selected="true"] {
-  background: #EFF6FF !important;
-  color: #1D4ED8 !important;
+  background: #F8FAFC !important;
+  color: #0F172A !important;
 }
 
 div[data-baseweb="popover"] [role="option"]:hover *,
 div[data-baseweb="popover"] [role="option"][aria-selected="true"] *,
 div[role="option"]:hover *,
 div[role="option"][aria-selected="true"] * {
-  color: #1D4ED8 !important;
-  fill: #1D4ED8 !important;
-  stroke: #1D4ED8 !important;
+  color: #0F172A !important;
+  fill: #0F172A !important;
+  stroke: #0F172A !important;
 }
-
 
 .examinee-warning-area {
   display: flex;
