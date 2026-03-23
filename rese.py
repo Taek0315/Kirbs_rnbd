@@ -962,11 +962,10 @@ def inject_css():
         }
 
         .score-hero {
-            display: grid;
-            grid-template-columns: max-content minmax(0, 1fr);
-            align-items: end;
-            column-gap: 22px;
-            row-gap: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px 22px;
             margin-top: 18px;
             margin-bottom: 18px;
         }
@@ -975,8 +974,9 @@ def inject_css():
             display: flex;
             flex-direction: column;
             gap: 8px;
-            min-width: 0;
-            width: max-content;
+            min-width: 150px;
+            width: auto;
+            flex: 0 0 auto;
         }
 
         .score-hero > * {
@@ -1029,9 +1029,11 @@ def inject_css():
             color: var(--text);
             margin: 0;
             text-align: left;
-            align-self: end;
-            width: 100%;
-            max-width: 100%;
+            align-self: flex-end;
+            flex: 1 1 320px;
+            min-width: 0;
+            width: auto;
+            max-width: none;
             opacity: 1;
             -webkit-text-fill-color: currentColor;
         }
@@ -1438,27 +1440,24 @@ def inject_css():
             opacity: 1 !important;
         }
 
-        .answer-options-wrap {
-            width: 100%;
-            margin: 0 0 22px;
-        }
-
-        .answer-options-wrap > div[data-testid="stRadio"],
-        .answer-options-wrap > div[data-testid="stElementContainer"],
-        .answer-options-wrap > div {
-            width: 100%;
-            max-width: 100%;
-        }
-
         /* ---------- radio cards ---------- */
+        [data-testid="stElementContainer"]:has(> div[data-testid="stRadio"]),
+        [data-testid="stElementContainer"]:has(div[data-testid="stRadio"]) {
+            width: 100% !important;
+            max-width: 100% !important;
+            display: block !important;
+            margin: 0 0 22px !important;
+        }
+
         div[data-testid="stRadio"] > label {
             display: none !important;
         }
 
         div[data-testid="stRadio"] {
-            width: 100%;
-            margin: 0;
+            width: 100% !important;
+            max-width: 100% !important;
             display: block !important;
+            margin: 0 !important;
         }
 
         div[data-testid="stRadio"] > div,
@@ -1475,16 +1474,16 @@ def inject_css():
             gap: 12px !important;
             width: 100% !important;
             margin: 0 !important;
-            align-items: stretch !important;
+            justify-content: stretch !important;
             justify-items: stretch !important;
+            align-items: stretch !important;
         }
 
-        div[data-testid="stRadio"] [role="radiogroup"] > *,
-        div[data-testid="stRadio"] [role="radiogroup"] > label,
-        div[data-testid="stRadio"] [role="radiogroup"] > div {
+        div[data-testid="stRadio"] [role="radiogroup"] > div,
+        div[data-testid="stRadio"] [role="radiogroup"] > label {
             width: 100% !important;
+            max-width: 100% !important;
             min-width: 0 !important;
-            max-width: none !important;
             display: flex !important;
             align-items: stretch !important;
             justify-content: stretch !important;
@@ -1496,8 +1495,9 @@ def inject_css():
         div[data-testid="stRadio"] [data-baseweb="radio"] {
             position: relative !important;
             margin: 0 !important;
-            min-height: 68px !important;
             width: 100% !important;
+            min-width: 0 !important;
+            min-height: 68px !important;
             height: 100% !important;
             border: 1px solid rgba(165, 188, 212, 0.9) !important;
             border-radius: 16px !important;
@@ -1517,7 +1517,7 @@ def inject_css():
         div[data-testid="stRadio"] [data-baseweb="radio"]:hover {
             border-color: rgba(30, 78, 121, 0.58) !important;
             background: linear-gradient(180deg, #FFFFFF 0%, #EDF6FF 100%) !important;
-            transform: translateY(-1px);
+            transform: translateY(-1px) !important;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09) !important;
         }
 
@@ -1528,18 +1528,18 @@ def inject_css():
         div[data-testid="stRadio"] [data-baseweb="radio"]:has(input[type="radio"]:checked) {
             border-color: #1F6FB2 !important;
             background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%) !important;
-            transform: translateY(-1px);
+            transform: translateY(-1px) !important;
             box-shadow:
                 inset 0 0 0 2px rgba(31, 111, 178, 0.22),
                 inset 0 1px 0 rgba(255, 255, 255, 0.96),
                 0 14px 28px rgba(19, 74, 120, 0.18) !important;
         }
 
+        div[data-testid="stRadio"] input[type="radio"],
+        div[data-testid="stRadio"] svg,
         div[data-testid="stRadio"] [role="radiogroup"] > div > label > div:first-child:not([data-testid="stMarkdownContainer"]),
         div[data-testid="stRadio"] [role="radiogroup"] > label > div:first-child:not([data-testid="stMarkdownContainer"]),
-        div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child,
-        div[data-testid="stRadio"] input[type="radio"],
-        div[data-testid="stRadio"] svg {
+        div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {
             position: absolute !important;
             opacity: 0 !important;
             pointer-events: none !important;
@@ -1553,12 +1553,12 @@ def inject_css():
         div[data-testid="stRadio"] [role="radiogroup"] > label > div:last-child,
         div[data-testid="stRadio"] [data-baseweb="radio"] > div:last-child,
         div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] {
-            display: flex !important;
-            align-items: stretch !important;
-            justify-content: stretch !important;
             width: 100% !important;
             min-width: 0 !important;
             min-height: 68px !important;
+            display: flex !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
             margin: 0 !important;
             flex: 1 1 auto !important;
         }
@@ -1644,12 +1644,13 @@ def inject_css():
             }
 
             .score-hero {
-                grid-template-columns: 1fr;
+                flex-direction: column;
                 align-items: flex-start;
             }
 
             .result-summary {
                 width: 100%;
+                flex: 1 1 auto;
             }
         }
 
@@ -1885,7 +1886,6 @@ def page_survey(dev_mode: bool = False):
             st.session_state[radio_key] = label_from_score(selected_score)
 
         st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div></section>", unsafe_allow_html=True)
-        st.markdown("<div class='answer-options-wrap'>", unsafe_allow_html=True)
         selected_label = st.radio(
             f"{i}. {question}",
             options=SCALE_LABELS,
@@ -1894,7 +1894,6 @@ def page_survey(dev_mode: bool = False):
             horizontal=True,
             label_visibility="collapsed",
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
         score = score_from_label(selected_label)
         if score is None:
