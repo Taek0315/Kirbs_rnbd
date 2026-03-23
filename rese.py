@@ -974,7 +974,13 @@ def inject_css():
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-width: 0;
         }
+
+        .score-hero > * {
+            min-width: 0;
+        }
+
 
         .score-kicker {
             font-size: 13px;
@@ -1028,7 +1034,7 @@ def inject_css():
         }
 
         .result-highlight-line {
-            margin: 24px 0 0;
+            margin: 16px 0 0;
             padding-left: 14px;
             border-left: 4px solid rgba(46, 139, 87, 0.65);
             color: #245F49;
