@@ -1582,8 +1582,6 @@ def main():
     params = st.query_params
     dev_mode = str(params.get("dev", "0")) == "1"
 
-    st.caption("GAD-7 (Spitzer et al., 2006) · Streamlit 웹 인터페이스")
-
     if st.session_state.page == "intro":
         page_intro()
     elif st.session_state.page == "info":
