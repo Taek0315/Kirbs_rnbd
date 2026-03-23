@@ -668,15 +668,31 @@ def inject_css():
         .title-lg, .title-md, .question-title, .result-score {
             color: var(--text);
         }
-        .page-wrap section.card .title-lg,
-        .page-wrap section.card .title-md,
-        .page-wrap .result-card .title-lg,
+        .page-wrap .card .title-lg,
+        .page-wrap .card .title-md,
+        .page-wrap .card .text,
+        .page-wrap .card .muted,
+        .page-wrap .card .intro-subtitle,
+        .page-wrap .card .intro-bullets li,
+        .page-wrap .card .intro-note,
+        .page-wrap .card .privacy-note,
         .page-wrap .question-card .question-title,
-        .page-wrap .support-card .support-title {
-            color: var(--text);
+        .page-wrap .support-card .support-title,
+        .page-wrap .support-card .support-copy,
+        .page-wrap .result-card .title-lg,
+        .page-wrap .result-card .result-subcopy,
+        .page-wrap .result-card .result-summary,
+        .page-wrap .progress-row .progress-label {
             opacity: 1;
             text-shadow: none;
             filter: none;
+        }
+        .page-wrap .card .title-lg,
+        .page-wrap .card .title-md,
+        .page-wrap .question-card .question-title,
+        .page-wrap .support-card .support-title,
+        .page-wrap .result-card .title-lg {
+            color: var(--text);
             -webkit-text-fill-color: var(--text);
         }
         .title-lg {
@@ -696,21 +712,15 @@ def inject_css():
             line-height: 1.7;
             color: var(--text);
         }
-        .page-wrap section.card .text,
+        .page-wrap .card .text,
         .page-wrap .result-card .text,
         .page-wrap .result-card .result-subcopy,
         .page-wrap .result-card .result-summary {
             color: var(--text);
-            opacity: 1;
-            text-shadow: none;
-            filter: none;
             -webkit-text-fill-color: var(--text);
         }
         .page-wrap .support-card .support-copy {
             color: var(--muted);
-            opacity: 1;
-            text-shadow: none;
-            filter: none;
             -webkit-text-fill-color: var(--muted);
         }
         .muted, .footer-note, .progress-label {
@@ -718,21 +728,15 @@ def inject_css():
             line-height: 1.7;
             color: var(--muted);
         }
-        .page-wrap section.card .muted,
-        .page-wrap section.card .intro-subtitle,
-        .page-wrap section.card .intro-note,
-        .page-wrap section.card .privacy-note,
-        .page-wrap section.card .intro-bullets li,
+        .page-wrap .card .muted,
         .page-wrap .step-label,
         .page-wrap .step-circle,
-        .page-wrap .step-line,
-        .page-wrap .result-card .text,
-        .page-wrap .support-card .support-copy {
+        .page-wrap .step-line {
             opacity: 1;
             text-shadow: none;
             filter: none;
         }
-        .page-wrap section.card .muted {
+        .page-wrap .card .muted {
             color: var(--muted);
             -webkit-text-fill-color: var(--muted);
         }
@@ -757,7 +761,7 @@ def inject_css():
             letter-spacing: 0.01em;
             margin: 0 0 10px;
         }
-        .page-wrap section.card .intro-subtitle {
+        .page-wrap .card .intro-subtitle {
             color: var(--blue);
             -webkit-text-fill-color: var(--blue);
         }
@@ -775,7 +779,7 @@ def inject_css():
             word-break: keep-all;
             overflow-wrap: anywhere;
         }
-        .page-wrap section.card .intro-bullets li {
+        .page-wrap .card .intro-bullets li {
             color: var(--text);
             -webkit-text-fill-color: var(--text);
         }
@@ -790,7 +794,7 @@ def inject_css():
             border: 1px solid rgba(30, 78, 121, 0.12);
             color: var(--muted);
         }
-        .page-wrap section.card .intro-note {
+        .page-wrap .card .intro-note {
             color: var(--muted);
             -webkit-text-fill-color: var(--muted);
         }
@@ -799,7 +803,7 @@ def inject_css():
             border: 1px solid rgba(46, 139, 87, 0.16);
             color: #245f49;
         }
-        .page-wrap section.card .privacy-note {
+        .page-wrap .card .privacy-note {
             color: #245f49;
             -webkit-text-fill-color: #245f49;
         }
@@ -1253,22 +1257,105 @@ def inject_css():
         div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
             display: none;
         }
+        .page-wrap label[data-testid="stWidgetLabel"],
+        .page-wrap label[data-testid="stWidgetLabel"] p,
+        .page-wrap div[data-testid="stTextInput"] label,
+        .page-wrap div[data-testid="stTextInput"] label p,
+        .page-wrap div[data-testid="stSelectbox"] label,
+        .page-wrap div[data-testid="stSelectbox"] label p,
+        .page-wrap div[data-testid="stCheckbox"] label,
+        .page-wrap div[data-testid="stCheckbox"] p,
+        .page-wrap div[data-testid="stCheckbox"] span,
+        .page-wrap .stCheckbox label,
+        .page-wrap .stSelectbox label,
+        .page-wrap .stTextInput label {
+            color: #edf5ff;
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+            -webkit-text-fill-color: #edf5ff;
+            font-weight: 700;
+        }
+        .page-wrap div[data-testid="stCheckbox"] label,
+        .page-wrap .stCheckbox label {
+            gap: 0.55rem;
+            align-items: flex-start;
+        }
+        .page-wrap div[data-testid="stCheckbox"] p,
+        .page-wrap div[data-testid="stCheckbox"] span {
+            line-height: 1.65;
+        }
+        .page-wrap div[data-testid="stTextInput"] input,
+        .page-wrap div[data-testid="stTextInput"] > div input {
+            background: rgba(10, 27, 48, 0.72);
+            color: #f5fbff;
+            border: 1px solid rgba(214, 226, 236, 0.42);
+            border-radius: 14px;
+            min-height: 46px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .page-wrap div[data-testid="stTextInput"] > div {
+            border-radius: 14px;
+        }
+        .page-wrap div[data-testid="stTextInput"] input::placeholder {
+            color: rgba(222, 236, 248, 0.72);
+            -webkit-text-fill-color: rgba(222, 236, 248, 0.72);
+            opacity: 1;
+        }
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] {
+            background: transparent;
+        }
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div {
+            background: rgba(10, 27, 48, 0.72);
+            color: #f5fbff;
+            border-color: rgba(214, 226, 236, 0.42);
+            border-radius: 14px;
+            min-height: 46px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] * {
+            color: #f5fbff;
+            -webkit-text-fill-color: #f5fbff;
+        }
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
+        .page-wrap div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
+            color: rgba(222, 236, 248, 0.78);
+            -webkit-text-fill-color: rgba(222, 236, 248, 0.78);
+            opacity: 1;
+        }
+        .page-wrap div[data-testid="stSelectbox"] svg {
+            fill: #d7e8f7;
+            color: #d7e8f7;
+        }
+        .page-wrap div[data-testid="stCaptionContainer"] p,
+        .page-wrap div[data-testid="stAlertContainer"] p,
+        .page-wrap div[data-testid="stAlertContainer"] div[role="alert"] {
+            color: #edf5ff;
+            opacity: 1;
+            -webkit-text-fill-color: #edf5ff;
+        }
         div[data-testid="stRadio"] > label {
             display: none;
         }
         div[data-testid="stRadio"] {
             width: 100%;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] {
+        div[data-testid="stRadio"] div[role="radiogroup"],
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
             width: 100%;
+            align-items: stretch;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label,
+        .page-wrap div[data-testid="stRadio"] label {
             position: relative;
             margin: 0;
             min-height: 68px;
+            height: 100%;
             width: 100%;
             border: 1px solid rgba(165, 188, 212, 0.9);
             border-radius: 16px;
@@ -1282,14 +1369,17 @@ def inject_css():
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
             transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:hover,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:hover {
             border-color: rgba(30, 78, 121, 0.58);
             background: linear-gradient(180deg, #ffffff 0%, #edf6ff 100%);
             transform: translateY(-1px);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09);
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"],
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked),
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"],
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) {
             border-color: #1f6fb2;
             background: linear-gradient(135deg, rgba(217, 239, 255, 0.98) 0%, rgba(231, 247, 238, 0.98) 100%);
             transform: translateY(-1px);
@@ -1299,7 +1389,9 @@ def inject_css():
                 0 14px 28px rgba(19, 74, 120, 0.18);
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"]:hover,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked):hover {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked):hover,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"]:hover,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked):hover {
             border-color: #16659f;
             background: linear-gradient(135deg, rgba(210, 235, 255, 1) 0%, rgba(224, 244, 234, 1) 100%);
             box-shadow:
@@ -1307,8 +1399,10 @@ def inject_css():
                 inset 0 1px 0 rgba(255, 255, 255, 0.98),
                 0 16px 30px rgba(19, 74, 120, 0.2);
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label > div {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label > div,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label > div {
             width: 100%;
+            height: 100%;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child,
         div[data-testid="stRadio"] div[role="radiogroup"] > label input[type="radio"],
@@ -1320,7 +1414,8 @@ def inject_css():
             height: 0;
             margin: 0;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"] {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stMarkdownContainer"],
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label [data-testid="stMarkdownContainer"] {
             position: relative;
             display: flex;
             align-items: stretch;
@@ -1332,19 +1427,22 @@ def inject_css():
             visibility: visible;
             margin: 0;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label p {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label p,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label p,
+        .page-wrap div[data-testid="stRadio"] p {
             margin: 0;
             width: 100%;
             min-width: 0;
             min-height: 68px;
+            height: 100%;
             padding: 14px 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
             color: var(--text);
             font-size: 13px;
             font-weight: 700;
@@ -1352,7 +1450,9 @@ def inject_css():
             transition: color 0.16s ease, font-weight 0.16s ease;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] > label[data-selected="true"] p,
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) p {
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input[type="radio"]:checked) p,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] p,
+        .page-wrap div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) p {
             color: #0d3f68;
             font-weight: 800;
         }
@@ -1379,7 +1479,8 @@ def inject_css():
             filter: brightness(1.03);
         }
         @media (max-width: 900px) {
-            div[data-testid="stRadio"] div[role="radiogroup"] {
+            div[data-testid="stRadio"] div[role="radiogroup"],
+            .page-wrap div[data-testid="stRadio"] [role="radiogroup"] {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .page-wrap {
