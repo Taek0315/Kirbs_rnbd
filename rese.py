@@ -645,9 +645,13 @@ def inject_css():
             padding: 24px;
             box-shadow: 0 18px 42px rgba(8, 32, 58, 0.18);
             margin-bottom: 18px;
+            opacity: 1;
+            filter: none;
         }
         .card.soft {
             background: var(--surface-soft);
+            opacity: 1;
+            filter: none;
         }
         .badge {
             display: inline-block;
@@ -663,6 +667,17 @@ def inject_css():
         }
         .title-lg, .title-md, .question-title, .result-score {
             color: var(--text);
+        }
+        .page-wrap section.card .title-lg,
+        .page-wrap section.card .title-md,
+        .page-wrap .result-card .title-lg,
+        .page-wrap .question-card .question-title,
+        .page-wrap .support-card .support-title {
+            color: var(--text);
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+            -webkit-text-fill-color: var(--text);
         }
         .title-lg {
             font-size: 28px;
@@ -681,10 +696,45 @@ def inject_css():
             line-height: 1.7;
             color: var(--text);
         }
+        .page-wrap section.card .text,
+        .page-wrap .result-card .text,
+        .page-wrap .result-card .result-subcopy,
+        .page-wrap .result-card .result-summary {
+            color: var(--text);
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+            -webkit-text-fill-color: var(--text);
+        }
+        .page-wrap .support-card .support-copy {
+            color: var(--muted);
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+            -webkit-text-fill-color: var(--muted);
+        }
         .muted, .footer-note, .progress-label {
             font-size: 13px;
             line-height: 1.7;
             color: var(--muted);
+        }
+        .page-wrap section.card .muted,
+        .page-wrap section.card .intro-subtitle,
+        .page-wrap section.card .intro-note,
+        .page-wrap section.card .privacy-note,
+        .page-wrap section.card .intro-bullets li,
+        .page-wrap .step-label,
+        .page-wrap .step-circle,
+        .page-wrap .step-line,
+        .page-wrap .result-card .text,
+        .page-wrap .support-card .support-copy {
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+        }
+        .page-wrap section.card .muted {
+            color: var(--muted);
+            -webkit-text-fill-color: var(--muted);
         }
         .note-box {
             background: var(--green-soft);
@@ -707,6 +757,10 @@ def inject_css():
             letter-spacing: 0.01em;
             margin: 0 0 10px;
         }
+        .page-wrap section.card .intro-subtitle {
+            color: var(--blue);
+            -webkit-text-fill-color: var(--blue);
+        }
         .intro-bullets {
             margin: 0;
             padding-left: 1.2rem;
@@ -721,6 +775,10 @@ def inject_css():
             word-break: keep-all;
             overflow-wrap: anywhere;
         }
+        .page-wrap section.card .intro-bullets li {
+            color: var(--text);
+            -webkit-text-fill-color: var(--text);
+        }
         .intro-note, .privacy-note {
             border-radius: 18px;
             padding: 14px 16px;
@@ -732,10 +790,18 @@ def inject_css():
             border: 1px solid rgba(30, 78, 121, 0.12);
             color: var(--muted);
         }
+        .page-wrap section.card .intro-note {
+            color: var(--muted);
+            -webkit-text-fill-color: var(--muted);
+        }
         .privacy-note {
             background: rgba(46, 139, 87, 0.08);
             border: 1px solid rgba(46, 139, 87, 0.16);
             color: #245f49;
+        }
+        .page-wrap section.card .privacy-note {
+            color: #245f49;
+            -webkit-text-fill-color: #245f49;
         }
         .result-detail-box {
             margin-top: 24px;
@@ -774,15 +840,21 @@ def inject_css():
             color: #d8e7f5;
             backdrop-filter: blur(6px);
         }
+        .page-wrap .step-circle {
+            color: #d8e7f5;
+            -webkit-text-fill-color: #d8e7f5;
+        }
         .step-item.active .step-circle {
             background: #ffffff;
             border-color: #ffffff;
             color: var(--blue);
+            -webkit-text-fill-color: var(--blue);
         }
         .step-item.done .step-circle {
             background: var(--green);
             border-color: var(--green);
             color: #fff;
+            -webkit-text-fill-color: #fff;
         }
         .step-label {
             margin-top: 6px;
@@ -791,15 +863,23 @@ def inject_css():
             font-weight: 700;
             text-align: center;
         }
+        .page-wrap .step-label {
+            color: #d8e7f5;
+            -webkit-text-fill-color: #d8e7f5;
+        }
         .step-item.active .step-label,
         .step-item.done .step-label {
             color: #ffffff;
+            -webkit-text-fill-color: #ffffff;
         }
         .step-line {
             width: 42px;
             height: 2px;
             background: rgba(214, 226, 236, 0.45);
             border-radius: 999px;
+        }
+        .page-wrap .step-line {
+            background: rgba(214, 226, 236, 0.45);
         }
         .step-line.done {
             background: var(--green);
@@ -851,11 +931,13 @@ def inject_css():
             overflow: hidden;
             background:
                 radial-gradient(circle at top right, rgba(46, 139, 87, 0.12), transparent 28%),
-                linear-gradient(180deg, rgba(245, 250, 255, 0.98) 0%, rgba(255, 255, 255, 1) 38%, rgba(247, 251, 255, 1) 100%);
+                linear-gradient(180deg, rgba(245, 250, 255, 1) 0%, rgba(255, 255, 255, 1) 38%, rgba(247, 251, 255, 1) 100%);
             border: 1px solid rgba(214, 226, 236, 0.9);
             border-radius: 28px;
             padding: 26px;
             box-shadow: 0 22px 48px rgba(8, 32, 58, 0.2);
+            opacity: 1;
+            filter: none;
         }
         .result-card::after {
             content: "";
@@ -1086,11 +1168,13 @@ def inject_css():
             font-weight: 700;
         }
         .support-card {
-            background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(242, 248, 255, 0.96) 100%);
+            background: linear-gradient(180deg, rgba(248, 251, 255, 1) 0%, rgba(242, 248, 255, 1) 100%);
             border: 1px solid rgba(214, 226, 236, 0.96);
             border-radius: 24px;
             padding: 22px;
             box-shadow: 0 12px 28px rgba(8, 32, 58, 0.12);
+            opacity: 1;
+            filter: none;
         }
         .support-card-head {
             display: flex;
@@ -1148,6 +1232,15 @@ def inject_css():
             padding: 22px 22px 14px;
             margin-bottom: 16px;
             box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
+            opacity: 1;
+            filter: none;
+        }
+        .page-wrap .question-card .question-title {
+            color: var(--text);
+            opacity: 1;
+            text-shadow: none;
+            filter: none;
+            -webkit-text-fill-color: var(--text);
         }
         .survey-actions {
             padding-top: 8px;
