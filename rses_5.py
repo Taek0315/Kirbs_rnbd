@@ -630,6 +630,7 @@ def inject_css():
         }
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMainBlockContainer"] {
             color-scheme: light !important;
+            background-color: var(--navy-deep) !important;
         }
         .stApp,
         .stApp > div,
@@ -638,13 +639,24 @@ def inject_css():
         .stApp [data-testid="stAppViewContainer"] > .main .block-container,
         .stApp [data-testid="stMainBlockContainer"] {
             background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163b63 100%) !important;
+            color: var(--text) !important;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            -webkit-text-fill-color: currentColor !important;
+        }
+        .stApp [data-testid="stAppViewContainer"] {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
         }
         .stApp [data-testid="stMainBlockContainer"] {
             max-width: 980px !important;
+            width: 100% !important;
             padding-top: 2rem !important;
             padding-bottom: 3rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
+            margin: 0 auto !important;
         }
         .page-wrap {
             max-width: 920px !important;
@@ -656,14 +668,17 @@ def inject_css():
             box-sizing: border-box;
         }
         .page-wrap .card,
+        .page-wrap .card.soft,
         .page-wrap .question-card,
         .page-wrap .result-card,
         .page-wrap .support-card {
             color: var(--text) !important;
             opacity: 1 !important;
             filter: none !important;
-            -webkit-text-fill-color: initial !important;
+            text-shadow: none !important;
+            -webkit-text-fill-color: var(--text) !important;
             background-clip: padding-box !important;
+            backdrop-filter: none !important;
         }
         .page-wrap .card {
             background: var(--card) !important;
@@ -674,8 +689,10 @@ def inject_css():
             margin-bottom: 18px !important;
         }
         .page-wrap .card.soft {
-            background: var(--card-soft) !important;
-            border-color: var(--border) !important;
+            background: linear-gradient(180deg, #f8fbff 0%, #f4f9ff 100%) !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: 0 16px 34px rgba(8, 32, 58, 0.14) !important;
+            color: var(--text) !important;
         }
         .page-wrap .question-card {
             background: var(--card) !important;
@@ -722,6 +739,45 @@ def inject_css():
             text-shadow: none !important;
             -webkit-text-fill-color: currentColor !important;
         }
+        .page-wrap .card,
+        .page-wrap .card.soft,
+        .page-wrap .question-card,
+        .page-wrap .result-card,
+        .page-wrap .support-card,
+        .page-wrap .card *,
+        .page-wrap .question-card *,
+        .page-wrap .result-card *,
+        .page-wrap .support-card * {
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+        }
+        .page-wrap .card h1.title-lg,
+        .page-wrap .card.soft h1.title-lg,
+        .page-wrap .card h2.title-md,
+        .page-wrap .card.soft h2.title-md,
+        .page-wrap .card p,
+        .page-wrap .card li,
+        .page-wrap .card.soft p,
+        .page-wrap .card.soft li,
+        .page-wrap .question-card h1,
+        .page-wrap .question-card h2,
+        .page-wrap .question-card p,
+        .page-wrap .question-card li,
+        .page-wrap .result-card h1,
+        .page-wrap .result-card h2,
+        .page-wrap .result-card p,
+        .page-wrap .result-card li,
+        .page-wrap .support-card h1,
+        .page-wrap .support-card h2,
+        .page-wrap .support-card p,
+        .page-wrap .support-card li {
+            color: var(--text) !important;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            -webkit-text-fill-color: currentColor !important;
+        }
         .page-wrap .title-lg,
         .page-wrap .title-md,
         .page-wrap .text,
@@ -741,15 +797,16 @@ def inject_css():
         }
         .page-wrap .title-lg,
         .page-wrap .card h1.title-lg,
+        .page-wrap .card.soft h1.title-lg,
         .page-wrap .result-card h1.title-lg {
             font-size: 28px !important;
             font-weight: 800 !important;
             line-height: 1.3 !important;
             margin: 6px 0 0 !important;
-            color: var(--text) !important;
+            color: var(--navy) !important;
             opacity: 1 !important;
-            -webkit-text-fill-color: var(--text) !important;
-            text-shadow: 0 0 0 rgba(22, 50, 79, 0) !important;
+            -webkit-text-fill-color: var(--navy) !important;
+            text-shadow: none !important;
             filter: none !important;
         }
         .page-wrap .title-md,
@@ -778,6 +835,9 @@ def inject_css():
             font-size: 13px !important;
             line-height: 1.7 !important;
             color: var(--muted) !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            filter: none !important;
             -webkit-text-fill-color: var(--muted) !important;
         }
         .page-wrap .badge {
@@ -791,6 +851,9 @@ def inject_css():
             margin-right: 8px !important;
             margin-bottom: 8px !important;
             border: 1px solid rgba(30, 78, 121, 0.18) !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            filter: none !important;
             -webkit-text-fill-color: var(--blue) !important;
         }
         .page-wrap .note-box {
@@ -837,6 +900,15 @@ def inject_css():
             font-size: 13px !important;
             line-height: 1.7 !important;
             opacity: 1 !important;
+        }
+        .page-wrap .intro-note,
+        .page-wrap .privacy-note,
+        .page-wrap .stepper,
+        .page-wrap .step-label,
+        .page-wrap .step-circle {
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
         }
         .page-wrap .intro-note {
             background: rgba(30, 78, 121, 0.06) !important;
