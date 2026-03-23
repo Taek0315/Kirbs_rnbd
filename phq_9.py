@@ -1394,7 +1394,42 @@ def get_dev_mode() -> bool:
 # ──────────────────────────────────────────────────────────────────────────────
 # UI 헬퍼
 # ──────────────────────────────────────────────────────────────────────────────
+def render_choice_button_row(
+    *,
+    options: List[str],
+    state_key: str,
+    columns_count: int = 4,
+) -> Optional[str]:
+    current_value = st.session_state.get(state_key)
+    clicked_value: Optional[str] = None
+
+    cols = st.columns(columns_count, gap="small")
+    for idx, option in enumerate(options):
+        col = cols[idx % columns_count]
+        with col:
+            is_selected = current_value == option
+            if st.button(
+                option,
+                key=f"{state_key}__btn__{idx}",
+                type="primary" if is_selected else "secondary",
+                use_container_width=True,
+            ):
+                clicked_value = option
+
+    if clicked_value is not None and clicked_value != current_value:
+        st.session_state[state_key] = clicked_value
+        st.rerun()
+
+    return st.session_state.get(state_key)
+
+
 def render_question_item(question: Dict[str, object]) -> None:
+    q_no = int(question["no"])
+    state_key = f"q{q_no}"
+
+    if state_key not in st.session_state:
+        st.session_state[state_key] = st.session_state.answers.get(q_no)
+
     with st.container():
         st.markdown(
             dedent(
@@ -1408,18 +1443,20 @@ def render_question_item(question: Dict[str, object]) -> None:
             ),
             unsafe_allow_html=True,
         )
-        st.session_state.answers[question["no"]] = st.radio(
-            label=f"문항 {question['no']}",
+        selected = render_choice_button_row(
             options=LABELS,
-            index=None,
-            horizontal=True,
-            label_visibility="collapsed",
-            key=f"q{question['no']}",
+            state_key=state_key,
+            columns_count=4,
         )
+        st.session_state.answers[q_no] = selected
         st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_functional_block() -> None:
+    state_key = "functional-impact"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = st.session_state.functional
+
     with st.container():
         st.markdown(
             dedent(
@@ -1434,13 +1471,10 @@ def render_functional_block() -> None:
             ),
             unsafe_allow_html=True,
         )
-        st.session_state.functional = st.radio(
-            "기능 손상",
+        st.session_state.functional = render_choice_button_row(
             options=["전혀 어렵지 않음", "어렵지 않음", "어려움", "매우 어려움"],
-            index=None,
-            horizontal=True,
-            label_visibility="collapsed",
-            key="functional-impact",
+            state_key=state_key,
+            columns_count=4,
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
