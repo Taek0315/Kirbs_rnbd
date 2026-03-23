@@ -963,9 +963,9 @@ def inject_css():
 
         .score-hero {
             display: grid;
-            grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
-            gap: 20px;
-            align-items: center;
+            grid-template-columns: max-content minmax(0, 1fr);
+            gap: 12px 20px;
+            align-items: end;
             margin-top: 18px;
             margin-bottom: 18px;
         }
@@ -1027,7 +1027,8 @@ def inject_css():
             color: var(--text);
             margin: 0;
             text-align: left;
-            align-self: center;
+            align-self: end;
+            justify-self: start;
             max-width: 100%;
             opacity: 1;
             -webkit-text-fill-color: currentColor;
@@ -1445,18 +1446,26 @@ def inject_css():
             margin: 0 0 22px;
         }
 
+        div[data-testid="stRadio"] > div,
+        div[data-testid="stRadio"] > div > div,
         div[data-testid="stRadio"] [role="radiogroup"] {
-            display: grid !important;
-            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        div[data-testid="stRadio"] [role="radiogroup"] {
+            display: flex !important;
+            flex-wrap: nowrap !important;
             gap: 12px !important;
             width: 100% !important;
             align-items: stretch !important;
-            justify-items: stretch !important;
+            justify-content: stretch !important;
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] > label,
         div[data-testid="stRadio"] [role="radiogroup"] > div {
-            width: 100% !important;
+            flex: 1 1 0 !important;
+            width: 0 !important;
             min-width: 0 !important;
             max-width: none !important;
             display: flex !important;
@@ -1601,7 +1610,14 @@ def inject_css():
 
         @media (max-width: 900px) {
             div[data-testid="stRadio"] [role="radiogroup"] {
+                display: grid !important;
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            div[data-testid="stRadio"] [role="radiogroup"] > label,
+            div[data-testid="stRadio"] [role="radiogroup"] > div {
+                width: 100% !important;
+                flex: initial !important;
             }
 
             .page-wrap {
