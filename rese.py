@@ -1,10 +1,20 @@
 # 실행 방법:
 #   set ENABLE_DB_INSERT=false
-#   streamlit run rses.py
+#   streamlit run rese.py
 #
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
 #   ENABLE_DB_INSERT=false  -> DB insert 미수행 + debug payload 노출
+#
+# 권장(로컬/서버 동일 테마 고정):
+#   set STREAMLIT_THEME_BASE=dark
+#   set STREAMLIT_THEME_PRIMARY_COLOR=#2E8B57
+#   set STREAMLIT_THEME_BACKGROUND_COLOR=#0B1F38
+#   set STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR=#113459
+#   set STREAMLIT_THEME_TEXT_COLOR=#F5FBFF
+#   set STREAMLIT_THEME_BORDER_COLOR=#6887A3
+#   set STREAMLIT_THEME_SHOW_WIDGET_BORDER=true
+#   streamlit run rese.py
 
 # -*- coding: utf-8 -*-
 import json
@@ -35,7 +45,7 @@ REGION_OPTIONS = [
     "강원권",
     "전라권",
     "경상권",
-    "제주도",  
+    "제주도",
 ]
 
 GENDER_OPTIONS = [
@@ -78,7 +88,6 @@ QUESTIONS = [
 
 REVERSE_ITEMS = {3, 5, 8, 9, 10}
 
-# 최종 문구 교체 예정: intro 화면 안내 문구를 한 곳에서 쉽게 수정할 수 있도록 상수로 분리합니다.
 INTRO_DESC_BULLETS = [
     "이 검사는 현재 자신을 어떻게 인식하고 있는지 전반적인 경향을 살펴보기 위한 자기보고식 검사입니다.",
     "총 10개 문항으로 구성되어 있으며, 일반적으로 약 2~3분 안에 완료할 수 있습니다.",
@@ -229,6 +238,7 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         '</div>',
     ]
     return "\n".join(graph_html)
+
 
 def build_result_section_html(
     level: str,
@@ -593,12 +603,14 @@ def render_stepper(current_page: str):
     html = ["<div class='stepper'>"]
     for i, (key, label) in enumerate(steps):
         state = "done" if i < current_idx else "active" if i == current_idx else "todo"
-        html.append(f"""
+        html.append(
+            f"""
             <div class='step-item {state}'>
                 <div class='step-circle'>{i+1}</div>
                 <div class='step-label'>{label}</div>
             </div>
-        """)
+            """
+        )
         if i < len(steps) - 1:
             line_state = "done" if i < current_idx else "todo"
             html.append(f"<div class='step-line {line_state}'></div>")
@@ -606,12 +618,135 @@ def render_stepper(current_page: str):
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
+def inject_runtime_theme_guard():
+    components.html(
+        """
+        <script>
+        (() => {
+            const pwin = window.parent;
+            if (!pwin || !pwin.document) return;
+
+            const doc = pwin.document;
+            const STYLE_ID = "kirbs-runtime-theme-guard";
+
+            const cssText = `
+                :root {
+                    color-scheme: dark !important;
+                }
+
+                html, body {
+                    color-scheme: dark !important;
+                    background: #0B1F38 !important;
+                }
+
+                @media (forced-colors: active) {
+                    html, body, .stApp, .stApp *, input, textarea, select, button, [role="option"], [data-baseweb="select"] {
+                        forced-color-adjust: none !important;
+                    }
+                }
+
+                body [data-baseweb="popover"],
+                body [data-baseweb="popover"] > div,
+                body ul[role="listbox"],
+                body div[role="listbox"] {
+                    background: #0F3158 !important;
+                    border: 1px solid rgba(214, 226, 236, 0.18) !important;
+                    border-radius: 14px !important;
+                    box-shadow: 0 16px 30px rgba(4, 18, 34, 0.32) !important;
+                }
+
+                body li[role="option"],
+                body div[role="option"] {
+                    background: transparent !important;
+                    color: #F6FBFF !important;
+                    -webkit-text-fill-color: #F6FBFF !important;
+                }
+
+                body li[role="option"] *,
+                body div[role="option"] * {
+                    color: inherit !important;
+                    -webkit-text-fill-color: inherit !important;
+                    opacity: 1 !important;
+                }
+
+                body li[role="option"]:hover,
+                body div[role="option"]:hover {
+                    background: #1A436D !important;
+                }
+
+                body li[role="option"][aria-selected="true"],
+                body div[role="option"][aria-selected="true"] {
+                    background: #29557F !important;
+                    color: #FFFFFF !important;
+                    -webkit-text-fill-color: #FFFFFF !important;
+                }
+            `;
+
+            function ensureStyle() {
+                let styleEl = doc.getElementById(STYLE_ID);
+                if (!styleEl) {
+                    styleEl = doc.createElement("style");
+                    styleEl.id = STYLE_ID;
+                    doc.head.appendChild(styleEl);
+                }
+                styleEl.textContent = cssText;
+            }
+
+            function lockInputAttributes() {
+                const inputSelector = [
+                    'input[type="text"]',
+                    'input[type="email"]',
+                    'input[type="search"]',
+                    'input:not([type])',
+                    'textarea'
+                ].join(",");
+
+                doc.querySelectorAll(inputSelector).forEach((el) => {
+                    if (!el.dataset.kirbsLocked) {
+                        el.setAttribute("autocomplete", "off");
+                        el.setAttribute("autocorrect", "off");
+                        el.setAttribute("autocapitalize", "none");
+                        el.setAttribute("spellcheck", "false");
+                        el.dataset.kirbsLocked = "1";
+                    }
+                });
+            }
+
+            function applyAll() {
+                ensureStyle();
+                lockInputAttributes();
+            }
+
+            applyAll();
+
+            if (!pwin.__kirbsThemeGuardObserver) {
+                pwin.__kirbsThemeGuardObserver = new MutationObserver(() => {
+                    applyAll();
+                });
+
+                pwin.__kirbsThemeGuardObserver.observe(doc.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: false
+                });
+            }
+
+            setTimeout(applyAll, 0);
+            setTimeout(applyAll, 150);
+            setTimeout(applyAll, 500);
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
 
 def inject_css():
     st.markdown(
         """
         <style>
         :root {
+            color-scheme: dark;
             --navy: #0F2747;
             --navy-deep: #0B1F38;
             --blue: #1E4E79;
@@ -623,19 +758,30 @@ def inject_css():
             --muted: #4F6B85;
             --green: #2E8B57;
             --green-soft: #EAF7F0;
-            --widget-bg: rgba(13, 39, 71, 0.78);
-            --widget-bg-soft: rgba(13, 39, 71, 0.92);
-            --widget-border: rgba(214, 226, 236, 0.48);
+            --widget-bg: #102F52;
+            --widget-bg-soft: #113459;
+            --widget-border: #6887A3;
+            --widget-border-strong: #81A9C8;
             --widget-text: #F5FBFF;
             --widget-label: #F4F8FD;
-            --widget-placeholder: rgba(225, 236, 246, 0.78);
-            --widget-menu-bg: #0f3158;
-            --widget-menu-hover: rgba(255, 255, 255, 0.10);
-            --widget-menu-selected: rgba(255, 255, 255, 0.18);
+            --widget-placeholder: #C6D8E9;
+            --widget-menu-bg: #0F3158;
+            --widget-menu-hover: #1A436D;
+            --widget-menu-selected: #29557F;
+        }
+
+        @media (forced-colors: active) {
+            html, body, .stApp, .stApp *, input, textarea, select, button, [role="option"], [data-baseweb="select"] {
+                forced-color-adjust: none !important;
+            }
         }
 
         html, body, .stApp,
-        .stApp [data-testid="stAppViewContainer"] {
+        .stApp [data-testid="stAppViewContainer"],
+        .stApp [data-testid="stHeader"],
+        .stApp [data-testid="stToolbar"],
+        .stApp [data-testid="stDecoration"] {
+            color-scheme: dark !important;
             background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%);
         }
 
@@ -669,7 +815,7 @@ def inject_css():
             display: inline-block;
             padding: 6px 12px;
             border-radius: 999px;
-            background: rgba(30, 78, 121, 0.1);
+            background: rgba(30, 78, 121, 0.10);
             color: var(--blue);
             font-size: 12px;
             font-weight: 800;
@@ -723,7 +869,7 @@ def inject_css():
 
         .note-box {
             background: var(--green-soft);
-            border: 1px solid rgba(46, 139, 87, 0.2);
+            border: 1px solid rgba(46, 139, 87, 0.20);
             border-radius: 18px;
             padding: 14px 16px;
         }
@@ -826,7 +972,7 @@ def inject_css():
             font-weight: 700;
             font-size: 14px;
             border: 1px solid rgba(214, 226, 236, 0.55);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.10);
             color: #D8E7F5;
             backdrop-filter: blur(6px);
             -webkit-text-fill-color: currentColor;
@@ -925,11 +1071,11 @@ def inject_css():
             overflow: hidden;
             background:
                 radial-gradient(circle at top right, rgba(46, 139, 87, 0.12), transparent 28%),
-                linear-gradient(180deg, rgba(245, 250, 255, 1) 0%, rgba(255, 255, 255, 1) 38%, rgba(247, 251, 255, 1) 100%);
-            border: 1px solid rgba(214, 226, 236, 0.9);
+                linear-gradient(180deg, #F5FAFF 0%, #FFFFFF 38%, #F7FBFF 100%);
+            border: 1px solid rgba(214, 226, 236, 0.90);
             border-radius: 28px;
             padding: 26px;
-            box-shadow: 0 22px 48px rgba(8, 32, 58, 0.2);
+            box-shadow: 0 22px 48px rgba(8, 32, 58, 0.20);
         }
 
         .result-card::after {
@@ -983,7 +1129,6 @@ def inject_css():
             min-width: 0;
         }
 
-
         .score-kicker {
             font-size: 13px;
             font-weight: 800;
@@ -1015,7 +1160,7 @@ def inject_css():
             gap: 8px;
             padding: 10px 14px;
             border-radius: 999px;
-            background: rgba(46, 139, 87, 0.1);
+            background: rgba(46, 139, 87, 0.10);
             border: 1px solid rgba(46, 139, 87, 0.18);
             color: var(--green);
             font-size: 14px;
@@ -1138,7 +1283,7 @@ def inject_css():
             width: 0;
             max-width: calc(100% - 6px);
             border-radius: 999px;
-            background: linear-gradient(90deg, rgba(30, 78, 121, 0.9) 0%, rgba(46, 139, 87, 0.95) 100%);
+            background: linear-gradient(90deg, rgba(30, 78, 121, 0.90) 0%, rgba(46, 139, 87, 0.95) 100%);
             box-shadow: 0 10px 18px rgba(46, 139, 87, 0.18);
             animation: bulletGrow 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
         }
@@ -1304,6 +1449,7 @@ def inject_css():
 
         /* ---------- widget labels ---------- */
         .stApp [data-testid="stWidgetLabel"] p,
+        .stApp [data-testid="stWidgetLabel"] span,
         .stApp div[data-testid="stTextInput"] label p,
         .stApp div[data-testid="stSelectbox"] label p,
         .stApp div[data-testid="stCheckbox"] label p,
@@ -1324,10 +1470,15 @@ def inject_css():
         }
 
         .stApp div[data-testid="stCheckbox"] input {
-            accent-color: #FF6B6B;
+            accent-color: var(--green) !important;
         }
 
         /* ---------- text input ---------- */
+        .stApp div[data-testid="stTextInput"],
+        .stApp div[data-testid="stTextInput"] * {
+            color-scheme: dark !important;
+        }
+
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"],
         .stApp div[data-testid="stTextInput"] > div {
             background: transparent !important;
@@ -1339,10 +1490,15 @@ def inject_css():
         }
 
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div {
-            background: var(--widget-bg-soft) !important;
+            background-color: var(--widget-bg-soft) !important;
             border: 1px solid var(--widget-border) !important;
             min-height: 46px !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div:focus-within {
+            border-color: var(--widget-border-strong) !important;
+            box-shadow: 0 0 0 1px rgba(129, 169, 200, 0.72) !important;
         }
 
         .stApp div[data-testid="stTextInput"] input {
@@ -1358,17 +1514,40 @@ def inject_css():
             -webkit-text-fill-color: var(--widget-placeholder) !important;
         }
 
+        .stApp div[data-testid="stTextInput"] input:-webkit-autofill,
+        .stApp div[data-testid="stTextInput"] input:-webkit-autofill:hover,
+        .stApp div[data-testid="stTextInput"] input:-webkit-autofill:focus,
+        .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill,
+        .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill:hover,
+        .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--widget-text) !important;
+            caret-color: var(--widget-text) !important;
+            box-shadow: 0 0 0px 1000px var(--widget-bg-soft) inset !important;
+            transition: background-color 99999s ease-out 0s !important;
+            border-radius: 16px !important;
+        }
+
         /* ---------- selectbox control ---------- */
+        .stApp div[data-testid="stSelectbox"],
+        .stApp div[data-testid="stSelectbox"] * {
+            color-scheme: dark !important;
+        }
+
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] {
             background: transparent !important;
         }
 
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
-            background: var(--widget-bg-soft) !important;
+            background-color: var(--widget-bg-soft) !important;
             border: 1px solid var(--widget-border) !important;
             border-radius: 16px !important;
             min-height: 46px !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+            border-color: var(--widget-border-strong) !important;
+            box-shadow: 0 0 0 1px rgba(129, 169, 200, 0.72) !important;
         }
 
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input,
@@ -1499,7 +1678,7 @@ def inject_css():
             min-width: 0 !important;
             min-height: 68px !important;
             height: 100% !important;
-            border: 1px solid rgba(165, 188, 212, 0.9) !important;
+            border: 1px solid rgba(165, 188, 212, 0.90) !important;
             border-radius: 16px !important;
             background: linear-gradient(180deg, #FFFFFF 0%, #F6FBFF 100%) !important;
             padding: 0 !important;
@@ -1614,11 +1793,11 @@ def inject_css():
             background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
             color: #FFFFFF;
             border: none;
-            box-shadow: 0 14px 24px rgba(30, 78, 121, 0.2);
+            box-shadow: 0 14px 24px rgba(30, 78, 121, 0.20);
         }
 
         div[data-testid="stButton"] > button:hover {
-            border-color: rgba(30, 78, 121, 0.6);
+            border-color: rgba(30, 78, 121, 0.60);
             color: var(--blue);
         }
 
@@ -1681,6 +1860,7 @@ def inject_css():
         unsafe_allow_html=True,
     )
 
+
 def page_intro():
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
@@ -1708,7 +1888,7 @@ def page_intro():
                     {intro_notice_html}
                 </div>
                 <div class="intro-note">
-                    입력하신 응답은 현재 세션에서 결과 산출에 사용되며, 재접속시 검사를 다시 진행하셔야합니다.
+                    입력하신 응답은 현재 세션에서 결과 산출에 사용되며, 재접속 시 검사를 다시 진행하셔야 합니다.
                 </div>
             </div>
         </section>
@@ -1778,7 +1958,9 @@ def page_info():
         gender = st.selectbox(
             "성별",
             options=[""] + GENDER_OPTIONS,
-            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", "")) if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS) else 0,
+            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
+            if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS)
+            else 0,
         )
 
     info_row_2_col_1, info_row_2_col_2 = st.columns(2)
@@ -1788,7 +1970,9 @@ def page_info():
         region = st.selectbox(
             "거주지역",
             options=[""] + REGION_OPTIONS,
-            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", "")) if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS) else 0,
+            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
+            if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS)
+            else 0,
         )
 
     phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
@@ -1812,7 +1996,6 @@ def page_info():
     phone_error = validate_phone(normalized_phone)
     email_error = validate_email(email)
 
-    # 필수 입력 누락만 모아서 표시
     missing_fields = []
 
     if name_error:
@@ -1830,14 +2013,12 @@ def page_info():
     if missing_fields:
         st.error(f"{', '.join(missing_fields)}을 입력해주세요.")
 
-    # 선택항목은 따로 표시 (원하면 유지)
     if phone_error:
         st.warning(phone_error)
 
     if email_error:
         st.warning(email_error)
 
-    # 버튼 활성화 기준
     all_valid = len(missing_fields) == 0
 
     c1, c2 = st.columns([1, 1])
@@ -1885,7 +2066,10 @@ def page_survey(dev_mode: bool = False):
         if radio_key not in st.session_state:
             st.session_state[radio_key] = label_from_score(selected_score)
 
-        st.markdown(f"<section class='question-card'><div class='question-title'>{i}. {question}</div></section>", unsafe_allow_html=True)
+        st.markdown(
+            f"<section class='question-card'><div class='question-title'>{i}. {question}</div></section>",
+            unsafe_allow_html=True,
+        )
         selected_label = st.radio(
             f"{i}. {question}",
             options=SCALE_LABELS,
@@ -1902,8 +2086,6 @@ def page_survey(dev_mode: bool = False):
             st.session_state.answers[key] = score
 
     payload, missing = build_payload()
-    answered_count = len(st.session_state.answers)
-
 
     if len(missing) != 0:
         st.caption("모든 문항에 응답하면 결과 보기가 활성화됩니다.")
@@ -2014,13 +2196,13 @@ def page_result(dev_mode: bool = False):
 
 
 def main():
-    inject_css()
     init_state()
+    inject_runtime_theme_guard()
+    inject_css()
 
     params = st.query_params
     dev_mode = str(params.get("dev", "0")) == "1"
 
-    
     if st.session_state.page == "intro":
         page_intro()
     elif st.session_state.page == "info":
@@ -2048,8 +2230,8 @@ def main():
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
+    raw = os.getenv("ENABLE_DB_INSERT", "false")
+    return str(raw).strip().lower() == "true"
 
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
