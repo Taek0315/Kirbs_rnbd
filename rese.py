@@ -6,15 +6,8 @@
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
 #   ENABLE_DB_INSERT=false  -> DB insert 미수행 + debug payload 노출
 #
-# 권장(로컬/서버 동일 테마 고정):
-#   set STREAMLIT_THEME_BASE=dark
-#   set STREAMLIT_THEME_PRIMARY_COLOR=#2E8B57
-#   set STREAMLIT_THEME_BACKGROUND_COLOR=#0B1F38
-#   set STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR=#113459
-#   set STREAMLIT_THEME_TEXT_COLOR=#F5FBFF
-#   set STREAMLIT_THEME_BORDER_COLOR=#6887A3
-#   set STREAMLIT_THEME_SHOW_WIDGET_BORDER=true
-#   streamlit run rese.py
+# 본 파일은 Streamlit toolbar/theme 전환과 기기별 color-scheme 영향을 차단하기 위해
+# 환경변수 + runtime theme guard를 함께 적용한 단일 파일 버전이다.
 
 # -*- coding: utf-8 -*-
 import json
@@ -23,6 +16,18 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
+# -----------------------------------------------------------------------------
+# Streamlit theme hard-lock (반드시 streamlit import 전에 적용)
+# -----------------------------------------------------------------------------
+os.environ["STREAMLIT_THEME_BASE"] = "dark"
+os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#2E8B57"
+os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "#0B1F38"
+os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#113459"
+os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "#F5FBFF"
+os.environ["STREAMLIT_THEME_BORDER_COLOR"] = "#6887A3"
+os.environ["STREAMLIT_THEME_SHOW_WIDGET_BORDER"] = "true"
+os.environ.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
+
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -30,6 +35,7 @@ st.set_page_config(
     page_title="자아존중감 자기평가 검사",
     page_icon="🧠",
     layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
 KST = timezone(timedelta(hours=9))
@@ -226,7 +232,7 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         '        <div class="bullet-track">',
         f"            {''.join(band_html)}",
         f'            <div class="bullet-fill" style="--target-width:{fill_pct:.2f}%;"></div>',
-        f'            <div class="bullet-marker" style="left:{fill_pct:.2f}%;">',
+        f'            <div class="bullet-marker" style="left:{fill_pct:.2f}%">',
         '                <span class="bullet-marker-dot"></span>',
         f'                <span class="bullet-marker-pill">{total}점</span>',
         '            </div>',
@@ -627,22 +633,62 @@ def inject_runtime_theme_guard():
             if (!pwin || !pwin.document) return;
 
             const doc = pwin.document;
-            const STYLE_ID = "kirbs-runtime-theme-guard";
+            const STYLE_ID = "kirbs-hard-theme-lock";
+
+            const ROOT_VARS = {
+                "color-scheme": "dark",
+                "--primary-color": "#2E8B57",
+                "--background-color": "#0B1F38",
+                "--secondary-background-color": "#113459",
+                "--text-color": "#F5FBFF",
+                "--link-color": "#8CC7FF",
+                "--border-color": "#6887A3",
+                "--widget-border-color": "#6887A3",
+                "--font": "\"Source Sans Pro\", sans-serif"
+            };
 
             const cssText = `
                 :root {
                     color-scheme: dark !important;
+                    --primary-color: #2E8B57 !important;
+                    --background-color: #0B1F38 !important;
+                    --secondary-background-color: #113459 !important;
+                    --text-color: #F5FBFF !important;
+                    --link-color: #8CC7FF !important;
+                    --border-color: #6887A3 !important;
+                    --widget-border-color: #6887A3 !important;
                 }
 
-                html, body {
+                html,
+                body,
+                #root,
+                .stApp,
+                [data-testid="stAppViewContainer"],
+                [data-testid="stMain"],
+                [data-testid="stHeader"] {
                     color-scheme: dark !important;
                     background: #0B1F38 !important;
                 }
 
-                @media (forced-colors: active) {
-                    html, body, .stApp, .stApp *, input, textarea, select, button, [role="option"], [data-baseweb="select"] {
-                        forced-color-adjust: none !important;
-                    }
+                [data-testid="stToolbar"],
+                [data-testid="stDecoration"],
+                [data-testid="stStatusWidget"],
+                header button[kind="header"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    pointer-events: none !important;
+                }
+
+                body,
+                body * {
+                    scrollbar-color: #6887A3 #113459;
+                }
+
+                body [data-baseweb="input"] > div,
+                body [data-baseweb="select"] > div,
+                body textarea,
+                body input:not([type="radio"]):not([type="checkbox"]) {
+                    color-scheme: dark !important;
                 }
 
                 body [data-baseweb="popover"],
@@ -682,26 +728,69 @@ def inject_runtime_theme_guard():
                 }
             `;
 
+            function forceStyle(el, prop, value) {
+                if (!el) return;
+                el.style.setProperty(prop, value, "important");
+            }
+
             function ensureStyle() {
                 let styleEl = doc.getElementById(STYLE_ID);
                 if (!styleEl) {
                     styleEl = doc.createElement("style");
                     styleEl.id = STYLE_ID;
-                    doc.head.appendChild(styleEl);
                 }
                 styleEl.textContent = cssText;
+                doc.head.appendChild(styleEl);
             }
 
-            function lockInputAttributes() {
-                const inputSelector = [
-                    'input[type="text"]',
-                    'input[type="email"]',
-                    'input[type="search"]',
-                    'input:not([type])',
-                    'textarea'
-                ].join(",");
+            function lockRootTheme() {
+                const root = doc.documentElement;
+                const body = doc.body;
 
-                doc.querySelectorAll(inputSelector).forEach((el) => {
+                Object.entries(ROOT_VARS).forEach(([key, value]) => {
+                    forceStyle(root, key, value);
+                    forceStyle(body, key, value);
+                });
+
+                forceStyle(root, "background", "#0B1F38");
+                forceStyle(body, "background", "#0B1F38");
+                forceStyle(root, "color", "#F5FBFF");
+                forceStyle(body, "color", "#F5FBFF");
+                forceStyle(root, "accent-color", "#2E8B57");
+                forceStyle(body, "accent-color", "#2E8B57");
+
+                root.setAttribute("data-theme", "dark");
+                body.setAttribute("data-theme", "dark");
+            }
+
+            function hideToolbar() {
+                [
+                    '[data-testid="stToolbar"]',
+                    '[data-testid="stDecoration"]',
+                    '[data-testid="stStatusWidget"]',
+                    'header button[kind="header"]'
+                ].forEach((selector) => {
+                    doc.querySelectorAll(selector).forEach((el) => {
+                        forceStyle(el, "display", "none");
+                        forceStyle(el, "visibility", "hidden");
+                        forceStyle(el, "pointer-events", "none");
+                    });
+                });
+            }
+
+            function lockTextInputs() {
+                doc.querySelectorAll('div[data-testid="stTextInput"] [data-baseweb="input"] > div').forEach((el) => {
+                    forceStyle(el, "background", "#113459");
+                    forceStyle(el, "border", "1px solid #6887A3");
+                    forceStyle(el, "border-radius", "16px");
+                    forceStyle(el, "box-shadow", "inset 0 1px 0 rgba(255,255,255,0.05)");
+                });
+
+                doc.querySelectorAll('div[data-testid="stTextInput"] input, div[data-testid="stTextInput"] textarea').forEach((el) => {
+                    forceStyle(el, "color", "#F5FBFF");
+                    forceStyle(el, "caret-color", "#F5FBFF");
+                    forceStyle(el, "background", "transparent");
+                    forceStyle(el, "-webkit-text-fill-color", "#F5FBFF");
                     if (!el.dataset.kirbsLocked) {
                         el.setAttribute("autocomplete", "off");
                         el.setAttribute("autocorrect", "off");
@@ -712,28 +801,102 @@ def inject_runtime_theme_guard():
                 });
             }
 
+            function lockSelectboxes() {
+                doc.querySelectorAll('div[data-testid="stSelectbox"] [data-baseweb="select"] > div').forEach((el) => {
+                    forceStyle(el, "background", "#113459");
+                    forceStyle(el, "border", "1px solid #6887A3");
+                    forceStyle(el, "border-radius", "16px");
+                    forceStyle(el, "min-height", "46px");
+                    forceStyle(el, "box-shadow", "inset 0 1px 0 rgba(255,255,255,0.05)");
+                });
+
+                doc.querySelectorAll('div[data-testid="stSelectbox"] [data-baseweb="select"] input, div[data-testid="stSelectbox"] [data-baseweb="select"] span, div[data-testid="stSelectbox"] [data-baseweb="select"] div').forEach((el) => {
+                    forceStyle(el, "color", "#F5FBFF");
+                    forceStyle(el, "opacity", "1");
+                    forceStyle(el, "-webkit-text-fill-color", "#F5FBFF");
+                });
+
+                doc.querySelectorAll('div[data-testid="stSelectbox"] svg').forEach((el) => {
+                    forceStyle(el, "fill", "#D7E8F7");
+                    forceStyle(el, "color", "#D7E8F7");
+                });
+            }
+
+            function lockLabels() {
+                const selectors = [
+                    '[data-testid="stWidgetLabel"] p',
+                    '[data-testid="stWidgetLabel"] span',
+                    'div[data-testid="stTextInput"] label p',
+                    'div[data-testid="stSelectbox"] label p',
+                    'div[data-testid="stCheckbox"] label p',
+                    'div[data-testid="stCheckbox"] label span',
+                    'div[data-testid="stNumberInput"] label p',
+                    'div[data-testid="stCaptionContainer"] p'
+                ];
+
+                doc.querySelectorAll(selectors.join(',')).forEach((el) => {
+                    forceStyle(el, "color", "#F4F8FD");
+                    forceStyle(el, "opacity", "1");
+                    forceStyle(el, "text-shadow", "none");
+                    forceStyle(el, "filter", "none");
+                    forceStyle(el, "-webkit-text-fill-color", "#F4F8FD");
+                });
+            }
+
+            function lockListbox() {
+                doc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="popover"] > div, ul[role="listbox"], div[role="listbox"]').forEach((el) => {
+                    forceStyle(el, "background", "#0F3158");
+                    forceStyle(el, "border", "1px solid rgba(214, 226, 236, 0.18)");
+                    forceStyle(el, "border-radius", "14px");
+                    forceStyle(el, "box-shadow", "0 16px 30px rgba(4,18,34,0.32)");
+                });
+
+                doc.querySelectorAll('li[role="option"], div[role="option"]').forEach((el) => {
+                    forceStyle(el, "background", "transparent");
+                    forceStyle(el, "color", "#F6FBFF");
+                    forceStyle(el, "-webkit-text-fill-color", "#F6FBFF");
+                });
+            }
+
             function applyAll() {
                 ensureStyle();
-                lockInputAttributes();
+                lockRootTheme();
+                hideToolbar();
+                lockLabels();
+                lockTextInputs();
+                lockSelectboxes();
+                lockListbox();
             }
 
             applyAll();
 
-            if (!pwin.__kirbsThemeGuardObserver) {
-                pwin.__kirbsThemeGuardObserver = new MutationObserver(() => {
-                    applyAll();
-                });
-
-                pwin.__kirbsThemeGuardObserver.observe(doc.body, {
+            if (!pwin.__kirbsHardThemeObserver) {
+                pwin.__kirbsHardThemeObserver = new MutationObserver(() => applyAll());
+                pwin.__kirbsHardThemeObserver.observe(doc.documentElement, {
                     childList: true,
                     subtree: true,
-                    attributes: false
+                    attributes: true,
+                    attributeFilter: ["class", "style", "data-theme"]
                 });
+            }
+
+            if (pwin.matchMedia) {
+                const media = pwin.matchMedia('(prefers-color-scheme: dark)');
+                if (!pwin.__kirbsMediaBound) {
+                    const reapply = () => applyAll();
+                    if (media.addEventListener) {
+                        media.addEventListener('change', reapply);
+                    } else if (media.addListener) {
+                        media.addListener(reapply);
+                    }
+                    pwin.__kirbsMediaBound = true;
+                }
             }
 
             setTimeout(applyAll, 0);
             setTimeout(applyAll, 150);
             setTimeout(applyAll, 500);
+            setTimeout(applyAll, 1200);
         })();
         </script>
         """,
@@ -782,7 +945,16 @@ def inject_css():
         .stApp [data-testid="stToolbar"],
         .stApp [data-testid="stDecoration"] {
             color-scheme: dark !important;
-            background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%);
+            background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%) !important;
+        }
+
+        .stApp [data-testid="stToolbar"],
+        .stApp [data-testid="stDecoration"],
+        .stApp [data-testid="stStatusWidget"],
+        header button[kind="header"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         }
 
         .stApp [data-testid="stMainBlockContainer"],
@@ -1447,7 +1619,6 @@ def inject_css():
             display: none;
         }
 
-        /* ---------- widget labels ---------- */
         .stApp [data-testid="stWidgetLabel"] p,
         .stApp [data-testid="stWidgetLabel"] span,
         .stApp div[data-testid="stTextInput"] label p,
@@ -1473,7 +1644,6 @@ def inject_css():
             accent-color: var(--green) !important;
         }
 
-        /* ---------- text input ---------- */
         .stApp div[data-testid="stTextInput"],
         .stApp div[data-testid="stTextInput"] * {
             color-scheme: dark !important;
@@ -1527,7 +1697,6 @@ def inject_css():
             border-radius: 16px !important;
         }
 
-        /* ---------- selectbox control ---------- */
         .stApp div[data-testid="stSelectbox"],
         .stApp div[data-testid="stSelectbox"] * {
             color-scheme: dark !important;
@@ -1570,7 +1739,6 @@ def inject_css():
             color: #D7E8F7 !important;
         }
 
-        /* ---------- selectbox dropdown menu ---------- */
         body [data-baseweb="popover"],
         body [data-baseweb="popover"] > div,
         body ul[role="listbox"],
@@ -1607,7 +1775,6 @@ def inject_css():
             -webkit-text-fill-color: #FFFFFF !important;
         }
 
-        /* ---------- captions / alerts ---------- */
         .stApp div[data-testid="stCaptionContainer"] p {
             color: #DCEAF8 !important;
             opacity: 1 !important;
@@ -1619,7 +1786,6 @@ def inject_css():
             opacity: 1 !important;
         }
 
-        /* ---------- radio cards ---------- */
         [data-testid="stElementContainer"]:has(> div[data-testid="stRadio"]),
         [data-testid="stElementContainer"]:has(div[data-testid="stRadio"]) {
             width: 100% !important;
@@ -1774,7 +1940,6 @@ def inject_css():
             -webkit-text-fill-color: #0D3F68 !important;
         }
 
-        /* ---------- buttons ---------- */
         div[data-testid="stButton"] {
             width: 100%;
         }
@@ -2019,7 +2184,11 @@ def page_info():
     if email_error:
         st.warning(email_error)
 
-    all_valid = len(missing_fields) == 0
+    all_valid = (
+        len(missing_fields) == 0
+        and phone_error is None
+        and email_error is None
+    )
 
     c1, c2 = st.columns([1, 1])
     with c1:
@@ -2229,6 +2398,10 @@ def main():
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 데이터 저장 분기 + DB 연동 전용 블록
+# -----------------------------------------------------------------------------
+# KIRBS 가이드 기준: 단일 Streamlit 앱 구조 유지, main 기준 독립 실행,
+# ENABLE_DB_INSERT=false 에서는 DB insert 미실행, DB import/호출은 하단 배치.
+# -----------------------------------------------------------------------------
 def _is_db_insert_enabled() -> bool:
     raw = os.getenv("ENABLE_DB_INSERT", "false")
     return str(raw).strip().lower() == "true"
