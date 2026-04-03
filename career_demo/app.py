@@ -1,9 +1,10 @@
+from pathlib import Path
 import re
 import streamlit as st
 from data_loader import load_job_data, search_jobs, get_job_detail
 
-FILE_PATH = "career_jobs.xlsx"
-
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_FILE_PATH = BASE_DIR / "career_jobs.xlsx"
 
 st.set_page_config(
     page_title="직업 정보 검색 데모",
@@ -13,8 +14,13 @@ st.set_page_config(
 
 
 @st.cache_data
-def get_data():
-    return load_job_data(FILE_PATH)
+def get_data_from_path(file_path: str):
+    return load_job_data(file_path)
+
+
+@st.cache_data
+def get_data_from_upload(uploaded_file):
+    return load_job_data(uploaded_file)
 
 
 def split_lines(text: str):
@@ -42,9 +48,9 @@ def render_text_section(title: str, text: str):
         st.markdown(f"- {line}")
 
 
-def render_list_section(title: str, items: list[str]):
+def render_list_section(title: str, items):
     st.markdown(f"### {title}")
-    clean_items = [item.strip() for item in items if item and str(item).strip()]
+    clean_items = [str(item).strip() for item in items if str(item).strip()]
 
     if not clean_items:
         st.info("등록된 내용이 없습니다.")
@@ -118,8 +124,34 @@ def render_job_detail(detail: dict):
         render_list_section("관련 학과", detail.get("major_list", []))
 
 
+def load_dataframe():
+    st.sidebar.markdown("## 데이터 설정")
+
+    use_uploaded = st.sidebar.checkbox("엑셀 파일 직접 업로드해서 사용", value=False)
+
+    if use_uploaded:
+        uploaded_file = st.sidebar.file_uploader(
+            "직업 정보 엑셀 업로드",
+            type=["xlsx"]
+        )
+        if uploaded_file is None:
+            st.info("사이드바에서 엑셀 파일을 업로드해 주세요.")
+            st.stop()
+        return get_data_from_upload(uploaded_file)
+
+    if DEFAULT_FILE_PATH.exists():
+        return get_data_from_path(str(DEFAULT_FILE_PATH))
+
+    st.error(
+        "기본 엑셀 파일을 찾지 못했습니다. "
+        "career_jobs.xlsx 파일이 app.py와 같은 폴더에 있는지 확인하거나, "
+        "사이드바에서 엑셀 파일을 직접 업로드해 주세요."
+    )
+    st.stop()
+
+
 def main():
-    df = get_data()
+    df = load_dataframe()
 
     st.title("직업 정보 검색 데모")
     st.write("희망 직업이나 관심 키워드를 검색하면 관련 직업 정보를 확인할 수 있습니다.")
@@ -140,14 +172,10 @@ def main():
             st.warning("검색 결과가 없습니다.")
             return
 
-        if "score" in results.columns:
-            st.caption(f"검색 결과 {len(results)}건")
-        else:
-            st.caption(f"기본 목록 {len(results)}건")
+        st.caption(f"검색 결과 {len(results)}건")
 
         job_options = results["job"].tolist()
 
-        default_index = 0
         if "selected_job" not in st.session_state:
             st.session_state.selected_job = job_options[0]
 

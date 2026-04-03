@@ -38,8 +38,8 @@ def collect_nonempty_values(row, columns):
     return values
 
 
-def load_job_data(file_path: str) -> pd.DataFrame:
-    df = pd.read_excel(file_path)
+def load_job_data(file_source):
+    df = pd.read_excel(file_source)
 
     for col in BASE_COLUMNS + CONTACT_COLUMNS + MAJOR_COLUMNS:
         if col not in df.columns:
@@ -74,13 +74,10 @@ def score_job(row, query: str) -> int:
     search_text = row["search_text"]
 
     score = 0
-
     if job == q:
         score += 100
-
     if q in job:
         score += 50
-
     if q in search_text:
         score += 20
 
