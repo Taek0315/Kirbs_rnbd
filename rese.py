@@ -1,7 +1,7 @@
 
 # 실행 방법:
 #   set ENABLE_DB_INSERT=false
-#   streamlit run rese_fixed_stable.py
+#   streamlit run rese_fixed_corssafe.py
 #
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
@@ -50,7 +50,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "RSES"
 EXAM_TITLE = "자아존중감 자기평가 검사"
 EXAM_SUBTITLE = "Rosenberg Self-Esteem Scale 기반"
-EXAM_VERSION = "streamlit_1.3"
+EXAM_VERSION = "streamlit_1.4"
 
 REGION_OPTIONS = [
     "수도권",
@@ -605,232 +605,14 @@ def render_stepper(current_page: str) -> None:
 
 def inject_runtime_light_guard() -> None:
     """
-    BaseWeb selectbox popover는 portal로 부모 document 아래에 렌더링될 수 있으므로,
-    부모 document head에 스타일을 심어 light scheme으로 고정한다.
+    전산센터 iframe 임베딩 환경에서 components.html 내부 스크립트가
+    window.parent.document 에 접근하면 교차 출처(SecurityError/CORS)로
+    실행이 중단될 수 있다.
 
-    주의:
-    - MutationObserver는 childList/subtree만 감시하여 무한 루프를 피한다.
-    - 스타일 태그 주입 + 선택값/placeholder/드롭다운 항목에 대한 직접 스타일 보정을 함께 수행한다.
+    이 함수는 의도적으로 부모 문서 접근을 수행하지 않는다.
+    실제 테마/위젯/드롭다운 보정은 모두 inject_css() 안의 정적 CSS만으로 처리한다.
     """
-    components.html(
-        """
-        <script>
-        (() => {
-            const pwin = window.parent;
-            if (!pwin || !pwin.document) return;
-
-            const doc = pwin.document;
-            const STYLE_ID = "kirbs-light-widget-lock";
-            const TEXT = "#16324F";
-            const PLACEHOLDER = "#6C84A0";
-            const BORDER = "#A9C2D9";
-            const HOVER = "#EAF3FB";
-
-            const cssText = `
-                :root {
-                    color-scheme: light !important;
-                }
-
-                html, body, #root, .stApp,
-                [data-testid="stAppViewContainer"],
-                [data-testid="stMain"],
-                [data-testid="stHeader"] {
-                    color-scheme: light !important;
-                }
-
-                [data-testid="stToolbar"],
-                [data-testid="stDecoration"],
-                [data-testid="stStatusWidget"],
-                header button[kind="header"] {
-                    display: none !important;
-                    visibility: hidden !important;
-                    pointer-events: none !important;
-                }
-
-                [data-testid="stTextInput"] [data-baseweb="input"] > div,
-                [data-testid="stSelectbox"] [data-baseweb="select"] > div,
-                input:not([type="radio"]):not([type="checkbox"]),
-                textarea {
-                    color-scheme: light !important;
-                }
-
-                [data-testid="stTextInput"] [data-baseweb="input"] > div,
-                [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-                    background: #FFFFFF !important;
-                    border: 1px solid ${BORDER} !important;
-                    border-radius: 16px !important;
-                    box-shadow: 0 6px 18px rgba(8, 32, 58, 0.10) !important;
-                }
-
-                [data-testid="stTextInput"] input,
-                [data-testid="stTextInput"] textarea,
-                [data-testid="stSelectbox"] [data-baseweb="select"] input,
-                [data-testid="stSelectbox"] [data-baseweb="select"] span,
-                [data-testid="stSelectbox"] [data-baseweb="select"] div {
-                    color: ${TEXT} !important;
-                    -webkit-text-fill-color: ${TEXT} !important;
-                    opacity: 1 !important;
-                }
-
-                [data-testid="stSelectbox"] [data-baseweb="select"] [class*="singleValue"],
-                [data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"],
-                [data-testid="stSelectbox"] [data-baseweb="select"] [class*="control"] {
-                    color: ${TEXT} !important;
-                    -webkit-text-fill-color: ${TEXT} !important;
-                    opacity: 1 !important;
-                }
-
-                [data-testid="stTextInput"] input::placeholder,
-                [data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
-                [data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"],
-                [data-testid="stSelectbox"] [data-baseweb="select"] [class*="placeholder"] {
-                    color: ${PLACEHOLDER} !important;
-                    -webkit-text-fill-color: ${PLACEHOLDER} !important;
-                    opacity: 1 !important;
-                }
-
-                [data-testid="stSelectbox"] svg {
-                    fill: #365C81 !important;
-                    color: #365C81 !important;
-                }
-
-                [data-baseweb="popover"],
-                [data-baseweb="popover"] > div,
-                ul[role="listbox"],
-                div[role="listbox"] {
-                    background: #FFFFFF !important;
-                    border: 1px solid #C7D8E7 !important;
-                    border-radius: 14px !important;
-                    box-shadow: 0 18px 34px rgba(8, 32, 58, 0.18) !important;
-                }
-
-                li[role="option"],
-                div[role="option"] {
-                    background: #FFFFFF !important;
-                    color: ${TEXT} !important;
-                    -webkit-text-fill-color: ${TEXT} !important;
-                }
-
-                li[role="option"] *,
-                div[role="option"] * {
-                    color: inherit !important;
-                    -webkit-text-fill-color: inherit !important;
-                    opacity: 1 !important;
-                }
-
-                li[role="option"]:hover,
-                div[role="option"]:hover,
-                li[role="option"][aria-selected="true"],
-                div[role="option"][aria-selected="true"] {
-                    background: ${HOVER} !important;
-                    color: ${TEXT} !important;
-                    -webkit-text-fill-color: ${TEXT} !important;
-                }
-            `;
-
-            function setImp(el, prop, value) {
-                if (!el) return;
-                el.style.setProperty(prop, value, "important");
-            }
-
-            function mountStyle() {
-                if (!doc.head) return;
-                let styleEl = doc.getElementById(STYLE_ID);
-                if (!styleEl) {
-                    styleEl = doc.createElement("style");
-                    styleEl.id = STYLE_ID;
-                    doc.head.appendChild(styleEl);
-                }
-                if (styleEl.textContent !== cssText) {
-                    styleEl.textContent = cssText;
-                }
-            }
-
-            function paintSelectboxes() {
-                doc.querySelectorAll('[data-testid="stSelectbox"] [data-baseweb="select"] > div').forEach((el) => {
-                    setImp(el, 'background', '#FFFFFF');
-                    setImp(el, 'border', `1px solid ${BORDER}`);
-                    setImp(el, 'border-radius', '16px');
-                    setImp(el, 'box-shadow', '0 6px 18px rgba(8, 32, 58, 0.10)');
-                });
-
-                doc.querySelectorAll('[data-testid="stSelectbox"] [data-baseweb="select"] input').forEach((el) => {
-                    setImp(el, 'color', TEXT);
-                    setImp(el, '-webkit-text-fill-color', TEXT);
-                    setImp(el, 'caret-color', TEXT);
-                    setImp(el, 'opacity', '1');
-                });
-
-                doc.querySelectorAll('[data-testid="stSelectbox"] [data-baseweb="select"] [class*="singleValue"], [data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"], [data-testid="stSelectbox"] [data-baseweb="select"] span, [data-testid="stSelectbox"] [data-baseweb="select"] p').forEach((el) => {
-                    const txt = (el.textContent || '').trim();
-                    if (!txt) return;
-                    setImp(el, 'color', TEXT);
-                    setImp(el, '-webkit-text-fill-color', TEXT);
-                    setImp(el, 'opacity', '1');
-                    setImp(el, 'font-weight', '600');
-                    setImp(el, 'text-shadow', 'none');
-                });
-
-                doc.querySelectorAll('[data-testid="stSelectbox"] [data-baseweb="select"] [aria-hidden="true"], [data-testid="stSelectbox"] [data-baseweb="select"] [class*="placeholder"]').forEach((el) => {
-                    setImp(el, 'color', PLACEHOLDER);
-                    setImp(el, '-webkit-text-fill-color', PLACEHOLDER);
-                    setImp(el, 'opacity', '1');
-                });
-
-                doc.querySelectorAll('[data-testid="stSelectbox"] svg').forEach((el) => {
-                    setImp(el, 'fill', '#365C81');
-                    setImp(el, 'color', '#365C81');
-                    setImp(el, 'opacity', '1');
-                });
-            }
-
-            function paintOptions() {
-                doc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="popover"] > div, ul[role="listbox"], div[role="listbox"]').forEach((el) => {
-                    setImp(el, 'background', '#FFFFFF');
-                    setImp(el, 'border', '1px solid #C7D8E7');
-                    setImp(el, 'border-radius', '14px');
-                    setImp(el, 'box-shadow', '0 18px 34px rgba(8, 32, 58, 0.18)');
-                });
-
-                doc.querySelectorAll('li[role="option"], div[role="option"]').forEach((el) => {
-                    setImp(el, 'background', '#FFFFFF');
-                    setImp(el, 'color', TEXT);
-                    setImp(el, '-webkit-text-fill-color', TEXT);
-                    setImp(el, 'opacity', '1');
-                });
-            }
-
-            function applyAll() {
-                mountStyle();
-                paintSelectboxes();
-                paintOptions();
-            }
-
-            applyAll();
-            setTimeout(applyAll, 0);
-            setTimeout(applyAll, 120);
-            setTimeout(applyAll, 350);
-            setTimeout(applyAll, 800);
-            setTimeout(applyAll, 1500);
-
-            if (!pwin.__kirbsLightWidgetObserver) {
-                pwin.__kirbsLightWidgetObserver = new MutationObserver(() => {
-                    applyAll();
-                });
-
-                const target = doc.body || doc.documentElement;
-                pwin.__kirbsLightWidgetObserver.observe(target, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-        })();
-        </script>
-        """,
-        height=0,
-    )
-
-
+    return
 def inject_css() -> None:
     st.markdown(
         """
@@ -1566,7 +1348,11 @@ def inject_css() -> None:
         }
 
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"],
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [aria-haspopup="listbox"],
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="control"] {
+            background: #FFFFFF !important;
             background-color: #FFFFFF !important;
             border: 1px solid var(--border-strong) !important;
             border-radius: 16px !important;
@@ -1575,9 +1361,19 @@ def inject_css() -> None:
         }
 
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div:focus-within,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"]:focus-within,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="control"]:focus-within {
             border-color: var(--blue-strong) !important;
             box-shadow: 0 0 0 2px rgba(46, 97, 143, 0.16) !important;
+        }
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div > div,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"],
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"] > div {
+            background: transparent !important;
+            background-color: transparent !important;
         }
 
         .stApp div[data-testid="stTextInput"] input,
@@ -1588,22 +1384,29 @@ def inject_css() -> None:
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] p,
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="singleValue"],
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"],
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="control"] {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="control"],
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"] {
             color: var(--text) !important;
             caret-color: var(--text) !important;
             -webkit-text-fill-color: var(--text) !important;
             background: transparent !important;
             opacity: 1 !important;
             text-shadow: none !important;
+            filter: none !important;
         }
 
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="singleValue"],
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="singleValue"] *,
         .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="valueContainer"] > *,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] span:not([aria-hidden="true"]) {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"] > div:first-child,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"] span:not([aria-hidden="true"]),
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"] p {
             color: var(--text) !important;
             -webkit-text-fill-color: var(--text) !important;
             opacity: 1 !important;
             font-weight: 600 !important;
+            text-shadow: none !important;
+            filter: none !important;
         }
 
         .stApp div[data-testid="stTextInput"] input::placeholder,
@@ -1614,6 +1417,12 @@ def inject_css() -> None:
             color: var(--placeholder) !important;
             opacity: 1 !important;
             -webkit-text-fill-color: var(--placeholder) !important;
+            text-shadow: none !important;
+        }
+
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"]:empty,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] [class*="placeholder"]:empty {
+            display: none !important;
         }
 
         .stApp div[data-testid="stTextInput"] input:-webkit-autofill,
