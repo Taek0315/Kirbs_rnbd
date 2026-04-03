@@ -1,17 +1,7 @@
-
-# 실행 방법:
-#   set ENABLE_DB_INSERT=false
-#   streamlit run rese_fixed_stable.py
-#
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
 #   ENABLE_DB_INSERT=false  -> DB insert 미수행 + debug payload 노출
-#
-# 주의:
-# - 전산센터 배포 환경에서 OS/브라우저/Streamlit 테마 차이로 인한 색상 뒤틀림을 막기 위해
-#   글로벌 dark lock 대신 light widget lock + 페이지 전용 커스텀 스타일을 사용한다.
-# - KIRBS 가이드 기준에 따라 단일 Streamlit 앱 구조, main() 진입, ENABLE_DB_INSERT 분기,
-#   DB import/호출 하단 배치를 유지한다.
+
 
 # -*- coding: utf-8 -*-
 import json
