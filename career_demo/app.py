@@ -1,6 +1,7 @@
 from pathlib import Path
 import re
 import html
+
 import streamlit as st
 from data_loader import load_job_data, search_jobs, get_job_detail
 
@@ -37,7 +38,7 @@ def inject_css():
             font-weight: 800 !important;
         }
 
-        p, li, label, span, div {
+        p, li, label, span {
             color: #334155;
         }
 
@@ -60,6 +61,7 @@ def inject_css():
             font-size: 1rem;
             color: #4b5563;
             margin-bottom: 0;
+            line-height: 1.7;
         }
 
         .section-card {
@@ -69,6 +71,13 @@ def inject_css():
             padding: 22px 24px;
             margin-bottom: 18px;
             box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+        }
+
+        .section-title {
+            font-size: 1.08rem;
+            font-weight: 800;
+            color: #12355b;
+            margin-bottom: 14px;
         }
 
         .section-body {
@@ -81,13 +90,6 @@ def inject_css():
             font-size: 0.95rem;
         }
 
-        .section-title {
-            font-size: 1.08rem;
-            font-weight: 800;
-            color: #12355b;
-            margin-bottom: 14px;
-        }
-
         .result-badge {
             display: inline-block;
             background: #e8f1ff;
@@ -97,6 +99,28 @@ def inject_css():
             font-size: 0.88rem;
             font-weight: 700;
             margin-bottom: 10px;
+        }
+
+        .left-panel-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 22px 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+        }
+
+        .left-panel-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #12355b;
+            margin-bottom: 6px;
+        }
+
+        .left-panel-sub {
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         div[data-baseweb="input"] > div,
@@ -121,10 +145,6 @@ def inject_css():
         .stTextInput label {
             color: #334155 !important;
             font-weight: 700 !important;
-        }
-
-        button[kind="secondary"] {
-            border-radius: 12px !important;
         }
 
         div[role="tablist"] {
@@ -154,11 +174,18 @@ def inject_css():
 
         ul {
             padding-left: 1.1rem;
+            margin-bottom: 0;
         }
 
         li {
             margin-bottom: 0.45rem;
             line-height: 1.65;
+        }
+
+        .result-count {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
         }
         </style>
         """,
@@ -174,12 +201,13 @@ def get_data():
 def split_lines(text: str):
     if not text:
         return []
+
     lines = []
     for line in str(text).split("\n"):
         line = line.strip()
         if not line:
             continue
-        line = re.sub(r"^[\-•·]\s*", "", line)
+        line = re.sub(r"^[\\-•·]\s*", "", line)
         if line:
             lines.append(line)
     return lines
@@ -310,13 +338,23 @@ def main():
     left_col, right_col = st.columns([1.05, 1.95], gap="large")
 
     with left_col:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown("### 검색 결과")
-        st.caption(f"검색 결과 {len(results)}건")
+        st.markdown(
+            """
+            <div class="left-panel-card">
+                <div class="left-panel-title">검색 결과</div>
+                <div class="left-panel-sub">검색된 직업 목록에서 원하는 직업을 선택해 상세 정보를 확인할 수 있습니다.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            f'<div class="result-count">검색 결과 {len(results)}건</div>',
+            unsafe_allow_html=True,
+        )
 
         if results.empty:
             st.warning("검색 결과가 없습니다.")
-            st.markdown("</div>", unsafe_allow_html=True)
             return
 
         job_options = results["job"].tolist()
@@ -333,7 +371,6 @@ def main():
             index=job_options.index(st.session_state.selected_job),
         )
         st.session_state.selected_job = selected_job
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with right_col:
         detail = get_job_detail(df, st.session_state.selected_job)
