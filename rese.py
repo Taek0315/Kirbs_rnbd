@@ -1,7 +1,3 @@
-# 실행 방법:
-#   set ENABLE_DB_INSERT=false
-#   streamlit run rese_rebuilt_stable.py
-#
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
 #   ENABLE_DB_INSERT=false  -> DB insert 미수행 + debug payload 노출
