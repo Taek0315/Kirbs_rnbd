@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-
+import html
 import streamlit as st
 from data_loader import load_job_data, search_jobs, get_job_detail
 
@@ -69,6 +69,16 @@ def inject_css():
             padding: 22px 24px;
             margin-bottom: 18px;
             box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+        }
+
+        .section-body {
+            color: #334155;
+            line-height: 1.75;
+        }
+
+        .empty-text {
+            color: #94a3b8;
+            font-size: 0.95rem;
         }
 
         .section-title {
@@ -175,32 +185,42 @@ def split_lines(text: str):
     return lines
 
 
+def render_card(title: str, content_html: str):
+    st.markdown(
+        f"""
+        <div class="section-card">
+            <div class="section-title">{html.escape(title)}</div>
+            <div class="section-body">
+                {content_html}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_text_section(title: str, text: str):
-    st.markdown(f'<div class="section-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
-
     lines = split_lines(text)
-    if not lines:
-        st.info("등록된 내용이 없습니다.")
-    else:
-        for line in lines:
-            st.markdown(f"- {line}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    if not lines:
+        render_card(title, '<div class="empty-text">등록된 내용이 없습니다.</div>')
+        return
+
+    items = "".join(f"<li>{html.escape(line)}</li>" for line in lines)
+    content_html = f"<ul>{items}</ul>"
+    render_card(title, content_html)
 
 
 def render_list_section(title: str, items):
-    st.markdown(f'<div class="section-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
-
     clean_items = [str(item).strip() for item in items if str(item).strip()]
-    if not clean_items:
-        st.info("등록된 내용이 없습니다.")
-    else:
-        for item in clean_items:
-            st.markdown(f"- {item}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    if not clean_items:
+        render_card(title, '<div class="empty-text">등록된 내용이 없습니다.</div>')
+        return
+
+    items_html = "".join(f"<li>{html.escape(item)}</li>" for item in clean_items)
+    content_html = f"<ul>{items_html}</ul>"
+    render_card(title, content_html)
 
 
 def render_job_detail(detail: dict):
