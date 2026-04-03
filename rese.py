@@ -1,13 +1,17 @@
+
 # 실행 방법:
 #   set ENABLE_DB_INSERT=false
-#   streamlit run rese.py
+#   streamlit run rese_fixed_stable.py
 #
 # 운영/병합 환경:
 #   ENABLE_DB_INSERT=true   -> DB insert 수행
 #   ENABLE_DB_INSERT=false  -> DB insert 미수행 + debug payload 노출
 #
-# 본 파일은 Streamlit toolbar/theme 전환과 기기별 color-scheme 영향을 차단하기 위해
-# 환경변수 + runtime theme guard를 함께 적용한 단일 파일 버전이다.
+# 주의:
+# - 전산센터 배포 환경에서 OS/브라우저/Streamlit 테마 차이로 인한 색상 뒤틀림을 막기 위해
+#   글로벌 dark lock 대신 light widget lock + 페이지 전용 커스텀 스타일을 사용한다.
+# - KIRBS 가이드 기준에 따라 단일 Streamlit 앱 구조, main() 진입, ENABLE_DB_INSERT 분기,
+#   DB import/호출 하단 배치를 유지한다.
 
 # -*- coding: utf-8 -*-
 import json
@@ -15,16 +19,19 @@ import os
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple
 
 # -----------------------------------------------------------------------------
-# Streamlit theme hard-lock (반드시 streamlit import 전에 적용)
+# Streamlit theme baseline (반드시 streamlit import 전에 적용)
 # -----------------------------------------------------------------------------
-os.environ["STREAMLIT_THEME_BASE"] = "dark"
-os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#2E8B57"
-os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "#0B1F38"
-os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#113459"
-os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "#F5FBFF"
-os.environ["STREAMLIT_THEME_BORDER_COLOR"] = "#6887A3"
+# 전산센터 배포 환경에서 강제 dark scheme과 브라우저 자동 dark 처리 충돌이 발생하지 않도록
+# Streamlit 기본 테마는 light로 고정하고, 실제 화면 배색은 CSS에서 제어한다.
+os.environ["STREAMLIT_THEME_BASE"] = "light"
+os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#1E4E79"
+os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "#F5FAFF"
+os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#FFFFFF"
+os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "#16324F"
+os.environ["STREAMLIT_THEME_BORDER_COLOR"] = "#D6E2EC"
 os.environ["STREAMLIT_THEME_SHOW_WIDGET_BORDER"] = "true"
 os.environ.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
 
@@ -43,7 +50,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "RSES"
 EXAM_TITLE = "자아존중감 자기평가 검사"
 EXAM_SUBTITLE = "Rosenberg Self-Esteem Scale 기반"
-EXAM_VERSION = "streamlit_1.0"
+EXAM_VERSION = "streamlit_1.2"
 
 REGION_OPTIONS = [
     "수도권",
@@ -62,14 +69,6 @@ GENDER_OPTIONS = [
 ]
 
 SCALE_LABELS = [
-    "전혀 그렇지 않다",
-    "그렇지 않은 편이다",
-    "보통이다",
-    "그런 편이다",
-    "매우 그렇다",
-]
-
-SCALE_TEXT_LABELS = [
     "전혀 그렇지 않다",
     "그렇지 않은 편이다",
     "보통이다",
@@ -113,7 +112,7 @@ PRIVACY_BULLETS = [
 ]
 
 
-def rses_level(total: int):
+def rses_level(total: int) -> Tuple[str, str]:
     if total >= 38:
         return (
             "높은 자아존중감",
@@ -130,7 +129,7 @@ def rses_level(total: int):
     )
 
 
-def result_display_content(level: str, total: int) -> dict[str, str]:
+def result_display_content(level: str, total: int) -> Dict[str, str]:
     if level == "높은 자아존중감":
         return {
             "subtitle": "현재의 자기 인식을 차분하게 잘 지지하고 있는 상태예요",
@@ -186,8 +185,8 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         ("높음", 38, 50, "band band-high"),
     ]
 
-    band_html: list[str] = []
-    scale_html: list[str] = []
+    band_html: List[str] = []
+    scale_html: List[str] = []
     for label, start, end, band_class in segments:
         band_start = max(min_score, start - 0.5)
         band_end = min(max_score, end + 0.5)
@@ -202,7 +201,7 @@ def build_bullet_graph_html(total: int, min_score: int = 10, max_score: int = 50
         )
 
     tick_values = [10, 20, 30, 40, 50]
-    ticks: list[str] = []
+    ticks: List[str] = []
     for tick in tick_values:
         tick_left = ((tick - min_score) / score_span) * 100 if score_span else 0
         ticks.append(
@@ -294,14 +293,14 @@ def build_result_section_html(
     """
 
 
-def render_bullet_list(items: list[str], css_class: str = "intro-bullets") -> str:
+def render_bullet_list(items: List[str], css_class: str = "intro-bullets") -> str:
     bullet_items = []
     for item in items:
         bullet_items.append(f"<li>{item}</li>")
     return f"<ul class='{css_class}'>" + "".join(bullet_items) + "</ul>"
 
 
-def score_from_label(label: str | None):
+def score_from_label(label: Optional[str]) -> Optional[int]:
     if not label:
         return None
     for idx, full_label in enumerate(SCALE_LABELS, start=1):
@@ -310,7 +309,7 @@ def score_from_label(label: str | None):
     return None
 
 
-def label_from_score(score: int | None):
+def label_from_score(score: Optional[int]) -> Optional[str]:
     if score is None:
         return None
     if score in SCALE_SCORES:
@@ -322,11 +321,21 @@ def reverse_score(value: int) -> int:
     return 6 - value
 
 
-def now_iso():
+def now_iso() -> str:
     return datetime.now(KST).isoformat()
 
 
-def init_state():
+def get_query_param(name: str, default: str = "0") -> str:
+    try:
+        return str(st.query_params.get(name, default))
+    except Exception:
+        try:
+            return str(st.experimental_get_query_params().get(name, [default])[0])
+        except Exception:
+            return default
+
+
+def init_state() -> None:
     if "page" not in st.session_state:
         st.session_state.page = "intro"
 
@@ -361,11 +370,8 @@ def init_state():
     if "close_attempted" not in st.session_state:
         st.session_state.close_attempted = False
 
-    if "last_q" not in st.session_state:
-        st.session_state.last_q = None
 
-
-def reset_all():
+def reset_all() -> None:
     respondent_id = str(uuid.uuid4())
     st.session_state.page = "intro"
     st.session_state.meta = {
@@ -387,7 +393,11 @@ def reset_all():
     st.session_state.result_payload = None
     st.session_state.db_insert_done = False
     st.session_state.close_attempted = False
-    st.session_state.last_q = None
+
+    for i in range(1, len(QUESTIONS) + 1):
+        radio_key = f"q{i}_radio"
+        if radio_key in st.session_state:
+            del st.session_state[radio_key]
 
 
 def normalize_phone(phone: str) -> str:
@@ -395,13 +405,13 @@ def normalize_phone(phone: str) -> str:
     return digits
 
 
-def validate_name(name: str) -> str | None:
+def validate_name(name: str) -> Optional[str]:
     if not name.strip():
         return "이름을 입력해 주세요."
     return None
 
 
-def validate_age(age: str) -> str | None:
+def validate_age(age: str) -> Optional[str]:
     age = (age or "").strip()
     if not age:
         return "연령을 입력해 주세요."
@@ -413,19 +423,19 @@ def validate_age(age: str) -> str | None:
     return None
 
 
-def validate_gender(gender: str) -> str | None:
+def validate_gender(gender: str) -> Optional[str]:
     if not (gender or "").strip():
         return "성별을 선택해 주세요."
     return None
 
 
-def validate_region(region: str) -> str | None:
+def validate_region(region: str) -> Optional[str]:
     if not (region or "").strip():
         return "거주지역을 선택해 주세요."
     return None
 
 
-def validate_phone(phone: str) -> str | None:
+def validate_phone(phone: str) -> Optional[str]:
     if not phone:
         return None
     if len(phone) not in (10, 11):
@@ -433,7 +443,7 @@ def validate_phone(phone: str) -> str | None:
     return None
 
 
-def validate_email(email: str) -> str | None:
+def validate_email(email: str) -> Optional[str]:
     email = (email or "").strip()
     if not email:
         return None
@@ -452,7 +462,7 @@ def _sanitize_csv_value(v) -> str:
     return s.strip()
 
 
-def dict_to_kv_csv(d: dict) -> str:
+def dict_to_kv_csv(d: Dict) -> str:
     if not isinstance(d, dict):
         return ""
     parts = []
@@ -461,35 +471,7 @@ def dict_to_kv_csv(d: dict) -> str:
     return ",".join(parts)
 
 
-def serialize_answers_payload(answers: dict[str, int] | None = None) -> str:
-    source = answers if answers is not None else st.session_state.answers
-    normalized = {}
-    for i in range(1, len(QUESTIONS) + 1):
-        key = f"q{i}"
-        value = source.get(key) if isinstance(source, dict) else None
-        if value in SCALE_SCORES:
-            normalized[key] = int(value)
-    return json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
-
-
-def normalize_answers_dict(raw_answers: dict | None) -> dict[str, int]:
-    normalized_answers = {}
-    source = raw_answers if isinstance(raw_answers, dict) else {}
-    for i in range(1, len(QUESTIONS) + 1):
-        key = f"q{i}"
-        value = source.get(key)
-        if value is None:
-            continue
-        try:
-            value_int = int(value)
-        except (TypeError, ValueError):
-            continue
-        if value_int in SCALE_SCORES:
-            normalized_answers[key] = value_int
-    return normalized_answers
-
-
-def build_payload():
+def build_payload() -> Tuple[Dict, List[str]]:
     total_score = 0
     missing = []
     item_scores_raw = {}
@@ -552,7 +534,7 @@ def build_payload():
     return payload, missing
 
 
-def build_exam_data(payload: dict) -> dict:
+def build_exam_data(payload: Dict) -> Dict:
     examinee = payload.get("examinee", {})
     answers = payload.get("items", {}).get("answers", {})
     result = payload.get("result", {})
@@ -574,10 +556,7 @@ def build_exam_data(payload: dict) -> dict:
         "email": examinee.get("email", ""),
     }
 
-    answers_col = {
-        f"q{i}": answers.get(f"q{i}", "")
-        for i in range(1, 11)
-    }
+    answers_col = {f"q{i}": answers.get(f"q{i}", "") for i in range(1, 11)}
 
     result_col = {
         "total": result.get("total", ""),
@@ -596,7 +575,7 @@ def build_exam_data(payload: dict) -> dict:
     return exam_data
 
 
-def render_stepper(current_page: str):
+def render_stepper(current_page: str) -> None:
     steps = [
         ("intro", "동의"),
         ("info", "정보입력"),
@@ -607,12 +586,12 @@ def render_stepper(current_page: str):
     current_idx = idx_map.get(current_page, 0)
 
     html = ["<div class='stepper'>"]
-    for i, (key, label) in enumerate(steps):
+    for i, (_key, label) in enumerate(steps):
         state = "done" if i < current_idx else "active" if i == current_idx else "todo"
         html.append(
             f"""
             <div class='step-item {state}'>
-                <div class='step-circle'>{i+1}</div>
+                <div class='step-circle'>{i + 1}</div>
                 <div class='step-label'>{label}</div>
             </div>
             """
@@ -624,7 +603,16 @@ def render_stepper(current_page: str):
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
-def inject_runtime_theme_guard():
+def inject_runtime_light_guard() -> None:
+    """
+    BaseWeb selectbox popover는 portal로 부모 document 아래에 렌더링될 수 있으므로,
+    부모 document head에 스타일을 심어 light scheme으로 고정한다.
+
+    주의:
+    - 이전 버전처럼 MutationObserver + style attribute 변경을 함께 쓰면
+      일부 환경에서 무한 루프가 발생할 수 있으므로 사용하지 않는다.
+    - 스타일 태그만 안전하게 주입하고, 짧은 재주입 타이머로 portal 렌더링 시점을 커버한다.
+    """
     components.html(
         """
         <script>
@@ -633,41 +621,18 @@ def inject_runtime_theme_guard():
             if (!pwin || !pwin.document) return;
 
             const doc = pwin.document;
-            const STYLE_ID = "kirbs-hard-theme-lock";
-
-            const ROOT_VARS = {
-                "color-scheme": "dark",
-                "--primary-color": "#2E8B57",
-                "--background-color": "#0B1F38",
-                "--secondary-background-color": "#113459",
-                "--text-color": "#F5FBFF",
-                "--link-color": "#8CC7FF",
-                "--border-color": "#6887A3",
-                "--widget-border-color": "#6887A3",
-                "--font": "\"Source Sans Pro\", sans-serif"
-            };
+            const STYLE_ID = "kirbs-light-widget-lock";
 
             const cssText = `
                 :root {
-                    color-scheme: dark !important;
-                    --primary-color: #2E8B57 !important;
-                    --background-color: #0B1F38 !important;
-                    --secondary-background-color: #113459 !important;
-                    --text-color: #F5FBFF !important;
-                    --link-color: #8CC7FF !important;
-                    --border-color: #6887A3 !important;
-                    --widget-border-color: #6887A3 !important;
+                    color-scheme: light !important;
                 }
 
-                html,
-                body,
-                #root,
-                .stApp,
+                html, body, #root, .stApp,
                 [data-testid="stAppViewContainer"],
                 [data-testid="stMain"],
                 [data-testid="stHeader"] {
-                    color-scheme: dark !important;
-                    background: #0B1F38 !important;
+                    color-scheme: light !important;
                 }
 
                 [data-testid="stToolbar"],
@@ -679,224 +644,97 @@ def inject_runtime_theme_guard():
                     pointer-events: none !important;
                 }
 
-                body,
-                body * {
-                    scrollbar-color: #6887A3 #113459;
+                [data-testid="stTextInput"] [data-baseweb="input"] > div,
+                [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+                input:not([type="radio"]):not([type="checkbox"]),
+                textarea {
+                    color-scheme: light !important;
                 }
 
-                body [data-baseweb="input"] > div,
-                body [data-baseweb="select"] > div,
-                body textarea,
-                body input:not([type="radio"]):not([type="checkbox"]) {
-                    color-scheme: dark !important;
+                [data-testid="stTextInput"] [data-baseweb="input"] > div,
+                [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+                    background: #FFFFFF !important;
+                    border: 1px solid #A9C2D9 !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 6px 18px rgba(8, 32, 58, 0.10) !important;
                 }
 
-                body [data-baseweb="popover"],
-                body [data-baseweb="popover"] > div,
-                body ul[role="listbox"],
-                body div[role="listbox"] {
-                    background: #0F3158 !important;
-                    border: 1px solid rgba(214, 226, 236, 0.18) !important;
+                [data-testid="stTextInput"] input,
+                [data-testid="stTextInput"] textarea,
+                [data-testid="stSelectbox"] [data-baseweb="select"] input,
+                [data-testid="stSelectbox"] [data-baseweb="select"] span,
+                [data-testid="stSelectbox"] [data-baseweb="select"] div {
+                    color: #16324F !important;
+                    -webkit-text-fill-color: #16324F !important;
+                    opacity: 1 !important;
+                }
+
+                [data-testid="stTextInput"] input::placeholder,
+                [data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
+                [data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
+                    color: #6C84A0 !important;
+                    -webkit-text-fill-color: #6C84A0 !important;
+                    opacity: 1 !important;
+                }
+
+                [data-testid="stSelectbox"] svg {
+                    fill: #365C81 !important;
+                    color: #365C81 !important;
+                }
+
+                [data-baseweb="popover"],
+                [data-baseweb="popover"] > div,
+                ul[role="listbox"],
+                div[role="listbox"] {
+                    background: #FFFFFF !important;
+                    border: 1px solid #C7D8E7 !important;
                     border-radius: 14px !important;
-                    box-shadow: 0 16px 30px rgba(4, 18, 34, 0.32) !important;
+                    box-shadow: 0 18px 34px rgba(8, 32, 58, 0.18) !important;
                 }
 
-                body li[role="option"],
-                body div[role="option"] {
-                    background: transparent !important;
-                    color: #F6FBFF !important;
-                    -webkit-text-fill-color: #F6FBFF !important;
+                li[role="option"],
+                div[role="option"] {
+                    background: #FFFFFF !important;
+                    color: #16324F !important;
+                    -webkit-text-fill-color: #16324F !important;
                 }
 
-                body li[role="option"] *,
-                body div[role="option"] * {
+                li[role="option"] *,
+                div[role="option"] * {
                     color: inherit !important;
                     -webkit-text-fill-color: inherit !important;
                     opacity: 1 !important;
                 }
 
-                body li[role="option"]:hover,
-                body div[role="option"]:hover {
-                    background: #1A436D !important;
-                }
-
-                body li[role="option"][aria-selected="true"],
-                body div[role="option"][aria-selected="true"] {
-                    background: #29557F !important;
-                    color: #FFFFFF !important;
-                    -webkit-text-fill-color: #FFFFFF !important;
+                li[role="option"]:hover,
+                div[role="option"]:hover,
+                li[role="option"][aria-selected="true"],
+                div[role="option"][aria-selected="true"] {
+                    background: #EAF3FB !important;
+                    color: #16324F !important;
+                    -webkit-text-fill-color: #16324F !important;
                 }
             `;
 
-            function forceStyle(el, prop, value) {
-                if (!el) return;
-                el.style.setProperty(prop, value, "important");
-            }
-
-            function ensureStyle() {
+            function mountStyle() {
+                if (!doc.head) return;
                 let styleEl = doc.getElementById(STYLE_ID);
                 if (!styleEl) {
                     styleEl = doc.createElement("style");
                     styleEl.id = STYLE_ID;
+                    doc.head.appendChild(styleEl);
                 }
-                styleEl.textContent = cssText;
-                doc.head.appendChild(styleEl);
-            }
-
-            function lockRootTheme() {
-                const root = doc.documentElement;
-                const body = doc.body;
-
-                Object.entries(ROOT_VARS).forEach(([key, value]) => {
-                    forceStyle(root, key, value);
-                    forceStyle(body, key, value);
-                });
-
-                forceStyle(root, "background", "#0B1F38");
-                forceStyle(body, "background", "#0B1F38");
-                forceStyle(root, "color", "#F5FBFF");
-                forceStyle(body, "color", "#F5FBFF");
-                forceStyle(root, "accent-color", "#2E8B57");
-                forceStyle(body, "accent-color", "#2E8B57");
-
-                root.setAttribute("data-theme", "dark");
-                body.setAttribute("data-theme", "dark");
-            }
-
-            function hideToolbar() {
-                [
-                    '[data-testid="stToolbar"]',
-                    '[data-testid="stDecoration"]',
-                    '[data-testid="stStatusWidget"]',
-                    'header button[kind="header"]'
-                ].forEach((selector) => {
-                    doc.querySelectorAll(selector).forEach((el) => {
-                        forceStyle(el, "display", "none");
-                        forceStyle(el, "visibility", "hidden");
-                        forceStyle(el, "pointer-events", "none");
-                    });
-                });
-            }
-
-            function lockTextInputs() {
-                doc.querySelectorAll('div[data-testid="stTextInput"] [data-baseweb="input"] > div').forEach((el) => {
-                    forceStyle(el, "background", "#113459");
-                    forceStyle(el, "border", "1px solid #6887A3");
-                    forceStyle(el, "border-radius", "16px");
-                    forceStyle(el, "box-shadow", "inset 0 1px 0 rgba(255,255,255,0.05)");
-                });
-
-                doc.querySelectorAll('div[data-testid="stTextInput"] input, div[data-testid="stTextInput"] textarea').forEach((el) => {
-                    forceStyle(el, "color", "#F5FBFF");
-                    forceStyle(el, "caret-color", "#F5FBFF");
-                    forceStyle(el, "background", "transparent");
-                    forceStyle(el, "-webkit-text-fill-color", "#F5FBFF");
-                    if (!el.dataset.kirbsLocked) {
-                        el.setAttribute("autocomplete", "off");
-                        el.setAttribute("autocorrect", "off");
-                        el.setAttribute("autocapitalize", "none");
-                        el.setAttribute("spellcheck", "false");
-                        el.dataset.kirbsLocked = "1";
-                    }
-                });
-            }
-
-            function lockSelectboxes() {
-                doc.querySelectorAll('div[data-testid="stSelectbox"] [data-baseweb="select"] > div').forEach((el) => {
-                    forceStyle(el, "background", "#113459");
-                    forceStyle(el, "border", "1px solid #6887A3");
-                    forceStyle(el, "border-radius", "16px");
-                    forceStyle(el, "min-height", "46px");
-                    forceStyle(el, "box-shadow", "inset 0 1px 0 rgba(255,255,255,0.05)");
-                });
-
-                doc.querySelectorAll('div[data-testid="stSelectbox"] [data-baseweb="select"] input, div[data-testid="stSelectbox"] [data-baseweb="select"] span, div[data-testid="stSelectbox"] [data-baseweb="select"] div').forEach((el) => {
-                    forceStyle(el, "color", "#F5FBFF");
-                    forceStyle(el, "opacity", "1");
-                    forceStyle(el, "-webkit-text-fill-color", "#F5FBFF");
-                });
-
-                doc.querySelectorAll('div[data-testid="stSelectbox"] svg').forEach((el) => {
-                    forceStyle(el, "fill", "#D7E8F7");
-                    forceStyle(el, "color", "#D7E8F7");
-                });
-            }
-
-            function lockLabels() {
-                const selectors = [
-                    '[data-testid="stWidgetLabel"] p',
-                    '[data-testid="stWidgetLabel"] span',
-                    'div[data-testid="stTextInput"] label p',
-                    'div[data-testid="stSelectbox"] label p',
-                    'div[data-testid="stCheckbox"] label p',
-                    'div[data-testid="stCheckbox"] label span',
-                    'div[data-testid="stNumberInput"] label p',
-                    'div[data-testid="stCaptionContainer"] p'
-                ];
-
-                doc.querySelectorAll(selectors.join(',')).forEach((el) => {
-                    forceStyle(el, "color", "#F4F8FD");
-                    forceStyle(el, "opacity", "1");
-                    forceStyle(el, "text-shadow", "none");
-                    forceStyle(el, "filter", "none");
-                    forceStyle(el, "-webkit-text-fill-color", "#F4F8FD");
-                });
-            }
-
-            function lockListbox() {
-                doc.querySelectorAll('[data-baseweb="popover"], [data-baseweb="popover"] > div, ul[role="listbox"], div[role="listbox"]').forEach((el) => {
-                    forceStyle(el, "background", "#0F3158");
-                    forceStyle(el, "border", "1px solid rgba(214, 226, 236, 0.18)");
-                    forceStyle(el, "border-radius", "14px");
-                    forceStyle(el, "box-shadow", "0 16px 30px rgba(4,18,34,0.32)");
-                });
-
-                doc.querySelectorAll('li[role="option"], div[role="option"]').forEach((el) => {
-                    forceStyle(el, "background", "transparent");
-                    forceStyle(el, "color", "#F6FBFF");
-                    forceStyle(el, "-webkit-text-fill-color", "#F6FBFF");
-                });
-            }
-
-            function applyAll() {
-                ensureStyle();
-                lockRootTheme();
-                hideToolbar();
-                lockLabels();
-                lockTextInputs();
-                lockSelectboxes();
-                lockListbox();
-            }
-
-            applyAll();
-
-            if (!pwin.__kirbsHardThemeObserver) {
-                pwin.__kirbsHardThemeObserver = new MutationObserver(() => applyAll());
-                pwin.__kirbsHardThemeObserver.observe(doc.documentElement, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    attributeFilter: ["class", "style", "data-theme"]
-                });
-            }
-
-            if (pwin.matchMedia) {
-                const media = pwin.matchMedia('(prefers-color-scheme: dark)');
-                if (!pwin.__kirbsMediaBound) {
-                    const reapply = () => applyAll();
-                    if (media.addEventListener) {
-                        media.addEventListener('change', reapply);
-                    } else if (media.addListener) {
-                        media.addListener(reapply);
-                    }
-                    pwin.__kirbsMediaBound = true;
+                if (styleEl.textContent !== cssText) {
+                    styleEl.textContent = cssText;
                 }
             }
 
-            setTimeout(applyAll, 0);
-            setTimeout(applyAll, 150);
-            setTimeout(applyAll, 500);
-            setTimeout(applyAll, 1200);
+            mountStyle();
+            setTimeout(mountStyle, 0);
+            setTimeout(mountStyle, 120);
+            setTimeout(mountStyle, 350);
+            setTimeout(mountStyle, 800);
+            setTimeout(mountStyle, 1500);
         })();
         </script>
         """,
@@ -904,47 +742,36 @@ def inject_runtime_theme_guard():
     )
 
 
-def inject_css():
+def inject_css() -> None:
     st.markdown(
         """
         <style>
         :root {
-            color-scheme: dark;
-            --navy: #0F2747;
+            color-scheme: light !important;
             --navy-deep: #0B1F38;
+            --navy: #12355A;
             --blue: #1E4E79;
+            --blue-strong: #2E618F;
             --surface: #F5FAFF;
             --surface-soft: #F8FBFF;
             --card: #FFFFFF;
             --border: #D6E2EC;
+            --border-strong: #A9C2D9;
             --text: #16324F;
             --muted: #4F6B85;
             --green: #2E8B57;
             --green-soft: #EAF7F0;
-            --widget-bg: #102F52;
-            --widget-bg-soft: #113459;
-            --widget-border: #6887A3;
-            --widget-border-strong: #81A9C8;
-            --widget-text: #F5FBFF;
-            --widget-label: #F4F8FD;
-            --widget-placeholder: #C6D8E9;
-            --widget-menu-bg: #0F3158;
-            --widget-menu-hover: #1A436D;
-            --widget-menu-selected: #29557F;
+            --placeholder: #6C84A0;
+            --shadow-soft: 0 14px 36px rgba(8, 32, 58, 0.12);
+            --shadow-card: 0 18px 42px rgba(8, 32, 58, 0.18);
         }
 
-        @media (forced-colors: active) {
-            html, body, .stApp, .stApp *, input, textarea, select, button, [role="option"], [data-baseweb="select"] {
-                forced-color-adjust: none !important;
-            }
-        }
-
-        html, body, .stApp,
+        html, body,
+        .stApp,
         .stApp [data-testid="stAppViewContainer"],
         .stApp [data-testid="stHeader"],
-        .stApp [data-testid="stToolbar"],
-        .stApp [data-testid="stDecoration"] {
-            color-scheme: dark !important;
+        .stApp [data-testid="stMain"] {
+            color-scheme: light !important;
             background: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 22%, #163B63 100%) !important;
         }
 
@@ -971,16 +798,16 @@ def inject_css():
         }
 
         .card {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: var(--card) !important;
+            border: 1px solid var(--border) !important;
             border-radius: 24px;
             padding: 24px;
-            box-shadow: 0 18px 42px rgba(8, 32, 58, 0.18);
+            box-shadow: var(--shadow-card);
             margin-bottom: 18px;
         }
 
         .card.soft {
-            background: var(--surface-soft);
+            background: var(--surface-soft) !important;
         }
 
         .badge {
@@ -994,17 +821,28 @@ def inject_css():
             margin-right: 8px;
             margin-bottom: 8px;
             border: 1px solid rgba(30, 78, 121, 0.18);
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .title-lg,
         .title-md,
         .question-title,
-        .result-score {
-            color: var(--text);
-            opacity: 1;
-            text-shadow: none;
-            filter: none;
-            -webkit-text-fill-color: currentColor;
+        .result-score,
+        .card h1,
+        .card h2,
+        .card h3,
+        .card p,
+        .card li,
+        .result-card h1,
+        .result-card h2,
+        .result-card p,
+        .support-card h2,
+        .support-card p {
+            color: var(--text) !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            filter: none !important;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .title-lg {
@@ -1024,9 +862,8 @@ def inject_css():
         .text {
             font-size: 15px;
             line-height: 1.7;
-            color: var(--text);
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            color: var(--text) !important;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .muted,
@@ -1034,9 +871,9 @@ def inject_css():
         .progress-label {
             font-size: 13px;
             line-height: 1.7;
-            color: var(--muted);
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            color: var(--muted) !important;
+            -webkit-text-fill-color: currentColor !important;
+            opacity: 1 !important;
         }
 
         .note-box {
@@ -1059,11 +896,10 @@ def inject_css():
         .intro-subtitle {
             font-size: 14px;
             font-weight: 800;
-            color: var(--blue);
+            color: var(--blue) !important;
             letter-spacing: 0.01em;
             margin: 0 0 10px;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .intro-bullets {
@@ -1074,14 +910,13 @@ def inject_css():
         }
 
         .intro-bullets li {
-            color: var(--text);
+            color: var(--text) !important;
             font-size: 15px;
             line-height: 1.72;
             padding-left: 0.1rem;
             word-break: keep-all;
             overflow-wrap: anywhere;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .intro-note,
@@ -1090,8 +925,7 @@ def inject_css():
             padding: 14px 16px;
             font-size: 13px;
             line-height: 1.7;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .intro-note {
@@ -1147,7 +981,7 @@ def inject_css():
             background: rgba(255, 255, 255, 0.10);
             color: #D8E7F5;
             backdrop-filter: blur(6px);
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .step-item.active .step-circle {
@@ -1169,7 +1003,7 @@ def inject_css():
             font-weight: 700;
             text-align: center;
             opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .step-item.active .step-label,
@@ -1218,13 +1052,6 @@ def inject_css():
             border-radius: 999px;
         }
 
-        .result-level {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--green);
-            margin: 6px 0 0;
-        }
-
         .result-stack {
             display: flex;
             flex-direction: column;
@@ -1271,12 +1098,11 @@ def inject_css():
         }
 
         .result-subcopy {
-            color: var(--muted);
+            color: var(--muted) !important;
             font-size: 14px;
             line-height: 1.7;
             margin: 8px 0 0;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .score-hero {
@@ -1305,17 +1131,16 @@ def inject_css():
             font-size: 13px;
             font-weight: 800;
             color: var(--green);
-            letter-spacing: 0.01em;
         }
 
         .score-big {
             font-size: clamp(52px, 9vw, 78px);
             line-height: 0.95;
             font-weight: 900;
-            color: var(--navy);
+            color: var(--navy-deep);
             letter-spacing: -0.04em;
             margin: 0;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .score-unit {
@@ -1323,7 +1148,7 @@ def inject_css():
             color: var(--blue);
             font-weight: 800;
             margin-left: 6px;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .result-label-chip {
@@ -1337,13 +1162,13 @@ def inject_css():
             color: var(--green);
             font-size: 14px;
             font-weight: 800;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .result-summary {
             font-size: 16px;
             line-height: 1.75;
-            color: var(--text);
+            color: var(--text) !important;
             margin: 0;
             text-align: left;
             align-self: flex-end;
@@ -1351,19 +1176,18 @@ def inject_css():
             min-width: 0;
             width: auto;
             max-width: none;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .result-highlight-line {
             margin: 16px 0 0;
             padding-left: 14px;
             border-left: 4px solid rgba(46, 139, 87, 0.65);
-            color: #245F49;
+            color: #245F49 !important;
             font-size: 15px;
             line-height: 1.75;
             font-weight: 700;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-graph-card {
@@ -1384,16 +1208,18 @@ def inject_css():
         }
 
         .bullet-graph-title {
-            color: var(--text);
+            color: var(--text) !important;
             font-size: 16px;
             font-weight: 800;
             margin-bottom: 2px;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-graph-caption {
-            color: var(--muted);
+            color: var(--muted) !important;
             font-size: 13px;
             line-height: 1.6;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-graph-chip {
@@ -1403,6 +1229,7 @@ def inject_css():
             color: var(--blue);
             font-size: 13px;
             font-weight: 800;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-scale {
@@ -1416,8 +1243,9 @@ def inject_css():
             transform: translateX(-50%);
             font-size: 12px;
             font-weight: 800;
-            color: var(--muted);
+            color: var(--muted) !important;
             white-space: nowrap;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-track-wrap {
@@ -1441,12 +1269,6 @@ def inject_css():
             border-radius: 999px;
             background: transparent;
             pointer-events: none;
-        }
-
-        .band-low,
-        .band-mid,
-        .band-high {
-            background: transparent;
         }
 
         .bullet-fill {
@@ -1495,11 +1317,12 @@ def inject_css():
             justify-content: center;
             padding: 6px 10px;
             border-radius: 999px;
-            background: var(--navy);
+            background: var(--navy-deep);
             color: #FFFFFF;
             font-size: 12px;
             font-weight: 800;
             white-space: nowrap;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .bullet-ticks {
@@ -1525,9 +1348,10 @@ def inject_css():
 
         .bullet-tick-text {
             display: block;
-            color: var(--muted);
+            color: var(--muted) !important;
             font-size: 11px;
             font-weight: 700;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .support-card {
@@ -1558,21 +1382,19 @@ def inject_css():
         }
 
         .support-title {
-            color: var(--text);
+            color: var(--text) !important;
             font-size: 18px;
             font-weight: 800;
             margin: 0;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .support-copy {
-            color: var(--muted);
+            color: var(--muted) !important;
             font-size: 14px;
             line-height: 1.85;
             margin: 0;
-            opacity: 1;
-            -webkit-text-fill-color: currentColor;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         .support-copy-secondary {
@@ -1600,12 +1422,12 @@ def inject_css():
         }
 
         .question-card {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: var(--card) !important;
+            border: 1px solid var(--border) !important;
             border-radius: 22px;
             padding: 22px;
             margin-bottom: 14px;
-            box-shadow: 0 14px 36px rgba(8, 32, 58, 0.12);
+            box-shadow: var(--shadow-soft);
         }
 
         .survey-actions {
@@ -1614,23 +1436,19 @@ def inject_css():
             margin-bottom: 18px;
         }
 
-        .survey-payload-bridge,
-        div[data-testid="stTextArea"]:has(textarea[aria-label="survey_payload_bridge"]) {
-            display: none;
-        }
-
         .stApp [data-testid="stWidgetLabel"] p,
         .stApp [data-testid="stWidgetLabel"] span,
         .stApp div[data-testid="stTextInput"] label p,
         .stApp div[data-testid="stSelectbox"] label p,
         .stApp div[data-testid="stCheckbox"] label p,
         .stApp div[data-testid="stCheckbox"] label span,
-        .stApp div[data-testid="stNumberInput"] label p {
-            color: var(--widget-label) !important;
+        .stApp div[data-testid="stNumberInput"] label p,
+        .stApp div[data-testid="stCaptionContainer"] p {
+            color: #F4F8FD !important;
             opacity: 1 !important;
             text-shadow: none !important;
             filter: none !important;
-            -webkit-text-fill-color: var(--widget-label) !important;
+            -webkit-text-fill-color: #F4F8FD !important;
             font-weight: 700 !important;
             line-height: 1.55 !important;
         }
@@ -1645,43 +1463,53 @@ def inject_css():
         }
 
         .stApp div[data-testid="stTextInput"],
-        .stApp div[data-testid="stTextInput"] * {
-            color-scheme: dark !important;
+        .stApp div[data-testid="stTextInput"] *,
+        .stApp div[data-testid="stSelectbox"],
+        .stApp div[data-testid="stSelectbox"] * {
+            color-scheme: light !important;
         }
 
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"],
-        .stApp div[data-testid="stTextInput"] > div {
+        .stApp div[data-testid="stTextInput"] > div,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"],
+        .stApp div[data-testid="stSelectbox"] > div {
             background: transparent !important;
         }
 
         .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div,
-        .stApp div[data-testid="stTextInput"] input {
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            background-color: #FFFFFF !important;
+            border: 1px solid var(--border-strong) !important;
             border-radius: 16px !important;
+            min-height: 48px !important;
+            box-shadow: 0 6px 18px rgba(8, 32, 58, 0.10) !important;
         }
 
-        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div {
-            background-color: var(--widget-bg-soft) !important;
-            border: 1px solid var(--widget-border) !important;
-            min-height: 46px !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div:focus-within,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+            border-color: var(--blue-strong) !important;
+            box-shadow: 0 0 0 2px rgba(46, 97, 143, 0.16) !important;
         }
 
-        .stApp div[data-testid="stTextInput"] [data-baseweb="input"] > div:focus-within {
-            border-color: var(--widget-border-strong) !important;
-            box-shadow: 0 0 0 1px rgba(129, 169, 200, 0.72) !important;
-        }
-
-        .stApp div[data-testid="stTextInput"] input {
-            color: var(--widget-text) !important;
-            caret-color: var(--widget-text) !important;
-            -webkit-text-fill-color: var(--widget-text) !important;
+        .stApp div[data-testid="stTextInput"] input,
+        .stApp div[data-testid="stTextInput"] textarea,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] span,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div {
+            color: var(--text) !important;
+            caret-color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
             background: transparent !important;
+            opacity: 1 !important;
         }
 
-        .stApp div[data-testid="stTextInput"] input::placeholder {
-            color: var(--widget-placeholder) !important;
+        .stApp div[data-testid="stTextInput"] input::placeholder,
+        .stApp div[data-testid="stTextInput"] textarea::placeholder,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
+        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
+            color: var(--placeholder) !important;
             opacity: 1 !important;
-            -webkit-text-fill-color: var(--widget-placeholder) !important;
+            -webkit-text-fill-color: var(--placeholder) !important;
         }
 
         .stApp div[data-testid="stTextInput"] input:-webkit-autofill,
@@ -1690,70 +1518,33 @@ def inject_css():
         .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill,
         .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill:hover,
         .stApp div[data-testid="stTextInput"] textarea:-webkit-autofill:focus {
-            -webkit-text-fill-color: var(--widget-text) !important;
-            caret-color: var(--widget-text) !important;
-            box-shadow: 0 0 0px 1000px var(--widget-bg-soft) inset !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--text) !important;
+            box-shadow: 0 0 0px 1000px #FFFFFF inset !important;
             transition: background-color 99999s ease-out 0s !important;
             border-radius: 16px !important;
         }
 
-        .stApp div[data-testid="stSelectbox"],
-        .stApp div[data-testid="stSelectbox"] * {
-            color-scheme: dark !important;
-        }
-
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] {
-            background: transparent !important;
-        }
-
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
-            background-color: var(--widget-bg-soft) !important;
-            border: 1px solid var(--widget-border) !important;
-            border-radius: 16px !important;
-            min-height: 46px !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-        }
-
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
-            border-color: var(--widget-border-strong) !important;
-            box-shadow: 0 0 0 1px rgba(129, 169, 200, 0.72) !important;
-        }
-
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] span,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div {
-            color: var(--widget-text) !important;
-            opacity: 1 !important;
-            -webkit-text-fill-color: var(--widget-text) !important;
-        }
-
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] input::placeholder,
-        .stApp div[data-testid="stSelectbox"] [data-baseweb="select"] div[aria-hidden="true"] {
-            color: var(--widget-placeholder) !important;
-            -webkit-text-fill-color: var(--widget-placeholder) !important;
-            opacity: 1 !important;
-        }
-
         .stApp div[data-testid="stSelectbox"] svg {
-            fill: #D7E8F7 !important;
-            color: #D7E8F7 !important;
+            fill: var(--blue-strong) !important;
+            color: var(--blue-strong) !important;
         }
 
         body [data-baseweb="popover"],
         body [data-baseweb="popover"] > div,
         body ul[role="listbox"],
         body div[role="listbox"] {
-            background: var(--widget-menu-bg) !important;
-            border: 1px solid rgba(214, 226, 236, 0.18) !important;
+            background: #FFFFFF !important;
+            border: 1px solid #C7D8E7 !important;
             border-radius: 14px !important;
-            box-shadow: 0 16px 30px rgba(4, 18, 34, 0.32) !important;
+            box-shadow: 0 18px 34px rgba(8, 32, 58, 0.18) !important;
         }
 
         body li[role="option"],
         body div[role="option"] {
-            color: #F6FBFF !important;
-            -webkit-text-fill-color: #F6FBFF !important;
-            background: transparent !important;
+            color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
+            background: #FFFFFF !important;
         }
 
         body li[role="option"] *,
@@ -1764,21 +1555,12 @@ def inject_css():
         }
 
         body li[role="option"]:hover,
-        body div[role="option"]:hover {
-            background: var(--widget-menu-hover) !important;
-        }
-
+        body div[role="option"]:hover,
         body li[role="option"][aria-selected="true"],
         body div[role="option"][aria-selected="true"] {
-            background: var(--widget-menu-selected) !important;
-            color: #FFFFFF !important;
-            -webkit-text-fill-color: #FFFFFF !important;
-        }
-
-        .stApp div[data-testid="stCaptionContainer"] p {
-            color: #DCEAF8 !important;
-            opacity: 1 !important;
-            -webkit-text-fill-color: #DCEAF8 !important;
+            background: #EAF3FB !important;
+            color: var(--text) !important;
+            -webkit-text-fill-color: var(--text) !important;
         }
 
         .stApp div[data-testid="stAlertContainer"] p,
@@ -1866,9 +1648,7 @@ def inject_css():
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 20px rgba(15, 39, 71, 0.09) !important;
         }
 
-        div[data-testid="stRadio"] [role="radiogroup"] > div > label[data-selected="true"],
         div[data-testid="stRadio"] [role="radiogroup"] > div > label:has(input[type="radio"]:checked),
-        div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"],
         div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked),
         div[data-testid="stRadio"] [data-baseweb="radio"]:has(input[type="radio"]:checked) {
             border-color: #1F6FB2 !important;
@@ -1930,9 +1710,7 @@ def inject_css():
             transition: color 0.16s ease, font-weight 0.16s ease !important;
         }
 
-        div[data-testid="stRadio"] [role="radiogroup"] > div > label[data-selected="true"] p,
         div[data-testid="stRadio"] [role="radiogroup"] > div > label:has(input[type="radio"]:checked) p,
-        div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] p,
         div[data-testid="stRadio"] [role="radiogroup"] > label:has(input[type="radio"]:checked) p,
         div[data-testid="stRadio"] [data-baseweb="radio"]:has(input[type="radio"]:checked) p {
             color: #0D3F68 !important;
@@ -1952,6 +1730,7 @@ def inject_css():
             background: #FFFFFF;
             color: var(--text);
             font-weight: 700;
+            -webkit-text-fill-color: currentColor !important;
         }
 
         div[data-testid="stButton"] > button[kind="primary"] {
@@ -1959,6 +1738,7 @@ def inject_css():
             color: #FFFFFF;
             border: none;
             box-shadow: 0 14px 24px rgba(30, 78, 121, 0.20);
+            -webkit-text-fill-color: currentColor !important;
         }
 
         div[data-testid="stButton"] > button:hover {
@@ -2026,7 +1806,7 @@ def inject_css():
     )
 
 
-def page_intro():
+def page_intro() -> None:
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
@@ -2084,6 +1864,7 @@ def page_intro():
     consent = st.checkbox(
         "위 안내를 확인했으며, 개인정보 수집·이용 및 검사 진행에 동의합니다.",
         value=st.session_state.meta["consent"],
+        key="intro_consent_checkbox",
     )
     st.session_state.meta["consent"] = consent
 
@@ -2099,7 +1880,7 @@ def page_intro():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_info():
+def page_info() -> None:
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
@@ -2116,32 +1897,57 @@ def page_info():
         unsafe_allow_html=True,
     )
 
+    gender_options = [""] + GENDER_OPTIONS
+    region_options = [""] + REGION_OPTIONS
+
     info_row_1_col_1, info_row_1_col_2 = st.columns(2)
     with info_row_1_col_1:
-        name = st.text_input("이름", value=st.session_state.examinee.get("name", ""))
+        name = st.text_input(
+            "이름",
+            value=st.session_state.examinee.get("name", ""),
+            placeholder="이름을 입력해 주세요",
+            key="info_name",
+        )
     with info_row_1_col_2:
+        current_gender = st.session_state.examinee.get("gender", "")
         gender = st.selectbox(
             "성별",
-            options=[""] + GENDER_OPTIONS,
-            index=([""] + GENDER_OPTIONS).index(st.session_state.examinee.get("gender", ""))
-            if st.session_state.examinee.get("gender", "") in ([""] + GENDER_OPTIONS)
-            else 0,
+            options=gender_options,
+            index=gender_options.index(current_gender) if current_gender in gender_options else 0,
+            format_func=lambda x: "선택해 주세요" if x == "" else x,
+            key="info_gender",
         )
 
     info_row_2_col_1, info_row_2_col_2 = st.columns(2)
     with info_row_2_col_1:
-        age = st.text_input("연령", value=st.session_state.examinee.get("age", ""))
+        age = st.text_input(
+            "연령",
+            value=st.session_state.examinee.get("age", ""),
+            placeholder="숫자만 입력해 주세요",
+            key="info_age",
+        )
     with info_row_2_col_2:
+        current_region = st.session_state.examinee.get("region", "")
         region = st.selectbox(
             "거주지역",
-            options=[""] + REGION_OPTIONS,
-            index=([""] + REGION_OPTIONS).index(st.session_state.examinee.get("region", ""))
-            if st.session_state.examinee.get("region", "") in ([""] + REGION_OPTIONS)
-            else 0,
+            options=region_options,
+            index=region_options.index(current_region) if current_region in region_options else 0,
+            format_func=lambda x: "선택해 주세요" if x == "" else x,
+            key="info_region",
         )
 
-    phone_input = st.text_input("휴대폰번호 (선택)", value=st.session_state.examinee.get("phone", ""))
-    email = st.text_input("이메일 (선택)", value=st.session_state.examinee.get("email", ""))
+    phone_input = st.text_input(
+        "휴대폰번호 (선택)",
+        value=st.session_state.examinee.get("phone", ""),
+        placeholder="숫자만 입력해 주세요",
+        key="info_phone",
+    )
+    email = st.text_input(
+        "이메일 (선택)",
+        value=st.session_state.examinee.get("email", ""),
+        placeholder="example@email.com",
+        key="info_email",
+    )
 
     normalized_phone = normalize_phone(phone_input)
 
@@ -2162,16 +1968,12 @@ def page_info():
     email_error = validate_email(email)
 
     missing_fields = []
-
     if name_error:
         missing_fields.append("이름")
-
     if gender_error:
         missing_fields.append("성별")
-
     if age_error:
         missing_fields.append("연령")
-
     if region_error:
         missing_fields.append("거주지역")
 
@@ -2184,30 +1986,25 @@ def page_info():
     if email_error:
         st.warning(email_error)
 
-    all_valid = (
-        len(missing_fields) == 0
-        and phone_error is None
-        and email_error is None
-    )
+    all_valid = len(missing_fields) == 0 and phone_error is None and email_error is None
 
     c1, c2 = st.columns([1, 1])
     with c1:
-        if st.button("이전", use_container_width=True):
+        if st.button("이전", use_container_width=True, key="info_prev"):
             st.session_state.page = "intro"
             st.rerun()
     with c2:
-        if st.button("다음", type="primary", disabled=not all_valid, use_container_width=True):
+        if st.button("다음", type="primary", disabled=not all_valid, use_container_width=True, key="info_next"):
             st.session_state.page = "survey"
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_survey(dev_mode: bool = False):
+def page_survey(dev_mode: bool = False) -> None:
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
-    payload, missing = build_payload()
     answered_count = len(st.session_state.answers)
     progress_pct = int((answered_count / len(QUESTIONS)) * 100)
 
@@ -2239,6 +2036,7 @@ def page_survey(dev_mode: bool = False):
             f"<section class='question-card'><div class='question-title'>{i}. {question}</div></section>",
             unsafe_allow_html=True,
         )
+
         selected_label = st.radio(
             f"{i}. {question}",
             options=SCALE_LABELS,
@@ -2261,8 +2059,8 @@ def page_survey(dev_mode: bool = False):
 
     st.markdown("<div class='survey-actions'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
-    prev_clicked = c1.button("이전", use_container_width=True)
-    submit_clicked = c2.button("결과 보기", type="primary", use_container_width=True)
+    prev_clicked = c1.button("이전", use_container_width=True, key="survey_prev")
+    submit_clicked = c2.button("결과 보기", type="primary", use_container_width=True, key="survey_submit")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if prev_clicked:
@@ -2270,19 +2068,16 @@ def page_survey(dev_mode: bool = False):
         st.rerun()
 
     if submit_clicked:
-        payload, missing = build_payload()
         all_done = len(missing) == 0
-
         if all_done:
             st.session_state.meta["submitted_ts"] = now_iso()
-            payload, missing = build_payload()
+            payload, _ = build_payload()
             st.session_state.result_payload = payload
             st.session_state.page = "result"
             st.rerun()
         else:
             st.error("모든 문항에 응답해 주세요.")
 
-    payload, missing = build_payload()
     if dev_mode:
         st.caption("개발 모드 payload")
         st.code(json.dumps(payload, ensure_ascii=False, indent=2), language="json")
@@ -2290,7 +2085,7 @@ def page_survey(dev_mode: bool = False):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_result(dev_mode: bool = False):
+def page_result(dev_mode: bool = False) -> None:
     st.markdown("<div class='page-wrap'>", unsafe_allow_html=True)
     render_stepper(st.session_state.page)
 
@@ -2326,6 +2121,7 @@ def page_result(dev_mode: bool = False):
         guidance=guidance,
         bullet_graph_html=bullet_graph_html,
     )
+
     st.markdown(
         "<div class='result-stack'>"
         f"{result_section_html}"
@@ -2335,11 +2131,11 @@ def page_result(dev_mode: bool = False):
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("검사 다시하기", type="primary", use_container_width=True):
+        if st.button("검사 다시하기", type="primary", use_container_width=True, key="result_restart"):
             reset_all()
             st.rerun()
     with c2:
-        if st.button("닫기", use_container_width=True):
+        if st.button("닫기", use_container_width=True, key="result_close"):
             st.session_state.close_attempted = True
             components.html(
                 """
@@ -2350,6 +2146,7 @@ def page_result(dev_mode: bool = False):
                 height=0,
             )
             st.rerun()
+
     st.markdown("</div></div>", unsafe_allow_html=True)
 
     if st.session_state.close_attempted:
@@ -2364,13 +2161,12 @@ def page_result(dev_mode: bool = False):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def main():
+def main() -> None:
     init_state()
-    inject_runtime_theme_guard()
+    inject_runtime_light_guard()
     inject_css()
 
-    params = st.query_params
-    dev_mode = str(params.get("dev", "0")) == "1"
+    dev_mode = get_query_param("dev", "0") == "1"
 
     if st.session_state.page == "intro":
         page_intro()
@@ -2403,8 +2199,8 @@ def main():
 # ENABLE_DB_INSERT=false 에서는 DB insert 미실행, DB import/호출은 하단 배치.
 # -----------------------------------------------------------------------------
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
+    raw = os.getenv("ENABLE_DB_INSERT", "false")
+    return str(raw).strip().lower() == "true"
 
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
@@ -2413,7 +2209,7 @@ if ENABLE_DB_INSERT:
     from utils.database import Database
 
 
-def safe_db_insert(exam_data: dict) -> bool:
+def safe_db_insert(exam_data: Dict) -> bool:
     """
     dev PC: ENABLE_DB_INSERT=false → 저장 호출 안 함
     운영/병합: ENABLE_DB_INSERT가 false가 아니면 → Database().insert(exam_data) 수행
@@ -2429,7 +2225,7 @@ def safe_db_insert(exam_data: dict) -> bool:
         return False
 
 
-def auto_db_insert(exam_data: dict) -> None:
+def auto_db_insert(exam_data: Dict) -> None:
     """
     결과 저장 자동 호출
     - 개발 환경(ENABLE_DB_INSERT=false): DB insert 미실행 + exam_data expander로 노출
