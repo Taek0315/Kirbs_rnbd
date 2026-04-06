@@ -252,7 +252,7 @@ def build_result_section_html(
     <section class="support-card result-section">
         <div class="support-card-head">
             <div class="support-icon">☘</div>
-            <div>
+            <div class="support-title-wrap">
                 <h2 class="support-title">안내 드립니다.</h2>
             </div>
         </div>
@@ -605,6 +605,7 @@ def inject_css() -> None:
             --green-soft: #EAF7F0;
             --blue: #1E4E79;
             --blue-strong: #2E618F;
+            --support-title-ink: #143A5A;
         }
 
         .stApp {
@@ -1075,9 +1076,12 @@ def inject_css() -> None:
             display: flex;
             flex-direction: column;
             gap: 24px;
+            margin-bottom: 24px;
         }
 
-        .result-section { margin-bottom: 0; }
+        .result-section {
+            margin-bottom: 0;
+        }
 
         .result-card {
             position: relative;
@@ -1365,7 +1369,7 @@ def inject_css() -> None:
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
 
         .support-icon {
@@ -1376,15 +1380,29 @@ def inject_css() -> None:
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, rgba(30, 78, 121, 0.12) 0%, rgba(46, 139, 87, 0.16) 100%);
-            color: var(--green);
+            color: var(--green) !important;
             font-size: 20px;
+            flex: 0 0 42px;
         }
 
-        .support-title {
-            color: var(--card-ink);
-            font-size: 18px;
-            font-weight: 800;
+        .support-title-wrap {
+            display: inline-flex;
+            align-items: center;
+            min-height: 42px;
+        }
+
+        .support-card .support-title,
+        .support-card h2.support-title,
+        .support-title-wrap .support-title {
+            color: var(--support-title-ink) !important;
+            -webkit-text-fill-color: var(--support-title-ink) !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            font-size: 20px;
+            font-weight: 850;
+            line-height: 1.2;
             margin: 0;
+            letter-spacing: -0.02em;
         }
 
         .support-copy {
@@ -1396,6 +1414,10 @@ def inject_css() -> None:
 
         .support-copy-secondary {
             margin-top: 10px;
+        }
+
+        .result-actions-spacer {
+            height: 18px;
         }
 
         @keyframes bulletGrow {
@@ -1450,6 +1472,18 @@ def inject_css() -> None:
 
             .answer-segments div[data-testid="column"] {
                 flex: 1 1 100%;
+            }
+
+            .result-stack {
+                margin-bottom: 20px;
+            }
+
+            .result-actions-spacer {
+                height: 16px;
+            }
+
+            .support-card-head {
+                align-items: flex-start;
             }
         }
         </style>
@@ -1754,7 +1788,8 @@ def page_result(dev_mode: bool = False) -> None:
         bullet_graph_html=bullet_graph_html,
     )
 
-    st.markdown(f"<div class='result-stack'>{result_section_html}", unsafe_allow_html=True)
+    st.markdown(f"<div class='result-stack'>{result_section_html}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-actions-spacer'></div>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2, gap="medium")
     with c1:
@@ -1773,8 +1808,6 @@ def page_result(dev_mode: bool = False) -> None:
                 height=0,
             )
             st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.close_attempted:
         st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
