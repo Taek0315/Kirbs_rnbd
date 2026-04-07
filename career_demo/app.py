@@ -857,13 +857,38 @@ def render_radar_svg(scores: dict):
 
 
 def parse_salary_metrics(text: str):
-    if not text:
+    if text is None or (isinstance(text, float) and pd.isna(text)):
         return {}
-    matches = re.findall(r"(하위|평균|상위)\\(?\\d+%\\)?\\s*([0-9]+(?:\\.[0-9]+)?)만원", str(text))
-    if not matches:
-        matches = re.findall(r"(하위|평균|상위)[^\\d]*([0-9]+(?:\\.[0-9]+)?)만원", str(text))
+
+    raw = str(text).strip()
+    if not raw:
+        return {}
+
     label_map = {"하위": "하위 25%", "평균": "중앙값/평균", "상위": "상위 25%"}
-    return {label_map.get(key, key): f"{value}만원" for key, value in matches}
+    cleaned = raw.replace(",", "")
+
+    try:
+        patterns = [
+            r"(하위|평균|상위)\s*(?:\(?\d+%\)?)?\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
+            r"(하위|평균|상위)[^\d]{0,20}([0-9]+(?:\.[0-9]+)?)\s*만원",
+        ]
+        matches = []
+        for pattern in patterns:
+            found = re.findall(pattern, cleaned)
+            if found:
+                matches = found
+                break
+    except re.error:
+        return {}
+
+    if not matches:
+        return {}
+
+    metrics = {}
+    for key, value in matches:
+        label = label_map.get(key, key)
+        metrics[label] = f"{value}만원"
+    return metrics
 
 
 def classify_outlook(text: str):
@@ -970,7 +995,7 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
     with col2:
         selected_focus = st.multiselect(
             "어떤 정보를 우선해서 볼까요?",
-            options=["직무소개", "역량 적합도", "전망/연봉", "연관 직업", "준비 방법", "관련 학과", "추가 정보"],
+            options=["직무소개", "핵심 역량", "전망/연봉", "연관 직업", "준비 방법", "관련 학과", "추가 정보"],
             default=focus_items,
         )
 
@@ -995,9 +1020,20 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
 def render_brief_dashboard(detail: dict):
     one_line = make_one_line_definition(detail)
     keywords = extract_keywords(detail)
-    scores = derive_competency_scores(detail)
-    avg_score = round(sum(scores.values()) / len(scores))
     keyword_html = "".join([f'<span class="keyword-chip">{html.escape(k)}</span>' for k in keywords])
+    provided_scope = []
+    for label, key in [
+        ("직무 소개", "summary"),
+        ("준비 방법", "prepareway"),
+        ("훈련/교육", "training"),
+        ("전망", "job_possibility"),
+        ("연관 직업", "similarJob"),
+    ]:
+        if split_lines(detail.get(key, "")):
+            provided_scope.append(label)
+    if get_major_list(detail):
+        provided_scope.append("관련 학과")
+    scope_text = " · ".join(unique_keep_order(provided_scope)) if provided_scope else "직무 소개 중심 정보"
 
     st.markdown(
         f'''
@@ -1021,13 +1057,12 @@ def render_brief_dashboard(detail: dict):
                     </div>
                 </div>
                 <div class="mini-panel">
-                    <div class="meter-label">직무 요구 프로필</div>
-                    <div class="meter-shell">
-                        <div class="meter-fill" style="width:{avg_score}%"></div>
+                    <div class="mini-panel-title">현재 제공 범위</div>
+                    <div class="mini-panel-body" style="margin-bottom:8px;">
+                        {html.escape(scope_text)}
                     </div>
-                    <div class="meter-score">{avg_score}%</div>
                     <div class="mini-panel-body">
-                        현재는 개인 성향 데이터가 연결되지 않아, 직무 설명문을 바탕으로 한 직무 요구 프로필을 표시합니다.
+                        현재 리포트는 사용자 응답 데이터를 활용하지 않고, 직업 설명·준비 경로·전망 문구를 구조화하여 보여줍니다.
                     </div>
                 </div>
             </div>
@@ -1068,7 +1103,7 @@ def render_role_section(detail: dict):
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def render_fit_section(detail: dict):
+def render_capability_section(detail: dict):
     scores = derive_competency_scores(detail)
     radar_svg = render_radar_svg(scores)
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -1092,9 +1127,9 @@ def render_fit_section(detail: dict):
         f'''
         <div class="section-shell">
             <div class="section-head">
-                <div class="section-kicker">Fit & Aptitude</div>
-                <div class="section-title">나에게 얼마나 잘 맞을까요?</div>
-                <div class="section-sub">적성 설명문을 기반으로 핵심 역량을 시각화했습니다. 개인 검사 점수가 연결되면 이 영역은 개인화 지표로 확장할 수 있습니다.</div>
+                <div class="section-kicker">Capability Profile</div>
+                <div class="section-title">이 직업에 요구되는 핵심 역량은 무엇인가요?</div>
+                <div class="section-sub">직업 설명문과 적성 문구를 바탕으로 직무에서 상대적으로 강조되는 역량을 시각화했습니다.</div>
             </div>
 
             <div class="card">
@@ -1232,8 +1267,8 @@ def render_detail_sections(detail: dict, focus_items: list):
 
     if "직무소개" in focus or not focus:
         render_role_section(detail)
-    if "역량 적합도" in focus or not focus:
-        render_fit_section(detail)
+    if "핵심 역량" in focus or not focus:
+        render_capability_section(detail)
     if "전망/연봉" in focus or not focus:
         render_outlook_section(detail)
     if {"연관 직업", "준비 방법", "관련 학과", "추가 정보"} & focus or not focus:
@@ -1277,7 +1312,7 @@ def main():
         st.session_state.selected_job = job_options[0]
 
     if "focus_items" not in st.session_state:
-        st.session_state.focus_items = ["직무소개", "역량 적합도", "전망/연봉"]
+        st.session_state.focus_items = ["직무소개", "핵심 역량", "전망/연봉"]
 
     initial_detail = get_job_detail(df, st.session_state.selected_job)
     selected_job, selected_focus = render_navigator(
