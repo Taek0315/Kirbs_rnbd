@@ -1,26 +1,69 @@
+
 from pathlib import Path
-import re
 import html
+import math
+import re
 import textwrap
 from collections import Counter
+from difflib import SequenceMatcher
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
-from data_loader import load_job_data, search_jobs, get_job_detail
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "career_jobs.xlsx"
 
 st.set_page_config(
-    page_title="AI 직업 탐색 리포트",
+    page_title="Job-Explorer AI",
     page_icon="🔎",
     layout="wide",
 )
 
+SEARCH_COLUMNS = [
+    "job",
+    "summary",
+    "similarJob",
+    "aptitude",
+    "empway",
+    "prepareway",
+    "training",
+    "certification",
+    "employment",
+    "job_possibility",
+]
+
+KOREAN_STOPWORDS = {
+    "관련", "직업", "일", "일을", "하는", "대한", "및", "에서", "으로", "위한", "위해",
+    "같은", "있는", "되는", "분야", "업무", "직무", "사람", "경우", "통한", "기반", "직업명",
+    "탐색", "분석", "미래", "검색", "관련된", "중심", "하는일", "하거나", "하고", "또는"
+}
+
+SYNONYM_MAP = {
+    "컴퓨터": ["it", "정보", "소프트웨어", "프로그래밍", "시스템", "개발", "데이터", "네트워크", "전산", "ai", "인공지능"],
+    "it": ["컴퓨터", "정보", "소프트웨어", "시스템", "개발", "데이터", "네트워크", "전산", "ai", "인공지능"],
+    "인공지능": ["ai", "데이터", "소프트웨어", "시스템", "개발", "컴퓨터"],
+    "상담": ["심리", "치료", "코칭", "의사소통", "상담사"],
+    "디자인": ["그래픽", "시각", "콘텐츠", "광고", "영상", "편집"],
+    "행정": ["사무", "총무", "기획", "관리", "행정사무"],
+    "환경": ["기후", "생태", "에너지", "자원", "환경공학"],
+    "의료": ["보건", "병원", "간호", "임상", "건강"],
+    "교육": ["교사", "교수", "강사", "훈련", "학습"],
+    "연구": ["실험", "분석", "조사", "개발", "연구원"],
+    "기계": ["설비", "장비", "제조", "기술", "공학"],
+    "법": ["법률", "판사", "변호", "행정", "규정"],
+    "예술": ["음악", "미술", "공연", "디자인", "창작"],
+}
 
 def render_html(markup: str):
     st.markdown(textwrap.dedent(markup).strip(), unsafe_allow_html=True)
 
+def rerun_app():
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
 
 def inject_css():
     render_html(
@@ -29,308 +72,352 @@ def inject_css():
         :root{
             --bg:#f5f7fb;
             --panel:#ffffff;
-            --line:#e6ebf2;
+            --line:#e5eaf3;
             --text:#0f172a;
             --muted:#667085;
             --blue:#2563eb;
             --blue-soft:#eff6ff;
-            --shadow:0 4px 20px rgba(15,23,42,.05);
-            --radius:16px;
-            --container:1200px;
+            --shadow:0 8px 28px rgba(15,23,42,.06);
+            --radius:18px;
+            --container:1280px;
         }
 
-        html, body, [class*="css"] {
-            color: var(--text);
-        }
-
+        html, body, [class*="css"] { color: var(--text); }
         .stApp {
             background:
-                radial-gradient(circle at top right, rgba(59,130,246,.10), transparent 24%),
+                radial-gradient(circle at top right, rgba(37,99,235,.10), transparent 22%),
                 linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
         }
 
-        .block-container {
-            max-width: var(--container);
-            padding-top: 1.2rem;
-            padding-bottom: 2.5rem;
+        .block-container{
+            max-width:var(--container);
+            padding-top:1.2rem;
+            padding-bottom:2.5rem;
         }
 
-        h1,h2,h3,h4 {
-            color: #102a43 !important;
-            letter-spacing: -0.01em;
+        h1,h2,h3,h4,h5{
+            color:#102a43 !important;
+            letter-spacing:-0.02em;
         }
 
-        p, li, label, span, div {
-            color: #334155;
-        }
-
-        .nav-shell {
-            background: rgba(255,255,255,.94);
-            border: 1px solid var(--line);
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            padding: 18px 20px 14px 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(8px);
-        }
-
-        .nav-breadcrumb {
-            display:flex;
-            align-items:center;
-            gap:8px;
-            font-size:12px;
-            line-height:1.5;
-            color:#64748b;
-            margin-bottom:10px;
-            flex-wrap:wrap;
-        }
-
-        .crumb-current{
-            color:#0f172a;
-            font-weight:700;
-        }
-
-        .nav-title{
-            font-size:24px;
-            line-height:1.4;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:8px;
-        }
-
-        .nav-sub{
-            font-size:14px;
-            line-height:1.6;
-            color:#64748b;
-            margin-bottom:14px;
-        }
-
-        .context-shell{
-            background:#f8fbff;
-            border:1px solid #dbe7fb;
-            border-radius:16px;
-            padding:14px 16px;
-            margin-bottom:20px;
-        }
-
-        .context-line{
-            font-size:14px;
-            line-height:1.6;
+        p, li, label, span, div{
             color:#334155;
         }
 
-        .filter-chip-row{
+        .hero{
+            background:linear-gradient(135deg, #0f172a 0%, #173b74 55%, #2563eb 100%);
+            border-radius:24px;
+            padding:30px 30px 26px 30px;
+            box-shadow:var(--shadow);
+            color:#fff;
+            margin-bottom:20px;
+        }
+
+        .hero-kicker{
+            font-size:12px;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+            font-weight:800;
+            opacity:.9;
+            color:#dbeafe;
+            margin-bottom:10px;
+        }
+
+        .hero-title{
+            font-size:32px;
+            line-height:1.3;
+            font-weight:800;
+            color:#ffffff;
+            margin-bottom:10px;
+        }
+
+        .hero-sub{
+            font-size:15px;
+            line-height:1.7;
+            color:#dbeafe;
+            max-width:860px;
+        }
+
+        .glass-row{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-top:16px;
+        }
+
+        .glass-chip{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            background:rgba(255,255,255,.10);
+            border:1px solid rgba(255,255,255,.18);
+            border-radius:999px;
+            padding:9px 14px;
+            font-size:13px;
+            color:#f8fbff;
+            font-weight:700;
+        }
+
+        .panel{
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:20px;
+            box-shadow:var(--shadow);
+            padding:22px;
+            margin-bottom:20px;
+        }
+
+        .panel-head{
+            display:flex;
+            align-items:flex-end;
+            justify-content:space-between;
+            gap:16px;
+            flex-wrap:wrap;
+            margin-bottom:16px;
+        }
+
+        .section-kicker{
+            font-size:12px;
+            font-weight:800;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+            color:#2563eb;
+            margin-bottom:6px;
+        }
+
+        .section-title{
+            font-size:22px;
+            line-height:1.4;
+            font-weight:800;
+            color:#102a43;
+            margin:0 0 4px 0;
+        }
+
+        .section-sub{
+            font-size:14px;
+            line-height:1.6;
+            color:#64748b;
+        }
+
+        .stats-row{
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0,1fr));
+            gap:14px;
+            margin-top:18px;
+        }
+
+        .stat-card{
+            background:#ffffff;
+            border:1px solid #dbe7fb;
+            border-radius:16px;
+            padding:18px 16px;
+        }
+
+        .stat-label{
+            font-size:12px;
+            line-height:1.5;
+            color:#667085;
+            font-weight:700;
+            margin-bottom:8px;
+        }
+
+        .stat-value{
+            font-size:24px;
+            line-height:1.3;
+            font-weight:800;
+            color:#0f172a;
+            letter-spacing:-0.02em;
+            margin-bottom:4px;
+        }
+
+        .stat-sub{
+            font-size:13px;
+            line-height:1.5;
+            color:#64748b;
+        }
+
+        .search-banner{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid var(--line);
+            border-radius:20px;
+            padding:18px 18px 8px 18px;
+            box-shadow:var(--shadow);
+            margin-bottom:18px;
+        }
+
+        .filter-meta{
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-top:10px;
+            margin-top:8px;
         }
 
-        .filter-chip{
+        .meta-chip{
             display:inline-flex;
             align-items:center;
             padding:7px 12px;
             border-radius:999px;
             background:#eff6ff;
-            border:1px solid #dbeafe;
             color:#1d4ed8;
+            border:1px solid #dbeafe;
             font-size:12px;
             font-weight:700;
         }
 
-        .brief-shell{
-            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        .result-count{
+            font-size:14px;
+            line-height:1.6;
+            color:#475467;
+            font-weight:700;
+        }
+
+        .card-shell{
+            background:#ffffff;
             border:1px solid var(--line);
-            border-radius:20px;
-            box-shadow: var(--shadow);
-            padding:24px;
-            margin-bottom:24px;
-            position:relative;
-            overflow:hidden;
+            border-radius:18px;
+            box-shadow:var(--shadow);
+            padding:18px;
+            min-height:300px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
         }
 
-        .brief-shell::before{
-            content:"";
-            position:absolute;
-            inset:0;
-            background:linear-gradient(
-                110deg,
-                rgba(255,255,255,0) 0%,
-                rgba(59,130,246,.05) 35%,
-                rgba(255,255,255,0) 65%
-            );
-            transform:translateX(-100%);
-            animation:scan 2.8s linear infinite;
-            pointer-events:none;
-        }
-
-        @keyframes scan {
-            to { transform: translateX(100%); }
-        }
-
-        .brief-kicker,
-        .section-kicker{
-            font-size:12px;
-            line-height:1.5;
-            color:#2563eb;
+        .job-title{
+            font-size:20px;
+            line-height:1.45;
             font-weight:800;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-        }
-
-        .brief-kicker{
+            color:#102a43;
             margin-bottom:10px;
         }
 
-        .brief-title{
-            font-size:24px;
-            line-height:1.4;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:8px;
-        }
-
-        .brief-desc,
-        .section-sub{
+        .job-summary{
             font-size:14px;
-            line-height:1.6;
-            letter-spacing:-0.2px;
+            line-height:1.7;
             color:#475467;
+            min-height:76px;
+            margin-bottom:14px;
         }
 
-        .brief-desc{
-            margin-bottom:18px;
-        }
-
-        .summary-one-line{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:16px;
-            padding:18px;
-            margin-bottom:18px;
-        }
-
-        .summary-label{
-            font-size:12px;
-            line-height:1.5;
-            color:#2563eb;
-            font-weight:800;
-            margin-bottom:8px;
-        }
-
-        .summary-text{
-            font-size:18px;
-            line-height:1.6;
-            font-weight:700;
-            color:#0f172a;
-            letter-spacing:-0.3px;
-        }
-
-        .keyword-wrap{
+        .tag-row{
             display:flex;
             flex-wrap:wrap;
-            gap:10px;
-            margin-top:2px;
+            gap:8px;
+            margin-bottom:14px;
         }
 
-        .keyword-chip{
+        .tag{
             display:inline-flex;
             align-items:center;
-            padding:10px 14px;
+            padding:7px 11px;
             border-radius:999px;
-            background:#ffffff;
-            border:1px solid #e6eef8;
-            box-shadow: 0 2px 10px rgba(15,23,42,.03);
-            font-size:13px;
-            font-weight:700;
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
             color:#334155;
+            font-size:12px;
+            font-weight:700;
         }
 
-        .insight-grid{
-            display:grid;
-            grid-template-columns: 1.15fr .85fr;
-            gap:24px;
-            align-items:stretch;
+        .tag.blue{
+            background:#eff6ff;
+            border-color:#dbeafe;
+            color:#1d4ed8;
         }
 
-        .mini-panel{
-            background:#fff;
+        .tag.green{
+            background:#ecfdf3;
+            border-color:#d1fadf;
+            color:#027a48;
+        }
+
+        .tag.red{
+            background:#fef3f2;
+            border-color:#fecdca;
+            color:#b42318;
+        }
+
+        .detail-hero{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
-            border-radius:16px;
+            border-radius:22px;
+            box-shadow:var(--shadow);
+            padding:26px 24px;
+            margin-bottom:18px;
+        }
+
+        .detail-topline{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-bottom:12px;
+        }
+
+        .breadcrumb{
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            align-items:center;
+            font-size:12px;
+            color:#667085;
+        }
+
+        .detail-title{
+            font-size:30px;
+            line-height:1.35;
+            font-weight:800;
+            color:#102a43;
+            margin-bottom:10px;
+        }
+
+        .detail-summary{
+            font-size:15px;
+            line-height:1.8;
+            color:#475467;
+            margin-bottom:18px;
+        }
+
+        .detail-grid{
+            display:grid;
+            grid-template-columns:1.15fr .85fr;
+            gap:18px;
+        }
+
+        .mini-card{
+            background:#ffffff;
+            border:1px solid var(--line);
+            border-radius:18px;
             padding:18px;
             height:100%;
         }
 
-        .mini-panel-title{
-            font-size:18px;
+        .mini-title{
+            font-size:16px;
             line-height:1.5;
-            font-weight:700;
+            font-weight:800;
             color:#102a43;
             margin-bottom:10px;
         }
 
-        .mini-panel-body{
+        .mini-text{
             font-size:14px;
             line-height:1.7;
-            letter-spacing:-0.2px;
             color:#475467;
-        }
-
-        .section-shell{
-            background:transparent;
-            margin-bottom:28px;
-        }
-
-        .section-head{
-            margin-bottom:14px;
-        }
-
-        .section-kicker{
-            margin-bottom:6px;
-        }
-
-        .section-title{
-            font-size:18px;
-            line-height:1.5;
-            font-weight:700;
-            color:#102a43;
-            margin-bottom:4px;
-        }
-
-        .card{
-            background:#ffffff;
-            border:1px solid var(--line);
-            border-radius:16px;
-            box-shadow: var(--shadow);
-            padding:20px;
-        }
-
-        .grid-2{
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:24px;
-        }
-
-        .grid-3{
-            display:grid;
-            grid-template-columns:repeat(3, 1fr);
-            gap:16px;
         }
 
         .timeline{
             display:grid;
-            grid-template-columns:repeat(4, 1fr);
+            grid-template-columns:repeat(4, minmax(0,1fr));
             gap:16px;
         }
 
         .timeline-item{
             background:#fbfdff;
-            border:1px solid #e8eef7;
-            border-radius:16px;
+            border:1px solid #e6ebf3;
+            border-radius:18px;
             padding:18px 16px;
             min-height:220px;
-            display:flex;
-            flex-direction:column;
         }
 
         .timeline-no{
@@ -346,205 +433,59 @@ def inject_css():
             font-size:13px;
             font-weight:800;
             margin-bottom:14px;
-            flex-shrink:0;
-        }
-
-        .timeline-icon{
-            font-size:22px;
-            line-height:1;
-            margin-bottom:12px;
         }
 
         .timeline-title{
             font-size:15px;
             line-height:1.5;
-            font-weight:700;
-            color:#0f172a;
+            font-weight:800;
+            color:#102a43;
             margin-bottom:8px;
         }
 
         .timeline-text{
             font-size:14px;
-            line-height:1.7;
-            color:#64748b;
-            letter-spacing:-0.2px;
-            white-space:normal;
+            line-height:1.75;
+            color:#475467;
             word-break:keep-all;
         }
 
-        .radar-shell{
+        .keyword-cloud{
             display:flex;
-            gap:24px;
-            align-items:center;
-            justify-content:space-between;
             flex-wrap:wrap;
-        }
-
-        .radar-chart{
-            flex:0 0 360px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-        }
-
-        .legend-list{
-            min-width:240px;
-            flex:1 1 260px;
-        }
-
-        .legend-item{
-            margin-bottom:12px;
-        }
-
-        .legend-top{
-            display:flex;
-            justify-content:space-between;
             gap:10px;
-            margin-bottom:6px;
         }
 
-        .legend-name{
-            font-size:13px;
-            font-weight:700;
-            color:#334155;
-        }
-
-        .legend-value{
-            font-size:13px;
-            font-weight:800;
-            color:#0f172a;
-        }
-
-        .legend-bar{
-            width:100%;
-            height:8px;
-            background:#edf2f7;
-            border-radius:999px;
-            overflow:hidden;
-        }
-
-        .legend-bar > span{
-            display:block;
-            height:100%;
-            border-radius:999px;
-            background:linear-gradient(90deg, #93c5fd 0%, #2563eb 100%);
-        }
-
-        .ai-comment{
-            margin-top:16px;
-            background:#f8fbff;
-            border:1px solid #dbeafe;
-            border-radius:14px;
-            padding:14px 16px;
-            font-size:14px;
-            line-height:1.6;
-            color:#1e3a8a;
-        }
-
-        .metric-card{
-            background:#fbfdff;
-            border:1px solid #e8eef7;
-            border-radius:14px;
-            padding:16px;
-        }
-
-        .metric-label{
-            font-size:12px;
-            line-height:1.5;
-            color:#667085;
-            font-weight:700;
-            margin-bottom:8px;
-        }
-
-        .metric-value{
-            font-size:22px;
-            line-height:1.35;
-            font-weight:800;
-            color:#0f172a;
-            letter-spacing:-0.3px;
-            margin-bottom:4px;
-        }
-
-        .metric-sub{
-            font-size:13px;
-            line-height:1.6;
-            color:#667085;
-        }
-
-        .status-pill{
+        .keyword-pill{
             display:inline-flex;
             align-items:center;
-            gap:8px;
-            padding:10px 12px;
             border-radius:999px;
-            font-size:13px;
+            padding:10px 15px;
+            background:#ffffff;
+            border:1px solid #e6ebf3;
+            box-shadow:0 2px 8px rgba(15,23,42,.03);
             font-weight:800;
-            margin-bottom:12px;
+            color:#1f2937;
         }
 
-        .status-up{
-            background:#ecfdf3;
-            border:1px solid #d1fadf;
-            color:#027a48;
-        }
-
-        .status-mid{
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            color:#475467;
-        }
-
-        .status-down{
-            background:#fef3f2;
-            border:1px solid #fecdca;
-            color:#b42318;
-        }
-
-        .stress-shell{
-            margin-top:16px;
-        }
-
-        .stress-bar{
-            width:100%;
-            height:12px;
-            background:linear-gradient(90deg, #d1fae5 0%, #fde68a 50%, #fecaca 100%);
-            border-radius:999px;
-            position:relative;
-            overflow:hidden;
-        }
-
-        .stress-marker{
-            position:absolute;
-            top:-3px;
-            width:18px;
-            height:18px;
-            border-radius:50%;
-            background:#0f172a;
-            border:3px solid #fff;
-            box-shadow:0 2px 8px rgba(15,23,42,.18);
-            transform:translateX(-50%);
-        }
-
-        .stress-scale{
-            display:flex;
-            justify-content:space-between;
-            font-size:12px;
-            color:#667085;
-            margin-top:8px;
+        .two-col{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:18px;
         }
 
         .clean-list{
             list-style:none;
-            padding-left:0;
+            padding:0;
             margin:0;
         }
 
         .clean-list li{
-            padding:12px 0;
+            padding:10px 0;
             border-bottom:1px solid #eef2f6;
             font-size:14px;
             line-height:1.7;
-            color:#334155;
+            color:#475467;
             word-break:keep-all;
         }
 
@@ -553,10 +494,16 @@ def inject_css():
             padding-bottom:0;
         }
 
-        .empty-state{
-            color:#98a2b3;
+        .insight-grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:18px;
+        }
+
+        .empty-note{
             font-size:14px;
             line-height:1.6;
+            color:#98a2b3;
         }
 
         div[data-baseweb="input"] > div,
@@ -570,873 +517,839 @@ def inject_css():
             color:#111827 !important;
         }
 
-        input{
-            color:#111827 !important;
-        }
-
-        input::placeholder{
-            color:#94a3b8 !important;
-        }
+        input{ color:#111827 !important; }
+        input::placeholder{ color:#94a3b8 !important; }
 
         .stTextInput label,
         .stSelectbox label,
-        .stMultiSelect label{
+        .stMultiSelect label,
+        .stRadio label{
             color:#334155 !important;
             font-weight:700 !important;
-            font-size:14px !important;
         }
 
-        .stAlert, .stInfo, .stWarning{
-            border-radius:16px !important;
+        .stButton > button{
+            width:100%;
+            border-radius:14px;
+            border:1px solid #cdd8ea;
+            background:#ffffff;
+            color:#102a43;
+            font-weight:800;
+            padding:.7rem 1rem;
         }
 
-        @media (max-width: 1024px){
-            .insight-grid,
-            .grid-2,
+        .stButton > button:hover{
+            border-color:#2563eb;
+            color:#2563eb;
+            background:#eff6ff;
+        }
+
+        @media (max-width: 1100px){
+            .stats-row,
             .timeline,
-            .grid-3{
+            .detail-grid,
+            .two-col,
+            .insight-grid{
                 grid-template-columns:1fr;
-            }
-
-            .radar-shell{
-                flex-direction:column;
-                align-items:flex-start;
-            }
-
-            .radar-chart{
-                width:100%;
-                flex:1 1 auto;
             }
         }
         </style>
         """
     )
 
-
-@st.cache_data
-def get_data():
-    return load_job_data(DATA_FILE)
-
-
-def is_missing_like(value):
+def is_missing(value):
     if value is None:
         return True
-
     if isinstance(value, str):
         stripped = value.strip()
         return stripped == "" or stripped.lower() == "nan"
-
-    if isinstance(value, (list, tuple, set, dict)):
-        return len(value) == 0
-
     try:
-        na_result = pd.isna(value)
+        result = pd.isna(value)
+        if isinstance(result, bool):
+            return result
     except Exception:
-        return False
-
-    if isinstance(na_result, bool):
-        return na_result
-
+        pass
     return False
 
+def clean_text(value):
+    if is_missing(value):
+        return ""
+    text = str(value).replace("\r", "\n").strip()
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
-def normalize_to_strings(value):
-    if is_missing_like(value):
+def split_items(value):
+    if is_missing(value):
         return []
-
-    if isinstance(value, str):
-        return [value.strip()]
-
-    if isinstance(value, dict):
-        result = []
-        for item in value.values():
-            result.extend(normalize_to_strings(item))
-        return result
-
-    if isinstance(value, (list, tuple, set)):
-        result = []
-        for item in value:
-            result.extend(normalize_to_strings(item))
-        return result
-
-    return [str(value).strip()]
-
-
-def split_lines(text):
-    if is_missing_like(text):
-        return []
-
-    if isinstance(text, (list, tuple, set)):
-        result = []
-        for item in text:
-            result.extend(split_lines(item))
-        return result
-
-    if isinstance(text, dict):
-        result = []
-        for item in text.values():
-            result.extend(split_lines(item))
-        return result
-
-    text = str(text).replace("\\r", "\\n").strip()
-    if not text:
-        return []
-
+    text = str(value).replace("\r", "\n")
     raw_parts = []
-    for part in re.split(r"\\n|;", text):
+    for part in re.split(r"\n|;|\|", text):
         part = part.strip()
         if not part:
             continue
-        if "," in part and len(part) < 120:
+        if "," in part and len(part) < 150:
             raw_parts.extend([p.strip() for p in part.split(",") if p.strip()])
         else:
             raw_parts.append(part)
-
-    lines = []
-    for line in raw_parts:
-        line = re.sub(r"^[\\-•·]\\s*", "", line).strip()
-        if line:
-            lines.append(line)
-    return lines
-
+    items = []
+    for part in raw_parts:
+        part = re.sub(r"^[\-•·]+\s*", "", part).strip()
+        if part and part.lower() != "nan":
+            items.append(part)
+    return unique_keep_order(items)
 
 def unique_keep_order(items):
     seen = set()
     result = []
     for item in items:
-        norm = str(item).strip()
-        if not norm or norm.lower() == "nan":
+        key = str(item).strip()
+        if not key or key.lower() == "nan":
             continue
-        if norm not in seen:
-            seen.add(norm)
-            result.append(norm)
+        if key not in seen:
+            seen.add(key)
+            result.append(key)
     return result
 
+def shorten(text, width=42):
+    text = clean_text(text)
+    if len(text) <= width:
+        return text
+    return text[:width].rstrip() + "…"
 
-def collect_prefixed_values(detail: dict, prefix: str):
-    items = []
-    for key, value in detail.items():
-        if key.startswith(prefix):
-            items.extend(normalize_to_strings(value))
-    return unique_keep_order(items)
+def tokenize(text):
+    text = clean_text(text).lower()
+    tokens = re.findall(r"[a-z0-9가-힣]{2,20}", text)
+    return [t for t in tokens if t not in KOREAN_STOPWORDS]
 
+def expand_tokens(tokens):
+    expanded = set(tokens)
+    for token in list(tokens):
+        for key, values in SYNONYM_MAP.items():
+            if token == key or key in token or token in key:
+                expanded.add(key)
+                expanded.update(values)
+    return list(expanded)
 
-def get_similar_jobs(detail: dict):
-    return unique_keep_order(split_lines(detail.get("similarJob", "")))
+def parse_salary_metrics(text):
+    text = clean_text(text).replace(",", "")
+    if not text:
+        return {}
 
+    label_map = {"하위": "하위 25%", "평균": "평균", "상위": "상위 25%"}
+    patterns = [
+        r"(하위|평균|상위)\s*\(?\d+%\)?\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
+        r"(하위|평균|상위)[^\d]{0,18}([0-9]+(?:\.[0-9]+)?)\s*만원",
+    ]
+    metrics = {}
+    for pattern in patterns:
+        for key, value in re.findall(pattern, text):
+            metrics[label_map[key]] = float(value)
+        if metrics:
+            break
+    return metrics
 
-def get_major_list(detail: dict):
-    return collect_prefixed_values(detail, "major_")
+def classify_outlook(text):
+    raw = clean_text(text)
+    if any(word in raw for word in ["감소", "줄어", "축소", "약화", "낮아질", "어려울"]):
+        return "낮음"
+    if any(word in raw for word in ["증가", "성장", "확대", "유망", "밝", "좋"]):
+        return "높음"
+    return "보통"
 
+def extract_major_list(row):
+    majors = []
+    for col in [c for c in row.index if str(c).startswith("major_")]:
+        value = row[col]
+        if not is_missing(value):
+            majors.append(str(value).strip())
+    return unique_keep_order(majors)
 
-def get_contact_list(detail: dict):
+def extract_contact_list(row):
     contacts = []
-    contacts.extend(normalize_to_strings(detail.get("contact_list")))
-    contacts.extend(collect_prefixed_values(detail, "contact_"))
+    for col in [c for c in row.index if str(c).startswith("contact_")]:
+        value = row[col]
+        if not is_missing(value):
+            contacts.append(str(value).strip())
     return unique_keep_order(contacts)
 
-
-def clean_sentence(text: str):
-    if not text:
-        return ""
-    text = re.sub(r"^[\\-•·]\\s*", "", str(text)).strip()
-    text = re.sub(r"\\s+", " ", text)
-    return text
-
-
-def infer_domain(job_name: str, search_query: str, detail: dict):
-    text = f"{job_name} {search_query} {detail.get('summary', '')} {detail.get('aptitude', '')}".lower()
-    mapping = [
-        ("IT 분야", ["it", "정보", "컴퓨터", "시스템", "소프트웨어", "네트워크", "데이터"]),
-        ("보건·의료 분야", ["간호", "의료", "병원", "보건", "약", "임상", "치과"]),
-        ("교육 분야", ["교사", "교육", "교수", "강사", "훈련"]),
-        ("상담·심리 분야", ["상담", "심리", "치료", "정서"]),
-        ("디자인·콘텐츠 분야", ["디자인", "영상", "콘텐츠", "그래픽", "광고", "편집"]),
-        ("경영·사무 분야", ["경영", "회계", "사무", "행정", "인사", "총무", "기획"]),
-        ("공학·기술 분야", ["기계", "전기", "가스", "환경", "설비", "공학", "기술"]),
-        ("서비스 분야", ["서비스", "고객", "판매", "영업", "안내", "호텔", "관광"]),
-        ("연구 분야", ["연구", "분석", "실험"]),
-    ]
-    for label, keywords in mapping:
-        if any(keyword in text for keyword in keywords):
-            return label
-    return "직업 탐색"
-
-
-def build_breadcrumb(job_name: str, search_query: str, detail: dict):
-    domain = infer_domain(job_name, search_query, detail)
-    return ["직업 탐색", domain, job_name]
-
-
-def normalize_keyword_token(token: str):
-    token = token.strip()
-    token = re.sub(r"[^\\w가-힣·ㆍ]", "", token)
-    token = token.strip("·ㆍ")
-
-    suffixes = [
-        "으로서", "으로는", "으로", "에게서", "에서는", "에서", "에게", "들과", "들과의",
-        "입니다", "한다", "하며", "하고", "하여", "하는", "하다", "되는", "된다", "되며",
-        "적인", "적인지", "적인데", "적인가", "적", "들을", "에서의", "에서만",
-        "에게도", "까지", "부터", "처럼", "보다", "조차", "마저", "이라", "이며", "이면",
-        "이고", "인데", "이나", "나", "은", "는", "이", "가", "을", "를", "의", "와", "과",
-        "도", "만"
-    ]
-
-    changed = True
-    while changed:
-        changed = False
-        for suffix in suffixes:
-            if len(token) > len(suffix) + 1 and token.endswith(suffix):
-                token = token[: -len(suffix)]
-                changed = True
-                break
-
-    return token.strip()
-
-
-def extract_keywords(detail: dict, limit: int = 8):
-    text = " ".join(
+def extract_keyword_cloud(row, limit=14):
+    source_text = " ".join(
         [
-            str(detail.get("job", "")),
-            str(detail.get("summary", "")),
-            str(detail.get("aptitude", "")),
-            str(detail.get("empway", "")),
-            str(detail.get("prepareway", "")),
-            str(detail.get("training", "")),
+            clean_text(row.get("job")),
+            clean_text(row.get("summary")),
+            clean_text(row.get("aptitude")),
+            clean_text(row.get("prepareway")),
+            clean_text(row.get("training")),
+            clean_text(row.get("capacity_1")),
+            clean_text(row.get("capacity_all")),
         ]
     )
-
-    candidates = re.findall(r"[A-Za-z가-힣·ㆍ]{2,20}", text)
-
-    stopwords = {
-        "그리고", "관련", "직업", "위해", "통해", "되는", "한다", "있다", "있으며", "것으로",
-        "정도", "업무", "필요", "요구", "사람", "사람에게", "유리하다", "적합", "직업인",
-        "경우", "향후", "자료", "워크넷", "정보", "수준", "능력", "역할", "기업", "고객",
-        "기본적", "기본적인", "가능성", "직장", "고용", "임금", "평균", "하위", "상위",
-        "된다", "하는", "업무를", "직업은", "직업이", "관련된", "등의", "등을", "대한",
-        "자신의", "자신이", "수행", "준비", "교육", "활용", "전반적", "전반적인", "각종",
-        "존재", "현재", "사용자"
+    candidates = re.findall(r"[A-Za-z가-힣]{2,20}", source_text)
+    stopwords = KOREAN_STOPWORDS | {
+        "직업", "직무", "업무", "사람", "능력", "정보", "수행", "요구", "필요", "관련",
+        "기본", "전반", "통해", "분야", "현재", "자료", "워크넷", "직업인", "자신", "등의",
+        "정도", "가능성", "직장", "고객", "활용", "전반적", "전반적인"
     }
 
     weighted = []
-    preferred = ["시스템", "분석", "설계", "데이터", "기획", "문제해결", "커뮤니케이션", "기술", "네트워크", "지도", "공간"]
-
+    preferred = ["시스템", "데이터", "분석", "설계", "기획", "문제해결", "의사소통", "기술", "관리", "정확", "서비스", "연구"]
     for token in candidates:
-        token = normalize_keyword_token(token)
-        if len(token) < 2 or token.lower() == "nan":
+        token = token.strip()
+        token = re.sub(r"[^A-Za-z가-힣]", "", token)
+        if len(token) < 2:
             continue
-        if token in stopwords:
+        if token.lower() in {"nan"} or token in stopwords:
             continue
         weighted.append(token)
 
     counts = Counter(weighted)
-    top = [word for word, _ in counts.most_common(limit * 3)]
-
     ordered = []
     for pref in preferred:
-        for word in top:
+        for word, _ in counts.most_common(limit * 3):
             if pref in word and word not in ordered:
                 ordered.append(word)
                 break
-
-    for token in top:
-        if token not in ordered:
-            ordered.append(token)
+    for word, _ in counts.most_common(limit * 3):
+        if word not in ordered:
+            ordered.append(word)
         if len(ordered) >= limit:
             break
+    return ordered[:limit]
 
-    return [f"#{token}" for token in ordered[:limit]]
+def build_timeline(row):
+    summary_lines = split_items(row.get("summary"))
+    prepare_lines = split_items(row.get("prepareway"))
+    training_lines = split_items(row.get("training"))
+    empway_lines = split_items(row.get("empway"))
+    cert_lines = split_items(row.get("certification"))
 
-
-def derive_competency_scores(detail: dict):
-    text = " ".join(
-        [
-            str(detail.get("summary", "")),
-            str(detail.get("aptitude", "")),
-            str(detail.get("capacity_1", "")),
-            str(detail.get("capacity_all", "")),
-            str(detail.get("empway", "")),
-            str(detail.get("training", "")),
-        ]
-    )
-
-    score_map = {
-        "논리적 사고": {"base": 58, "keywords": ["분석", "논리", "기획", "판단", "진단", "전략", "문제해결"]},
-        "커뮤니케이션": {"base": 55, "keywords": ["고객", "의사소통", "설명", "협업", "조정", "서비스", "상담"]},
-        "문제 해결": {"base": 57, "keywords": ["해결", "개선", "대응", "최적", "점검", "감리"]},
-        "기술 이해": {"base": 54, "keywords": ["시스템", "컴퓨터", "정보", "기계", "설비", "기술", "전산", "데이터베이스"]},
-        "책임감": {"base": 56, "keywords": ["성실", "책임", "정확", "도덕성", "통제", "안전"]},
-        "분석력": {"base": 58, "keywords": ["자료", "수집", "조사", "평가", "검토", "통계", "분석", "데이터"]},
-    }
-
-    scores = {}
-    for label, info in score_map.items():
-        score = info["base"]
-        for keyword in info["keywords"]:
-            if keyword in text:
-                score += 6
-        scores[label] = max(35, min(score, 95))
-    return scores
-
-
-def render_radar_svg(scores: dict):
-    labels = list(scores.keys())
-    values = list(scores.values())
-    size = 320
-    center = size / 2
-    radius = 110
-
-    import math
-
-    def point(angle_deg, r):
-        rad = math.radians(angle_deg - 90)
-        x = center + r * math.cos(rad)
-        y = center + r * math.sin(rad)
-        return x, y
-
-    angles = [i * 360 / len(labels) for i in range(len(labels))]
-
-    grid_polys = []
-    for level in [25, 50, 75, 100]:
-        pts = []
-        for angle in angles:
-            x, y = point(angle, radius * level / 100)
-            pts.append(f"{x:.1f},{y:.1f}")
-        grid_polys.append(
-            f'<polygon points="{" ".join(pts)}" fill="none" stroke="#E5E7EB" stroke-width="1"/>'
-        )
-
-    axes = []
-    label_nodes = []
-    for label, angle in zip(labels, angles):
-        x, y = point(angle, radius)
-        axes.append(
-            f'<line x1="{center}" y1="{center}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E5E7EB" stroke-width="1"/>'
-        )
-        lx, ly = point(angle, radius + 28)
-        label_nodes.append(
-            f'<text x="{lx:.1f}" y="{ly:.1f}" fill="#64748B" font-size="12" font-weight="700" text-anchor="middle">{html.escape(label)}</text>'
-        )
-
-    poly_pts = []
-    for value, angle in zip(values, angles):
-        x, y = point(angle, radius * value / 100)
-        poly_pts.append(f"{x:.1f},{y:.1f}")
-
-    points_html = []
-    for value, angle in zip(values, angles):
-        x, y = point(angle, radius * value / 100)
-        points_html.append(
-            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>'
-        )
-
-    return textwrap.dedent(
-        f"""
-        <svg width="340" height="340" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="직무 핵심 역량 차트">
-            <circle cx="{center}" cy="{center}" r="3" fill="#CBD5E1"/>
-            {''.join(grid_polys)}
-            {''.join(axes)}
-            <polygon points="{' '.join(poly_pts)}" fill="rgba(37,99,235,.18)" stroke="#2563EB" stroke-width="2.5"/>
-            {''.join(points_html)}
-            {''.join(label_nodes)}
-        </svg>
-        """
-    ).strip()
-
-
-def parse_salary_metrics(text):
-    if is_missing_like(text):
-        return {}
-
-    raw = str(text).strip()
-    if not raw:
-        return {}
-
-    label_map = {
-        "하위": "하위 25%",
-        "평균": "중앙값/평균",
-        "상위": "상위 25%",
-    }
-    cleaned = raw.replace(",", "")
-
-    patterns = [
-        r"(하위|평균|상위)\\s*(?:\\(?\\d+%?\\)?)?\\s*[:：]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*만원",
-        r"(하위|평균|상위)[^\\d]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*만원",
+    sources = [
+        ("직무 이해", summary_lines[0] if summary_lines else ""),
+        ("진입 준비", prepare_lines[0] if prepare_lines else ""),
+        ("훈련·실무", training_lines[0] if training_lines else ""),
+        ("확장 경로", empway_lines[0] if empway_lines else (cert_lines[0] if cert_lines else "")),
     ]
 
-    metrics = {}
-    try:
-        for pattern in patterns:
-            matches = re.findall(pattern, cleaned)
-            for key, value in matches:
-                metrics[label_map.get(key, key)] = f"{value}만원"
-            if metrics:
-                break
-    except re.error:
-        return {}
+    fallback = [
+        "직무의 핵심 역할과 업무 맥락을 파악합니다.",
+        "학력·전공·기초 준비 요소를 확인합니다.",
+        "현장 훈련 또는 실무 적응 과정을 거칩니다.",
+        "자격과 경험을 넓혀 전문성을 확장합니다.",
+    ]
 
-    return metrics
+    items = []
+    for idx, (title, text) in enumerate(sources):
+        items.append(
+            {
+                "title": title,
+                "text": clean_text(text) or fallback[idx],
+            }
+        )
+    return items
 
+def render_empty_list(items):
+    if not items:
+        return '<div class="empty-note">등록된 정보가 없습니다.</div>'
+    return "<ul class='clean-list'>" + "".join(f"<li>{html.escape(str(item))}</li>" for item in items) + "</ul>"
 
-def classify_outlook(detail: dict):
-    text = f"{detail.get('employment', '')} {detail.get('job_possibility', '')}"
-    if any(word in text for word in ["증가", "성장", "확대", "밝", "좋", "유망"]):
-        return "상승", "매우 밝거나 확장 가능성이 있는 편입니다.", "status-up", "↗"
-    if any(word in text for word in ["감소", "줄어", "축소", "낮아질", "어려울"]):
-        return "하락", "감소 또는 축소 압력이 있는 편입니다.", "status-down", "↘"
-    return "유지", "현 수준 유지 또는 완만한 변화 가능성이 큽니다.", "status-mid", "→"
+def make_search_score(row, query, base_tokens, expanded_tokens):
+    if not query:
+        return 0.0
+    job_text = row["job_norm"]
+    full_text = row["search_blob_norm"]
+    score = 0.0
 
+    if query in job_text:
+        score += 120
+    if query in full_text:
+        score += 35
 
-def infer_stress_signal(detail: dict):
-    text = f"{detail.get('job_possibility', '')} {detail.get('summary', '')} {detail.get('aptitude', '')}"
-    score = 45
+    for token in base_tokens:
+        if token in job_text:
+            score += 28
+        elif token in full_text:
+            score += 10
 
-    if "정신적 스트레스는 심하지 않은" in text or "스트레스는 심하지 않은" in text:
-        score -= 18
-    if "정신적 스트레스" in text and any(k in text for k in ["높", "많", "심한", "큰"]):
-        score += 20
+    for token in expanded_tokens:
+        if token in full_text:
+            score += 4
 
-    for k, w in {
-        "고객": 8,
-        "감리": 8,
-        "안전": 6,
-        "책임": 8,
-        "분석": 5,
-        "점검": 5,
-        "정확": 5,
-        "상담": 10,
-        "영업": 8,
-        "위험": 8,
-    }.items():
-        if k in text:
-            score += w
+    ratio = SequenceMatcher(None, query, job_text).ratio()
+    if ratio >= 0.45:
+        score += ratio * 24
 
-    return max(15, min(score, 90))
+    return score
 
+@st.cache_data
+def load_and_prepare_data(file_path: str):
+    df = pd.read_excel(file_path)
+    df = df.copy()
 
-def make_one_line_definition(detail: dict):
-    summary_lines = split_lines(detail.get("summary", ""))
-    if summary_lines:
-        return clean_sentence(summary_lines[0])
-    return f"{detail.get('job', '이 직업')}는 필요한 정보를 수집하고 정리하여 현장에서 필요한 역할을 수행하는 직업입니다."
+    unnamed_cols = [c for c in df.columns if str(c).startswith("Unnamed")]
+    if unnamed_cols:
+        df = df.drop(columns=unnamed_cols)
 
+    major_cols = [c for c in df.columns if str(c).startswith("major_")]
+    contact_cols = [c for c in df.columns if str(c).startswith("contact_")]
 
-def get_role_steps(detail: dict):
-    summary_lines = split_lines(detail.get("summary", ""))
-    emp_lines = split_lines(detail.get("empway", ""))
-    training_lines = split_lines(detail.get("training", ""))
-    prepare_lines = split_lines(detail.get("prepareway", ""))
+    df["job"] = df["job"].astype(str).str.strip()
+    df["summary"] = df["summary"].fillna("")
+    df["similarJob"] = df["similarJob"].fillna("")
+    df["major_list"] = df.apply(extract_major_list, axis=1)
+    df["contact_list"] = df.apply(extract_contact_list, axis=1)
+    df["similar_list"] = df["similarJob"].apply(split_items)
+    df["certification_list"] = df["certification"].apply(split_items)
+    df["aptitude_list"] = df["aptitude"].apply(split_items)
+    df["salary_metrics"] = df["salery"].apply(parse_salary_metrics)
+    df["salary_avg_value"] = df["salary_metrics"].apply(lambda x: x.get("평균") if x else None)
 
-    merged = [clean_sentence(x) for x in (summary_lines + emp_lines + prepare_lines + training_lines) if clean_sentence(x)]
+    salary_series = pd.to_numeric(df["salary_avg_value"], errors="coerce")
+    q1 = float(salary_series.quantile(0.33)) if salary_series.notna().any() else None
+    q2 = float(salary_series.quantile(0.66)) if salary_series.notna().any() else None
 
-    default_titles = ["업무 맥락 파악", "핵심 역할 수행", "현장 대응 및 실행", "숙련도 확장"]
-    icons = ["🔍", "🧩", "🛠️", "📈"]
+    def salary_band(value):
+        if pd.isna(value) or value is None:
+            return "미상"
+        if value <= q1:
+            return "하"
+        if value <= q2:
+            return "중"
+        return "상"
 
-    steps = []
-    for idx in range(min(4, len(merged))):
-        steps.append({"title": default_titles[idx], "text": merged[idx], "icon": icons[idx]})
+    df["salary_band"] = df["salary_avg_value"].apply(salary_band)
+    df["outlook_label"] = (df["employment"].fillna("") + " " + df["job_possibility"].fillna("")).apply(classify_outlook)
+    df["summary_short"] = df["summary"].apply(lambda x: shorten(split_items(x)[0] if split_items(x) else x, 42))
+    df["search_blob"] = df.apply(
+        lambda row: " ".join([clean_text(row.get(col, "")) for col in SEARCH_COLUMNS] + row["major_list"] + row["contact_list"]),
+        axis=1,
+    )
+    df["job_norm"] = df["job"].fillna("").astype(str).str.lower()
+    df["search_blob_norm"] = df["search_blob"].fillna("").astype(str).str.lower()
 
-    while len(steps) < 4:
-        fallback = [
-            "직무 정보를 이해하고 전체 흐름을 파악합니다.",
-            "핵심 업무를 구조적으로 수행합니다.",
-            "현장에서 필요한 대응과 실행을 익힙니다.",
-            "경험을 통해 숙련도와 확장성을 높입니다.",
-        ]
-        idx = len(steps)
-        steps.append({"title": default_titles[idx], "text": fallback[idx], "icon": icons[idx]})
+    all_majors = sorted({major for majors in df["major_list"] for major in majors})
+    return df, all_majors
 
-    return steps
+def search_and_filter(df, query="", majors=None, salary_bands=None, outlooks=None, sort_by="관련도"):
+    work = df.copy()
+    majors = majors or []
+    salary_bands = salary_bands or []
+    outlooks = outlooks or []
 
+    query_clean = clean_text(query).lower()
+    base_tokens = tokenize(query_clean)
+    expanded_tokens = expand_tokens(base_tokens)
 
-def render_html_card(title: str, body_html: str):
-    render_html(
-        f"""
-        <div class="card">
-            <div class="mini-panel-title">{html.escape(title)}</div>
-            <div class="mini-panel-body">{body_html}</div>
-        </div>
-        """
+    work["search_score"] = work.apply(
+        lambda row: make_search_score(row, query_clean, base_tokens, expanded_tokens), axis=1
     )
 
+    if query_clean:
+        work = work[(work["search_score"] > 0) | (work["job_norm"].str.contains(query_clean, na=False))]
 
-def render_navigator(job_options, selected_job, focus_items, search_query, detail):
-    breadcrumb = build_breadcrumb(selected_job, search_query, detail)
+    if majors:
+        work = work[work["major_list"].apply(lambda items: any(m in items for m in majors))]
 
-    crumb_html = []
-    for idx, item in enumerate(breadcrumb):
-        cls = "crumb-current" if idx == len(breadcrumb) - 1 else ""
-        crumb_html.append(f'<span class="{cls}">{html.escape(item)}</span>')
-        if idx < len(breadcrumb) - 1:
-            crumb_html.append("<span>›</span>")
+    if salary_bands:
+        work = work[work["salary_band"].isin(salary_bands)]
+
+    if outlooks:
+        work = work[work["outlook_label"].isin(outlooks)]
+
+    if sort_by == "가나다순":
+        work = work.sort_values(["job"], ascending=[True])
+    elif sort_by == "평균임금 높은순":
+        work = work.sort_values(["salary_avg_value", "job"], ascending=[False, True], na_position="last")
+    else:
+        work = work.sort_values(["search_score", "salary_avg_value"], ascending=[False, False], na_position="last")
+
+    return work.reset_index(drop=True)
+
+def outlook_badge(label):
+    if label == "높음":
+        return "tag green"
+    if label == "낮음":
+        return "tag red"
+    return "tag"
+
+def salary_badge(label):
+    if label == "상":
+        return "tag blue"
+    if label == "하":
+        return "tag red"
+    return "tag"
+
+def render_main_header(df):
+    total_jobs = len(df)
+    major_count = len({major for items in df["major_list"] for major in items})
+    avg_salary = pd.to_numeric(df["salary_avg_value"], errors="coerce").dropna()
+    avg_salary_text = f"{avg_salary.mean():.0f}만원" if not avg_salary.empty else "미제공"
 
     render_html(
         f"""
-        <div class="nav-shell">
-            <div class="nav-breadcrumb">{''.join(crumb_html)}</div>
-            <div class="nav-title">{html.escape(selected_job)} 탐색 리포트</div>
-            <div class="nav-sub">
-                상단에서 직업과 보고 싶은 정보 범위를 정하면, 아래에서 AI가 핵심 정의와 세부 인사이트를 구조적으로 정리합니다.
+        <div class="hero">
+            <div class="hero-kicker">Job-Explorer AI</div>
+            <div class="hero-title">미래의 직업을 검색하세요</div>
+            <div class="hero-sub">
+                직업명, 요약, 유사직업, 적성, 전공 데이터를 함께 탐색하는 AI 기반 직업 데이터 큐레이션 웹페이지입니다.
+                검색 → 필터 → 카드 탐색 → 상세 분석 순서로 바로 확인할 수 있도록 구성했습니다.
+            </div>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">직업 데이터</div>
+                    <div class="stat-value">{total_jobs}</div>
+                    <div class="stat-sub">career_jobs.xlsx 기준 직업 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">관련 전공</div>
+                    <div class="stat-value">{major_count}</div>
+                    <div class="stat-sub">major_1~21 통합 기준</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">평균 임금 표기</div>
+                    <div class="stat-value">{avg_salary_text}</div>
+                    <div class="stat-sub">텍스트에서 평균값 파싱 기준</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">검색 방식</div>
+                    <div class="stat-value">키워드+유사어</div>
+                    <div class="stat-sub">job·summary·major 동시 탐색</div>
+                </div>
             </div>
         </div>
         """
     )
 
-    col1, col2 = st.columns([1.25, 1.75], gap="medium")
+def render_search_filters(all_majors):
+    render_html(
+        """
+        <div class="search-banner">
+            <div class="section-kicker">Search & Filter</div>
+            <div class="section-title">검색 및 필터링</div>
+            <div class="section-sub">job과 summary를 중심으로 유사 키워드까지 함께 탐색합니다.</div>
+        </div>
+        """
+    )
+
+    col1, col2 = st.columns([1.55, 1], gap="large")
     with col1:
-        selected = st.selectbox(
-            "어떤 직업을 중심으로 볼까요?",
-            options=job_options,
-            index=job_options.index(selected_job),
+        query = st.text_input(
+            "직업명 또는 키워드",
+            value=st.session_state.get("query_text", ""),
+            placeholder="예: 컴퓨터와 관련된 일, 상담, 디자인, 환경, 기획",
         )
     with col2:
-        selected_focus = st.multiselect(
-            "어떤 정보를 우선해서 볼까요?",
-            options=["직무소개", "핵심 역량", "전망/연봉", "연관 직업", "준비 방법", "관련 학과", "추가 정보"],
-            default=focus_items,
+        sort_by = st.selectbox(
+            "정렬",
+            options=["관련도", "가나다순", "평균임금 높은순"],
+            index=["관련도", "가나다순", "평균임금 높은순"].index(st.session_state.get("sort_by", "관련도")),
         )
 
-    focus_text = " · ".join(selected_focus) if selected_focus else "전체 정보"
-    chips = "".join(
-        [f'<span class="filter-chip">{html.escape(item)}</span>' for item in selected_focus]
-    ) or '<span class="filter-chip">전체 보기</span>'
+    col3, col4, col5 = st.columns([1.45, .8, .8], gap="large")
+    with col3:
+        majors = st.multiselect(
+            "전공별 필터",
+            options=all_majors,
+            default=st.session_state.get("major_filter", []),
+            placeholder="관련 전공을 선택하세요",
+        )
+    with col4:
+        salary_bands = st.multiselect(
+            "임금 수준",
+            options=["상", "중", "하"],
+            default=st.session_state.get("salary_filter", []),
+            placeholder="상/중/하",
+        )
+    with col5:
+        outlooks = st.multiselect(
+            "고용 전망",
+            options=["높음", "보통", "낮음"],
+            default=st.session_state.get("outlook_filter", []),
+            placeholder="전망 선택",
+        )
+
+    st.session_state["query_text"] = query
+    st.session_state["sort_by"] = sort_by
+    st.session_state["major_filter"] = majors
+    st.session_state["salary_filter"] = salary_bands
+    st.session_state["outlook_filter"] = outlooks
+
+    return query, majors, salary_bands, outlooks, sort_by
+
+def render_result_cards(results, query, majors, salary_bands, outlooks):
+    active_filters = []
+    if query:
+        active_filters.append(f"검색어: {query}")
+    if majors:
+        active_filters.append(f"전공 {len(majors)}개")
+    if salary_bands:
+        active_filters.append("임금 " + "/".join(salary_bands))
+    if outlooks:
+        active_filters.append("전망 " + "/".join(outlooks))
 
     render_html(
         f"""
-        <div class="context-shell">
-            <div class="context-line">
-                <strong>{html.escape(selected)}</strong>에 대해 <strong>{html.escape(focus_text)}</strong> 정보를 중심으로 보여주고 있습니다.
-            </div>
-            <div class="filter-chip-row">{chips}</div>
-        </div>
-        """
-    )
-
-    return selected, selected_focus
-
-
-def render_brief_dashboard(detail: dict):
-    one_line = make_one_line_definition(detail)
-    keywords = extract_keywords(detail)
-    keyword_html = "".join([f'<span class="keyword-chip">{html.escape(k)}</span>' for k in keywords])
-
-    provided_scope = []
-    for label, key in [
-        ("직무 소개", "summary"),
-        ("준비 방법", "prepareway"),
-        ("훈련/교육", "training"),
-        ("전망", "job_possibility"),
-        ("연관 직업", "similarJob"),
-    ]:
-        if split_lines(detail.get(key, "")):
-            provided_scope.append(label)
-
-    if get_major_list(detail):
-        provided_scope.append("관련 학과")
-
-    scope_text = " · ".join(unique_keep_order(provided_scope)) if provided_scope else "직무 소개 중심 정보"
-
-    render_html(
-        f"""
-        <div class="brief-shell">
-            <div class="brief-kicker">The Insight</div>
-            <div class="brief-title">AI 브리핑 대시보드</div>
-            <div class="brief-desc">
-                직업 설명, 적성, 준비 경로, 전망 문구를 종합해 핵심 정의와 탐색 키워드를 먼저 제시합니다.
-            </div>
-
-            <div class="summary-one-line">
-                <div class="summary-label">AI 한 줄 정의</div>
-                <div class="summary-text">{html.escape(one_line)}</div>
-            </div>
-
-            <div class="insight-grid">
-                <div class="mini-panel">
-                    <div class="mini-panel-title">핵심 키워드</div>
-                    <div class="mini-panel-body">
-                        <div class="keyword-wrap">{keyword_html or '<span class="empty-state">추출 가능한 키워드가 없습니다.</span>'}</div>
-                    </div>
+        <div class="panel">
+            <div class="panel-head">
+                <div>
+                    <div class="section-kicker">Result Grid</div>
+                    <div class="section-title">검색 결과 카드</div>
+                    <div class="section-sub">직업명, 요약, 유사 직업, 임금/전망을 빠르게 비교할 수 있습니다.</div>
                 </div>
-                <div class="mini-panel">
-                    <div class="mini-panel-title">현재 제공 범위</div>
-                    <div class="mini-panel-body" style="margin-bottom:8px;">
-                        {html.escape(scope_text)}
-                    </div>
-                    <div class="mini-panel-body">
-                        현재 리포트는 사용자 응답 데이터를 활용하지 않고, 직업 설명·준비 경로·전망 문구를 구조화하여 보여줍니다.
-                    </div>
-                </div>
+                <div class="result-count">총 {len(results)}개 직업</div>
+            </div>
+            <div class="filter-meta">
+                {''.join(f'<span class="meta-chip">{html.escape(item)}</span>' for item in active_filters) if active_filters else '<span class="meta-chip">전체 직업 보기</span>'}
             </div>
         </div>
         """
     )
 
+    if results.empty:
+        st.info("조건에 맞는 직업이 없습니다. 검색어 또는 필터를 바꿔서 다시 확인해 주세요.")
+        return
 
-def render_role_section(detail: dict):
-    steps = get_role_steps(detail)
+    max_cards = min(len(results), 24)
+    if len(results) > max_cards:
+        st.caption(f"결과가 많아 상위 {max_cards}개만 먼저 표시합니다. 검색어·필터를 더 구체화하면 범위를 좁힐 수 있습니다.")
+
+    cols = st.columns(3, gap="large")
+    for idx, (_, row) in enumerate(results.head(max_cards).iterrows()):
+        with cols[idx % 3]:
+            similar_tags = row["similar_list"][:3]
+            salary_value = f"평균 {row['salary_avg_value']:.0f}만원" if pd.notna(row["salary_avg_value"]) else "임금 정보 미상"
+            render_html(
+                f"""
+                <div class="card-shell">
+                    <div>
+                        <div class="job-title">{html.escape(row['job'])}</div>
+                        <div class="job-summary">{html.escape(row['summary_short'] or '요약 정보가 없습니다.')}</div>
+                        <div class="tag-row">
+                            <span class="{salary_badge(row['salary_band'])}">임금 {html.escape(str(row['salary_band']))}</span>
+                            <span class="{outlook_badge(row['outlook_label'])}">전망 {html.escape(row['outlook_label'])}</span>
+                        </div>
+                        <div class="tag-row">
+                            {''.join(f'<span class="tag">{html.escape(tag)}</span>' for tag in similar_tags) if similar_tags else '<span class="tag">유사 직업 정보 없음</span>'}
+                        </div>
+                        <div class="mini-text">{html.escape(salary_value)}</div>
+                    </div>
+                </div>
+                """
+            )
+            if st.button("상세 분석 보기", key=f"detail_{idx}_{row['job']}"):
+                st.session_state["selected_job"] = row["job"]
+                st.session_state["view_mode"] = "detail"
+                rerun_app()
+
+def render_detail_header(row):
+    salary_metrics = row["salary_metrics"] or {}
+    avg_salary = f"{salary_metrics['평균']:.0f}만원" if "평균" in salary_metrics else "미제공"
+    majors = row["major_list"][:4]
+    similar_tags = row["similar_list"][:4]
+
+    render_html(
+        f"""
+        <div class="detail-hero">
+            <div class="detail-topline">
+                <div class="breadcrumb">
+                    <span>직업 탐색</span><span>›</span><span>상세 분석</span><span>›</span><span>{html.escape(row['job'])}</span>
+                </div>
+            </div>
+            <div class="detail-title">{html.escape(row['job'])}</div>
+            <div class="detail-summary">{html.escape(clean_text(row['summary']) or '직업 요약 정보가 없습니다.')}</div>
+            <div class="glass-row">
+                <span class="meta-chip">평균 임금 {html.escape(avg_salary)}</span>
+                <span class="meta-chip">고용 전망 {html.escape(row['outlook_label'])}</span>
+                <span class="meta-chip">관련 전공 {len(row['major_list'])}개</span>
+                <span class="meta-chip">자격 정보 {len(row['certification_list'])}개</span>
+            </div>
+        </div>
+        """
+    )
+
+    col1, col2 = st.columns([1.1, .9], gap="large")
+    with col1:
+        render_html(
+            f"""
+            <div class="mini-card">
+                <div class="mini-title">유사 직업</div>
+                <div class="tag-row">
+                    {''.join(f'<span class="tag">{html.escape(tag)}</span>' for tag in similar_tags) if similar_tags else '<span class="tag">등록된 유사 직업 없음</span>'}
+                </div>
+                <div class="mini-title" style="margin-top:10px;">관련 전공 미리보기</div>
+                <div class="tag-row">
+                    {''.join(f'<span class="tag blue">{html.escape(tag)}</span>' for tag in majors) if majors else '<span class="tag">등록된 전공 없음</span>'}
+                </div>
+            </div>
+            """
+        )
+    with col2:
+        render_html(
+            f"""
+            <div class="mini-card">
+                <div class="mini-title">직무 핵심 포인트</div>
+                <div class="mini-text">
+                    적성, 준비방법, 훈련, 자격 정보를 하나의 직무 프로필로 묶어 보았습니다.
+                    아래 섹션에서 진입 로드맵, 역량 키워드, 자격 정보, 관심도 데이터를 순서대로 확인할 수 있습니다.
+                </div>
+            </div>
+            """
+        )
+
+def render_roadmap_section(row):
+    steps = build_timeline(row)
     cards = []
-    for idx, step in enumerate(steps, start=1):
+    for idx, item in enumerate(steps, start=1):
         cards.append(
             f"""
             <div class="timeline-item">
                 <div class="timeline-no">{idx}</div>
-                <div class="timeline-icon">{step["icon"]}</div>
-                <div class="timeline-title">{html.escape(step["title"])}</div>
-                <div class="timeline-text">{html.escape(step["text"])}</div>
+                <div class="timeline-title">{html.escape(item['title'])}</div>
+                <div class="timeline-text">{html.escape(item['text'])}</div>
             </div>
             """
         )
 
     render_html(
         f"""
-        <div class="section-shell">
-            <div class="section-head">
-                <div class="section-kicker">Role & Task</div>
-                <div class="section-title">이 직업은 어떤 일을 하나요?</div>
-                <div class="section-sub">긴 설명문 대신, 실제 업무 흐름처럼 읽히도록 단계형 구조로 정리했습니다.</div>
-            </div>
-            <div class="timeline">
-                {''.join(cards)}
-            </div>
+        <div class="panel">
+            <div class="section-kicker">How to be</div>
+            <div class="section-title">로드맵</div>
+            <div class="section-sub">prepareway와 training, empway를 묶어 단계형 타임라인으로 재구성했습니다.</div>
+            <div style="height:14px;"></div>
+            <div class="timeline">{''.join(cards)}</div>
         </div>
         """
     )
 
-
-def render_capability_section(detail: dict):
-    scores = derive_competency_scores(detail)
-    radar_svg = render_radar_svg(scores)
-    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    top_name, _ = sorted_scores[0]
-
-    legends = []
-    for name, value in scores.items():
-        legends.append(
-            f"""
-            <div class="legend-item">
-                <div class="legend-top">
-                    <div class="legend-name">{html.escape(name)}</div>
-                    <div class="legend-value">{value}</div>
-                </div>
-                <div class="legend-bar"><span style="width:{value}%"></span></div>
-            </div>
-            """
-        )
+def render_capability_section(row):
+    keywords = extract_keyword_cloud(row)
+    certs = row["certification_list"]
+    majors = row["major_list"]
+    aptitude_lines = row["aptitude_list"]
 
     render_html(
         f"""
-        <div class="section-shell">
-            <div class="section-head">
-                <div class="section-kicker">Capability Profile</div>
-                <div class="section-title">이 직업에 요구되는 핵심 역량은 무엇인가요?</div>
-                <div class="section-sub">직업 설명문과 적성 문구를 바탕으로 직무에서 상대적으로 강조되는 역량을 시각화했습니다.</div>
+        <div class="panel">
+            <div class="section-kicker">Capability & Qualification</div>
+            <div class="section-title">역량 및 자격</div>
+            <div class="section-sub">aptitude의 핵심 어휘를 키워드 클라우드처럼 정리하고, 자격·전공을 별도로 묶었습니다.</div>
+            <div style="height:16px;"></div>
+            <div class="keyword-cloud">
+                {''.join(f'<span class="keyword-pill">{html.escape(word)}</span>' for word in keywords) if keywords else '<div class="empty-note">추출 가능한 키워드가 없습니다.</div>'}
             </div>
-
-            <div class="card">
-                <div class="radar-shell">
-                    <div class="radar-chart">{radar_svg}</div>
-                    <div class="legend-list">
-                        {''.join(legends)}
-                    </div>
+            <div style="height:18px;"></div>
+            <div class="two-col">
+                <div class="mini-card">
+                    <div class="mini-title">자격증 / 자격 요건</div>
+                    {render_empty_list(certs)}
                 </div>
-                <div class="ai-comment">
-                    이 직업은 <strong>{html.escape(top_name)}</strong> 역량의 비중이 특히 크게 읽힙니다.
-                    현재 표시 값은 개인 적합도가 아니라 <strong>직무 핵심 역량 프로필</strong>입니다.
+                <div class="mini-card">
+                    <div class="mini-title">관련 전공</div>
+                    {render_empty_list(majors)}
                 </div>
             </div>
         </div>
         """
     )
 
+    with st.expander("적성 원문 보기", expanded=False):
+        if aptitude_lines:
+            for line in aptitude_lines:
+                st.write(f"- {line}")
+        else:
+            st.caption("등록된 적성 정보가 없습니다.")
 
-def render_outlook_section(detail: dict):
-    status, desc, status_class, arrow = classify_outlook(detail)
-    salary = parse_salary_metrics(detail.get("salery", ""))
-    stress = infer_stress_signal(detail)
-    possibility_lines = split_lines(detail.get("job_possibility", ""))
-    job_pos_summary = possibility_lines[0] if possibility_lines else "전반적 직업 조건 설명이 제공됩니다."
+def build_gender_chart(row, metric="PCNT1"):
+    col_male = f"{metric}_남자"
+    col_female = f"{metric}_여자"
+    values = [
+        pd.to_numeric(row.get(col_male), errors="coerce"),
+        pd.to_numeric(row.get(col_female), errors="coerce"),
+    ]
+    if pd.isna(values).all():
+        return None
 
+    chart_df = pd.DataFrame({"성별": ["남성", "여성"], "관심도": [0 if pd.isna(v) else float(v) for v in values]})
+    fig = px.pie(chart_df, names="성별", values="관심도", hole=0.55)
+    fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{value}<extra></extra>")
+    fig.update_layout(
+        margin=dict(l=10, r=10, t=10, b=10),
+        legend_title_text="",
+        height=320,
+    )
+    return fig
+
+def build_age_chart(row):
+    age_df = pd.DataFrame(
+        {
+            "연령대": ["중학생(14~16세)", "고등학생(17~19세)"],
+            "PCNT1": [
+                pd.to_numeric(row.get("PCNT1_중학생(14~16세 청소년)"), errors="coerce"),
+                pd.to_numeric(row.get("PCNT1_고등학생(17~19세 청소년)"), errors="coerce"),
+            ],
+            "PCNT2": [
+                pd.to_numeric(row.get("PCNT2_중학생(14~16세 청소년)"), errors="coerce"),
+                pd.to_numeric(row.get("PCNT2_고등학생(17~19세 청소년)"), errors="coerce"),
+            ],
+        }
+    )
+    age_df = age_df.fillna(0)
+    melted = age_df.melt(id_vars="연령대", var_name="지표", value_name="관심도")
+    fig = px.bar(melted, x="연령대", y="관심도", color="지표", barmode="group")
+    fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320, legend_title_text="")
+    fig.update_traces(hovertemplate="%{x} · %{fullData.name}: %{y}<extra></extra>")
+    return fig
+
+def render_insight_section(row):
+    salary_metrics = row["salary_metrics"] or {}
     salary_cards = []
-    if salary:
-        for label in ["하위 25%", "중앙값/평균", "상위 25%"]:
-            if label in salary:
-                salary_cards.append(
-                    f"""
-                    <div class="metric-card">
-                        <div class="metric-label">{html.escape(label)}</div>
-                        <div class="metric-value">{html.escape(salary[label])}</div>
-                        <div class="metric-sub">제공된 임금 정보 기준</div>
-                    </div>
-                    """
-                )
-    else:
+    for label in ["하위 25%", "평균", "상위 25%"]:
+        if label in salary_metrics:
+            salary_cards.append(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-label">{html.escape(label)}</div>
+                    <div class="stat-value">{salary_metrics[label]:.0f}만원</div>
+                    <div class="stat-sub">salery 텍스트 파싱 기준</div>
+                </div>
+                """
+            )
+    if not salary_cards:
         salary_cards.append(
             """
-            <div class="metric-card">
-                <div class="metric-label">임금 정보</div>
-                <div class="metric-value">별도 수치 없음</div>
-                <div class="metric-sub">원문 설명을 확인해 주세요.</div>
+            <div class="stat-card">
+                <div class="stat-label">임금 정보</div>
+                <div class="stat-value">미제공</div>
+                <div class="stat-sub">원본 텍스트 확인 필요</div>
             </div>
             """
         )
 
+    employment_text = clean_text(row.get("employment"))
+    possibility_text = clean_text(row.get("job_possibility"))
+
     render_html(
         f"""
-        <div class="section-shell">
-            <div class="section-head">
-                <div class="section-kicker">Outlook & Value</div>
-                <div class="section-title">미래 가치와 현실적 조건</div>
-                <div class="section-sub">전망, 연봉, 업무 밀도 시그널을 분리해 읽기 쉽게 구성했습니다.</div>
-            </div>
-
-            <div class="grid-2">
-                <div class="card">
-                    <div class="status-pill {status_class}">{arrow} {html.escape(status)}</div>
-                    <div class="mini-panel-title">고용 전망</div>
-                    <div class="mini-panel-body" style="margin-bottom:14px;">{html.escape(desc)}</div>
-                    <div class="mini-panel-body">{html.escape(clean_sentence(job_pos_summary))}</div>
-
-                    <div class="stress-shell">
-                        <div class="metric-label">업무 밀도 시그널</div>
-                        <div class="stress-bar">
-                            <div class="stress-marker" style="left:{stress}%"></div>
-                        </div>
-                        <div class="stress-scale">
-                            <span>낮음</span><span>보통</span><span>높음</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="mini-panel-title">연봉 및 조건 포인트</div>
-                    <div class="grid-3">
+        <div class="panel">
+            <div class="section-kicker">Data Insight</div>
+            <div class="section-title">시장 지표 및 통계 시각화</div>
+            <div class="section-sub">salery, employment, job_possibility, PCNT 데이터를 읽기 쉬운 인사이트 형태로 재구성했습니다.</div>
+            <div style="height:16px;"></div>
+            <div class="insight-grid">
+                <div class="mini-card">
+                    <div class="mini-title">시장 지표 인포그래픽</div>
+                    <div class="stats-row" style="grid-template-columns:repeat(3, minmax(0,1fr)); margin-top:0;">
                         {''.join(salary_cards)}
                     </div>
+                    <div style="height:14px;"></div>
+                    <div class="mini-title">고용 전망</div>
+                    <div class="mini-text">{html.escape(shorten(employment_text, 220) or '고용 전망 정보가 없습니다.')}</div>
+                    <div style="height:12px;"></div>
+                    <div class="mini-title">발전 가능성</div>
+                    <div class="mini-text">{html.escape(shorten(possibility_text, 220) or '발전 가능성 정보가 없습니다.')}</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-title">통계 차트</div>
+                    <div class="mini-text">성별 비중은 도넛 차트, 연령대 선호도는 막대 차트로 제공합니다.</div>
                 </div>
             </div>
         </div>
         """
     )
 
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("**성별 관심도 비중**")
+        tab1, tab2 = st.tabs(["PCNT1", "PCNT2"])
+        with tab1:
+            fig = build_gender_chart(row, "PCNT1")
+            if fig is not None:
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.caption("PCNT1 성별 데이터가 없습니다.")
+        with tab2:
+            fig = build_gender_chart(row, "PCNT2")
+            if fig is not None:
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.caption("PCNT2 성별 데이터가 없습니다.")
+    with right:
+        st.markdown("**연령대별 선호도**")
+        age_fig = build_age_chart(row)
+        st.plotly_chart(age_fig, use_container_width=True, config={"displayModeBar": False})
+        st.caption("PCNT1/PCNT2는 원본 엑셀 컬럼명을 그대로 반영한 관심도 지표입니다.")
 
-def render_extension_section(detail: dict):
-    similar_jobs = get_similar_jobs(detail)
-    majors = get_major_list(detail)
-    contacts = get_contact_list(detail)
+    with st.expander("원문 텍스트 전체 보기", expanded=False):
+        st.markdown("**고용전망**")
+        st.write(employment_text or "등록된 내용이 없습니다.")
+        st.markdown("**발전가능성**")
+        st.write(possibility_text or "등록된 내용이 없습니다.")
+        st.markdown("**준비방법**")
+        st.write(clean_text(row.get("prepareway")) or "등록된 내용이 없습니다.")
+        st.markdown("**훈련**")
+        st.write(clean_text(row.get("training")) or "등록된 내용이 없습니다.")
 
-    def render_list(items):
-        if not items:
-            return '<div class="empty-state">등록된 내용이 없습니다.</div>'
-        return "<ul class='clean-list'>" + "".join([f"<li>{html.escape(x)}</li>" for x in items]) + "</ul>"
+def render_detail_page(df):
+    selected_job = st.session_state.get("selected_job")
+    if not selected_job:
+        st.session_state["view_mode"] = "search"
+        rerun_app()
 
-    prepare_parts = []
-    for title, key in [
-        ("진입 경로", "empway"),
-        ("준비 방법", "prepareway"),
-        ("훈련 및 교육", "training"),
-        ("자격/면허", "certification"),
-    ]:
-        lines = split_lines(detail.get(key, ""))
-        if lines:
-            prepare_parts.extend([f"{title}: {x}" for x in lines])
+    row_df = df[df["job"] == selected_job]
+    if row_df.empty:
+        st.error("선택한 직업 정보를 찾을 수 없습니다.")
+        return
 
-    render_html(
-        """
-        <div class="section-shell">
-            <div class="section-head">
-                <div class="section-kicker">Extension</div>
-                <div class="section-title">다음 단계로 탐색을 확장해 보세요</div>
-                <div class="section-sub">연관 직업, 준비 방법, 관련 학과를 별도 모듈로 분리했습니다.</div>
-            </div>
-        </div>
-        """
-    )
+    row = row_df.iloc[0]
 
-    col1, col2 = st.columns(2, gap="large")
-    with col1:
-        render_html_card("연관 직업", render_list(similar_jobs))
-        st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
-        render_html_card("준비 방법", render_list(prepare_parts))
-    with col2:
-        render_html_card("관련 학과", render_list(majors))
-        st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
-        render_html_card("추가 정보", render_list(contacts))
+    top_left, top_right = st.columns([.22, .78], gap="large")
+    with top_left:
+        if st.button("← 검색 결과로 돌아가기"):
+            st.session_state["view_mode"] = "search"
+            rerun_app()
+    with top_right:
+        options = df["job"].dropna().astype(str).tolist()
+        current_idx = options.index(selected_job) if selected_job in options else 0
+        jump_job = st.selectbox("다른 직업으로 바로 이동", options=options, index=current_idx)
+        if jump_job != selected_job:
+            st.session_state["selected_job"] = jump_job
+            rerun_app()
 
-
-def render_detail_sections(detail: dict, focus_items: list):
-    focus = set(focus_items)
-
-    if "직무소개" in focus or not focus:
-        render_role_section(detail)
-    if "핵심 역량" in focus or not focus:
-        render_capability_section(detail)
-    if "전망/연봉" in focus or not focus:
-        render_outlook_section(detail)
-    if {"연관 직업", "준비 방법", "관련 학과", "추가 정보"} & focus or not focus:
-        render_extension_section(detail)
-
+    render_detail_header(row)
+    render_roadmap_section(row)
+    render_capability_section(row)
+    render_insight_section(row)
 
 def main():
     inject_css()
 
     if not DATA_FILE.exists():
         st.error(
-            f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}\\n\\n"
-            "app.py와 같은 폴더에 career_jobs.xlsx가 있는지 확인해 주세요."
+            f"데이터 파일을 찾을 수 없습니다: {DATA_FILE.name}\n"
+            "app.py와 같은 폴더에 career_jobs.xlsx를 두고 실행해 주세요."
         )
         st.stop()
 
-    df = get_data()
+    df, all_majors = load_and_prepare_data(str(DATA_FILE))
 
-    search_query = st.text_input(
-        "직업명 또는 키워드 검색",
-        placeholder="예: IT컨설턴트, 상담, 디자인, 행정, 환경",
+    if "view_mode" not in st.session_state:
+        st.session_state["view_mode"] = "search"
+
+    if st.session_state["view_mode"] == "detail":
+        render_detail_page(df)
+        return
+
+    render_main_header(df)
+    query, majors, salary_bands, outlooks, sort_by = render_search_filters(all_majors)
+    results = search_and_filter(
+        df,
+        query=query,
+        majors=majors,
+        salary_bands=salary_bands,
+        outlooks=outlooks,
+        sort_by=sort_by,
     )
-    results = search_jobs(df, search_query, top_n=30)
-
-    if results.empty:
-        render_html(
-            """
-            <div class="nav-shell">
-                <div class="nav-title">직업 탐색 리포트</div>
-                <div class="nav-sub">검색 결과가 없습니다. 다른 직업명이나 키워드로 다시 입력해 주세요.</div>
-            </div>
-            """
-        )
-        st.warning("검색 결과가 없습니다.")
-        st.stop()
-
-    job_options = results["job"].dropna().astype(str).tolist()
-    if not job_options:
-        st.error("검색 결과는 있으나 선택 가능한 직업명이 없습니다.")
-        st.stop()
-
-    if "selected_job" not in st.session_state or st.session_state.selected_job not in job_options:
-        st.session_state.selected_job = job_options[0]
-
-    if "focus_items" not in st.session_state:
-        st.session_state.focus_items = ["직무소개", "핵심 역량", "전망/연봉"]
-
-    initial_detail = get_job_detail(df, st.session_state.selected_job)
-    selected_job, selected_focus = render_navigator(
-        job_options=job_options,
-        selected_job=st.session_state.selected_job,
-        focus_items=st.session_state.focus_items,
-        search_query=search_query,
-        detail=initial_detail if initial_detail else {"job": st.session_state.selected_job},
-    )
-
-    st.session_state.selected_job = selected_job
-    st.session_state.focus_items = selected_focus if selected_focus else []
-
-    detail = get_job_detail(df, st.session_state.selected_job)
-    if not detail:
-        st.error("선택한 직업 정보를 찾을 수 없습니다.")
-        st.stop()
-
-    render_brief_dashboard(detail)
-    render_detail_sections(detail, st.session_state.focus_items)
-
+    render_result_cards(results, query, majors, salary_bands, outlooks)
 
 if __name__ == "__main__":
     main()
