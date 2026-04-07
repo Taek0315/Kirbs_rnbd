@@ -744,6 +744,10 @@ def inject_css() -> None:
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
             overflow:hidden;
+            opacity:0;
+            transform:translateY(14px);
+            animation:cardReveal .55s ease forwards;
+            animation-delay:var(--delay, 0s);
         }
         .result-card::before{
             content:"";
@@ -757,6 +761,10 @@ def inject_css() -> None:
             transform:translateY(-4px);
             box-shadow:0 18px 36px rgba(15,23,42,.10);
             border-color:#cfe0ff;
+        }
+        @keyframes cardReveal{
+            from{ opacity:0; transform:translateY(14px); }
+            to{ opacity:1; transform:translateY(0); }
         }
         .job-title{
             font-size:20px;
@@ -968,6 +976,189 @@ def inject_css() -> None:
             line-height:1.7;
             color:#98a2b3;
         }
+        .idle-shell{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid var(--line);
+            border-radius:24px;
+            box-shadow:var(--shadow);
+            padding:32px 28px;
+            margin-top:4px;
+        }
+        .idle-grid{
+            display:grid;
+            grid-template-columns:1.15fr .85fr;
+            gap:18px;
+            align-items:stretch;
+        }
+        .idle-card{
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            border-radius:18px;
+            padding:18px;
+        }
+        .idle-title{
+            font-size:24px;
+            line-height:1.42;
+            color:#102a43;
+            font-weight:800;
+            margin-bottom:10px;
+            letter-spacing:-0.02em;
+        }
+        .idle-desc{
+            font-size:15px;
+            line-height:1.8;
+            color:#475467;
+        }
+        .idle-step{
+            display:flex;
+            gap:12px;
+            align-items:flex-start;
+            margin-bottom:14px;
+        }
+        .idle-step:last-child{ margin-bottom:0; }
+        .idle-step-no{
+            width:28px;
+            height:28px;
+            border-radius:50%;
+            background:#eff6ff;
+            border:1px solid #dbeafe;
+            color:#2563eb;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:12px;
+            font-weight:800;
+            flex-shrink:0;
+            margin-top:2px;
+        }
+        .idle-step-text{
+            font-size:14px;
+            line-height:1.72;
+            color:#475467;
+        }
+        .loading-shell{
+            background:linear-gradient(135deg, #0f172a 0%, #173b74 54%, #2563eb 100%);
+            border-radius:24px;
+            padding:28px 28px 24px 28px;
+            margin:14px 0 22px 0;
+            box-shadow:var(--shadow-strong);
+            position:relative;
+            overflow:hidden;
+        }
+        .loading-shell::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 36%, rgba(255,255,255,0) 64%);
+            transform:translateX(-100%);
+            animation:loadingSweep 2.4s linear infinite;
+            pointer-events:none;
+        }
+        @keyframes loadingSweep{
+            to{ transform:translateX(100%); }
+        }
+        .loading-kicker{
+            font-size:12px;
+            color:#dbeafe;
+            font-weight:800;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+            margin-bottom:8px;
+        }
+        .loading-title{
+            font-size:26px;
+            line-height:1.34;
+            color:#ffffff;
+            font-weight:800;
+            margin-bottom:10px;
+            letter-spacing:-0.02em;
+        }
+        .loading-desc{
+            font-size:14px;
+            line-height:1.78;
+            color:#dbeafe;
+            max-width:860px;
+            margin-bottom:16px;
+        }
+        .loading-stage{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:9px 14px;
+            border-radius:999px;
+            background:rgba(255,255,255,.12);
+            border:1px solid rgba(255,255,255,.18);
+            color:#ffffff;
+            font-size:13px;
+            font-weight:700;
+            margin-bottom:18px;
+            backdrop-filter:blur(8px);
+        }
+        .loading-stage-dot{
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            background:#bfdbfe;
+            box-shadow:0 0 0 0 rgba(191,219,254,.48);
+            animation:pulseGlowLight 1.8s infinite;
+        }
+        @keyframes pulseGlowLight{
+            0%{ box-shadow:0 0 0 0 rgba(191,219,254,.45); }
+            70%{ box-shadow:0 0 0 8px rgba(191,219,254,0); }
+            100%{ box-shadow:0 0 0 0 rgba(191,219,254,0); }
+        }
+        .loading-steps{
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0, 1fr));
+            gap:12px;
+            margin-top:8px;
+        }
+        .loading-step-card{
+            background:rgba(255,255,255,.10);
+            border:1px solid rgba(255,255,255,.16);
+            border-radius:18px;
+            padding:16px 14px;
+            min-height:112px;
+            backdrop-filter:blur(8px);
+        }
+        .loading-step-label{
+            font-size:12px;
+            color:#dbeafe;
+            font-weight:800;
+            margin-bottom:8px;
+        }
+        .loading-step-text{
+            font-size:13px;
+            line-height:1.72;
+            color:#ffffff;
+        }
+        .skeleton-row{
+            display:grid;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap:16px;
+            margin-top:18px;
+        }
+        .skeleton-card{
+            background:#ffffff;
+            border:1px solid #e5edf8;
+            border-radius:20px;
+            padding:20px;
+            box-shadow:0 8px 24px rgba(15,23,42,.05);
+        }
+        .skeleton-line{
+            height:12px;
+            border-radius:999px;
+            margin-bottom:10px;
+            background:linear-gradient(90deg, #edf2f7 0%, #f8fbff 50%, #edf2f7 100%);
+            background-size:200% 100%;
+            animation:skeletonMove 1.35s linear infinite;
+        }
+        .skeleton-line:last-child{ margin-bottom:0; }
+        .w-90{ width:90%; } .w-78{ width:78%; } .w-68{ width:68%; } .w-55{ width:55%; } .w-42{ width:42%; }
+        @keyframes skeletonMove{
+            0%{ background-position:200% 0; }
+            100%{ background-position:-200% 0; }
+        }
 
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div,
@@ -999,154 +1190,15 @@ def inject_css() -> None:
         }
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
 
-        .ai-loading-shell{
-            background:linear-gradient(135deg, #0f172a 0%, #173b74 58%, #2563eb 100%);
-            border-radius:22px;
-            padding:22px 22px 18px 22px;
-            box-shadow:var(--shadow-strong);
-            color:#fff;
-            position:relative;
-            overflow:hidden;
-            margin:10px 0 18px 0;
-        }
-        .ai-loading-shell::after{
-            content:"";
-            position:absolute;
-            inset:0;
-            background:linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.16) 38%, rgba(255,255,255,0) 68%);
-            transform:translateX(-100%);
-            animation:aiScan 1.8s linear infinite;
-            pointer-events:none;
-        }
-        @keyframes aiScan{
-            to{ transform:translateX(100%); }
-        }
-        .ai-loading-top{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap:16px;
-            margin-bottom:14px;
-            flex-wrap:wrap;
-        }
-        .ai-loading-kicker{
-            font-size:12px;
-            font-weight:800;
-            letter-spacing:.12em;
-            text-transform:uppercase;
-            color:#dbeafe;
-            margin-bottom:6px;
-        }
-        .ai-loading-title{
-            font-size:24px;
-            line-height:1.35;
-            font-weight:800;
-            color:#ffffff;
-            margin-bottom:6px;
-            letter-spacing:-0.02em;
-        }
-        .ai-loading-sub{
-            font-size:14px;
-            line-height:1.72;
-            color:#dbeafe;
-        }
-        .ai-loading-badge{
-            display:inline-flex;
-            align-items:center;
-            gap:9px;
-            padding:9px 13px;
-            border-radius:999px;
-            background:rgba(255,255,255,.12);
-            border:1px solid rgba(255,255,255,.18);
-            color:#ffffff;
-            font-size:12px;
-            font-weight:800;
-            backdrop-filter:blur(8px);
-        }
-        .ai-loading-dot{
-            width:9px;
-            height:9px;
-            border-radius:50%;
-            background:#93c5fd;
-            box-shadow:0 0 0 0 rgba(147,197,253,.45);
-            animation:pulseGlow 1.6s infinite;
-        }
-        .ai-stage-row{
-            display:flex;
-            flex-wrap:wrap;
-            gap:10px;
-            margin:14px 0 16px 0;
-        }
-        .ai-stage-chip{
-            display:inline-flex;
-            align-items:center;
-            padding:9px 12px;
-            border-radius:999px;
-            background:rgba(255,255,255,.10);
-            border:1px solid rgba(255,255,255,.16);
-            color:#eaf2ff;
-            font-size:12px;
-            font-weight:700;
-        }
-        .ai-stage-chip.active{
-            background:rgba(255,255,255,.18);
-            border-color:rgba(255,255,255,.30);
-            color:#ffffff;
-        }
-        .ai-loading-progress{
-            width:100%;
-            height:10px;
-            border-radius:999px;
-            background:rgba(255,255,255,.16);
-            overflow:hidden;
-            margin-bottom:14px;
-        }
-        .ai-loading-progress > span{
-            display:block;
-            height:100%;
-            border-radius:999px;
-            background:linear-gradient(90deg, #bfdbfe 0%, #ffffff 100%);
-            transition:width .2s ease;
-        }
-        .ai-loading-meta{
-            display:grid;
-            grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:12px;
-        }
-        .ai-loading-card{
-            background:rgba(255,255,255,.10);
-            border:1px solid rgba(255,255,255,.14);
-            border-radius:16px;
-            padding:14px;
-            min-height:96px;
-            backdrop-filter:blur(6px);
-        }
-        .ai-loading-label{
-            font-size:11px;
-            color:#dbeafe;
-            font-weight:800;
-            margin-bottom:10px;
-            letter-spacing:.04em;
-        }
-        .ai-skeleton-line{
-            height:10px;
-            border-radius:999px;
-            background:linear-gradient(90deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.12) 100%);
-            background-size:200% 100%;
-            animation:skeletonMove 1.4s linear infinite;
-            margin-bottom:10px;
-        }
-        .ai-skeleton-line:last-child{ margin-bottom:0; }
-        @keyframes skeletonMove{
-            0%{ background-position:200% 0; }
-            100%{ background-position:-200% 0; }
-        }
-
         @media (max-width: 1100px){
-            .stats-row, .result-grid, .brief-grid, .ai-loading-meta{ grid-template-columns:1fr 1fr; }
+            .stats-row, .result-grid, .brief-grid{ grid-template-columns:1fr 1fr; }
+        }
+        @media (max-width: 1100px){
+            .loading-steps{ grid-template-columns:1fr 1fr; }
+            .idle-grid{ grid-template-columns:1fr; }
         }
         @media (max-width: 768px){
-            .stats-row, .result-grid, .insight-grid-2, .brief-grid, .ai-loading-meta{ grid-template-columns:1fr; }
+            .stats-row, .result-grid, .insight-grid-2, .brief-grid, .loading-steps, .skeleton-row{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
         }
         </style>
@@ -1221,70 +1273,130 @@ def render_top_stats(df: pd.DataFrame) -> None:
 
 
 
-def render_ai_loading_sequence(query: str) -> None:
-    stages = [
-        "탐색어 의미 해석 중",
-        "연관 직업 데이터 스캔 중",
-        "전공·전망 정보 매칭 중",
-        "AI 탐색 브리핑 정리 중",
-    ]
 
-    shell = st.empty()
-    progress = st.empty()
 
-    for idx, stage in enumerate(stages, start=1):
-        stage_html = "".join([
-            f'<span class="ai-stage-chip {'active' if i < idx else ''}">{html.escape(label)}</span>'
-            for i, label in enumerate(stages)
-        ])
-        width = int(idx / len(stages) * 100)
-
-        shell.markdown(
-            textwrap.dedent(f"""
-            <div class="ai-loading-shell">
-                <div class="ai-loading-top">
-                    <div>
-                        <div class="ai-loading-kicker">AI Exploration</div>
-                        <div class="ai-loading-title">AI가 탐색 흐름을 구성하고 있습니다</div>
-                        <div class="ai-loading-sub">
-                            입력한 탐색어 <strong>{html.escape(query or '직업 탐색')}</strong> 를 기준으로 의미를 해석하고,
-                            연관 직무·전공·전망 데이터를 연결해 보기 좋은 결과로 정리하고 있습니다.
-                        </div>
-                    </div>
-                    <div class="ai-loading-badge"><span class="ai-loading-dot"></span>{html.escape(stage)}</div>
+def render_idle_search_state() -> None:
+    render_html(
+        """
+        <div class="idle-shell">
+            <div class="idle-grid">
+                <div class="idle-card">
+                    <div class="section-kicker">AI Search Guide</div>
+                    <div class="idle-title">탐색어를 입력하면 AI가 직업 정보를 정리해 보여드립니다</div>
+                    <div class="idle-desc">초기 화면에서는 전체 직업 목록을 바로 펼치지 않습니다. 찾고 싶은 직업명, 관심사, 일의 분위기, 필요한 역량을 자연스럽게 입력한 뒤 <strong>AI 탐색 시작</strong>을 눌러 주세요.</div>
                 </div>
-                <div class="ai-stage-row">{stage_html}</div>
-                <div class="ai-loading-progress"><span style="width:{width}%"></span></div>
-                <div class="ai-loading-meta">
-                    <div class="ai-loading-card">
-                        <div class="ai-loading-label">탐색어 분석</div>
-                        <div class="ai-skeleton-line" style="width:76%"></div>
-                        <div class="ai-skeleton-line" style="width:54%"></div>
-                        <div class="ai-skeleton-line" style="width:62%"></div>
-                    </div>
-                    <div class="ai-loading-card">
-                        <div class="ai-loading-label">연관 데이터 매칭</div>
-                        <div class="ai-skeleton-line" style="width:84%"></div>
-                        <div class="ai-skeleton-line" style="width:68%"></div>
-                        <div class="ai-skeleton-line" style="width:58%"></div>
-                    </div>
-                    <div class="ai-loading-card">
-                        <div class="ai-loading-label">결과 브리핑 구성</div>
-                        <div class="ai-skeleton-line" style="width:70%"></div>
-                        <div class="ai-skeleton-line" style="width:88%"></div>
-                        <div class="ai-skeleton-line" style="width:52%"></div>
-                    </div>
+                <div class="idle-card">
+                    <div class="section-kicker">How It Works</div>
+                    <div class="idle-step"><div class="idle-step-no">1</div><div class="idle-step-text">입력한 문장을 바탕으로 탐색 의도와 핵심 키워드를 구조적으로 해석합니다.</div></div>
+                    <div class="idle-step"><div class="idle-step-no">2</div><div class="idle-step-text">직무 설명, 유사 직업, 관련 전공, 자격, 시장 지표를 교차 검토합니다.</div></div>
+                    <div class="idle-step"><div class="idle-step-no">3</div><div class="idle-step-text">우선순위를 재정렬한 뒤 탐색 브리핑과 결과 카드를 순차적으로 제시합니다.</div></div>
                 </div>
             </div>
-            """),
+        </div>
+        """
+    )
+
+
+def render_ai_loading_sequence(query: str) -> None:
+    stages = [
+        (
+            "탐색 의도를 정교하게 해석하고 있습니다",
+            "입력한 문장에서 관심 분야, 업무 성격, 적합 직무 신호를 분해하고 있습니다.",
+            [
+                ("의도 해석", "문장 속 핵심 키워드와 암묵적 요구를 정리합니다."),
+                ("직무 매칭", "직업명·소개·유사 직무 흐름을 교차 탐색합니다."),
+                ("맥락 결합", "전공, 자격, 시장 지표를 함께 결합합니다."),
+                ("브리핑 구성", "최종 결과를 읽기 쉬운 탐색 구조로 정리합니다."),
+            ],
+        ),
+        (
+            "직무 데이터의 연관 관계를 탐색하고 있습니다",
+            f"‘{html.escape(query)}’와 가까운 설명, 유사 직업, 전공 정보를 다층적으로 비교하고 있습니다.",
+            [
+                ("유사성 분석", "표면 키워드보다 의미상 가까운 직무를 우선 검토합니다."),
+                ("전공 매핑", "흩어져 있는 전공 정보를 통합해 연결 패턴을 찾습니다."),
+                ("시장 신호", "임금 수준과 고용 전망 텍스트를 함께 점검합니다."),
+                ("정렬 최적화", "탐색 흐름에 맞게 결과의 우선순위를 조정합니다."),
+            ],
+        ),
+        (
+            "결과를 큐레이션하고 있습니다",
+            "단순 일치 결과가 아니라, 바로 읽기 좋은 탐색 브리핑과 카드 구성을 정돈하고 있습니다.",
+            [
+                ("핵심 요약", "가장 먼저 볼 정보를 상단 브리핑에 압축합니다."),
+                ("가독성 조정", "긴 설명은 요약하고 핵심 메트릭은 전면에 배치합니다."),
+                ("카드 배열", "결과 카드를 위에서 아래로 순차적으로 제시할 준비를 합니다."),
+                ("세부 연결", "상세 페이지에서 이어 볼 정보 흐름을 정리합니다."),
+            ],
+        ),
+    ]
+
+    panel = st.empty()
+    progress_slot = st.empty()
+    skeleton_slot = st.empty()
+    progress = st.progress(0)
+
+    steps_total = len(stages)
+    for idx, (title, desc, cards) in enumerate(stages, start=1):
+        cards_html = "".join(
+            [
+                f'<div class="loading-step-card"><div class="loading-step-label">{html.escape(label)}</div><div class="loading-step-text">{html.escape(text_line)}</div></div>'
+                for label, text_line in cards
+            ]
+        )
+        panel.markdown(
+            textwrap.dedent(
+                f"""
+                <div class="loading-shell">
+                    <div class="loading-kicker">AI Curation Engine</div>
+                    <div class="loading-title">{html.escape(title)}</div>
+                    <div class="loading-desc">{desc}</div>
+                    <div class="loading-stage"><span class="loading-stage-dot"></span>{idx} / {steps_total} 단계 진행 중</div>
+                    <div class="loading-steps">{cards_html}</div>
+                </div>
+                """
+            ).strip(),
             unsafe_allow_html=True,
         )
-        progress.progress(width / 100)
-        time.sleep(0.22 if idx < len(stages) else 0.18)
+        progress_value = int(idx / steps_total * 100)
+        progress.progress(progress_value)
+        progress_slot.caption(f"AI가 탐색 결과를 정교하게 정리하고 있습니다 · {progress_value}%")
+        skeleton_slot.markdown(
+            textwrap.dedent(
+                """
+                <div class="skeleton-row">
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-55"></div>
+                        <div class="skeleton-line w-90"></div>
+                        <div class="skeleton-line w-78"></div>
+                        <div class="skeleton-line w-68"></div>
+                        <div class="skeleton-line w-42"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-55"></div>
+                        <div class="skeleton-line w-90"></div>
+                        <div class="skeleton-line w-78"></div>
+                        <div class="skeleton-line w-68"></div>
+                        <div class="skeleton-line w-42"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-55"></div>
+                        <div class="skeleton-line w-90"></div>
+                        <div class="skeleton-line w-78"></div>
+                        <div class="skeleton-line w-68"></div>
+                        <div class="skeleton-line w-42"></div>
+                    </div>
+                </div>
+                """
+            ).strip(),
+            unsafe_allow_html=True,
+        )
+        time.sleep(0.95 if idx == 1 else 1.05)
 
+    panel.empty()
     progress.empty()
-    shell.empty()
-
+    progress_slot.empty()
+    skeleton_slot.empty()
 
 def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
     chips = [
@@ -1375,7 +1487,7 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
     )
 
 
-def render_result_card(row: pd.Series) -> None:
+def render_result_card(row: pd.Series, delay: float = 0.0) -> None:
     tags = row.get("similar_job_list", [])[:3]
     if not tags:
         tags = row.get("major_list", [])[:3]
@@ -1391,7 +1503,7 @@ def render_result_card(row: pd.Series) -> None:
 
     render_html(
         f"""
-        <div class="result-card">
+        <div class="result-card" style="--delay:{delay:.2f}s;">
             <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
             <div class="job-summary">{html.escape(summary)}</div>
             <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
@@ -1905,11 +2017,16 @@ def render_main_page(df: pd.DataFrame) -> None:
     with col3:
         employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
 
-    if st.session_state.get("trigger_ai_search"):
-        render_ai_loading_sequence(st.session_state.get("committed_query", ""))
+    search_query = st.session_state.get("committed_query", "")
+
+    if st.session_state.get("trigger_ai_search") and search_query.strip():
+        render_ai_loading_sequence(search_query)
         st.session_state.trigger_ai_search = False
 
-    search_query = st.session_state.get("committed_query", "")
+    if not search_query.strip():
+        render_ai_search_brief(search_query, pd.DataFrame(), pd.DataFrame())
+        render_idle_search_state()
+        return
 
     searched = search_jobs(df, search_query)
     filtered = filter_results(searched, selected_majors, salary_filters, employment_filters)
@@ -1931,7 +2048,7 @@ def render_main_page(df: pd.DataFrame) -> None:
     cols = st.columns(3, gap="large")
     for idx, (_, row) in enumerate(page_df.iterrows()):
         with cols[idx % 3]:
-            render_result_card(row)
+            render_result_card(row, delay=idx * 0.08)
             if st.button(f"상세 보기 · {row['job']}", key=f"open_{start+idx}", use_container_width=True):
                 st.session_state.selected_job = row["job"]
                 st.session_state.page = "detail"
