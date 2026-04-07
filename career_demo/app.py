@@ -1,6 +1,7 @@
 from pathlib import Path
 import re
 import html
+import textwrap
 from collections import Counter
 
 import pandas as pd
@@ -17,8 +18,12 @@ st.set_page_config(
 )
 
 
+def render_html(markup: str):
+    st.markdown(textwrap.dedent(markup).strip(), unsafe_allow_html=True)
+
+
 def inject_css():
-    st.markdown(
+    render_html(
         """
         <style>
         :root{
@@ -163,13 +168,17 @@ def inject_css():
             to { transform: translateX(100%); }
         }
 
-        .brief-kicker{
+        .brief-kicker,
+        .section-kicker{
             font-size:12px;
             line-height:1.5;
             color:#2563eb;
             font-weight:800;
             letter-spacing:.08em;
             text-transform:uppercase;
+        }
+
+        .brief-kicker{
             margin-bottom:10px;
         }
 
@@ -181,11 +190,15 @@ def inject_css():
             margin-bottom:8px;
         }
 
-        .brief-desc{
+        .brief-desc,
+        .section-sub{
             font-size:14px;
             line-height:1.6;
             letter-spacing:-0.2px;
             color:#475467;
+        }
+
+        .brief-desc{
             margin-bottom:18px;
         }
 
@@ -207,7 +220,7 @@ def inject_css():
 
         .summary-text{
             font-size:18px;
-            line-height:1.5;
+            line-height:1.6;
             font-weight:700;
             color:#0f172a;
             letter-spacing:-0.3px;
@@ -235,7 +248,7 @@ def inject_css():
 
         .insight-grid{
             display:grid;
-            grid-template-columns: 1.2fr .8fr;
+            grid-template-columns: 1.15fr .85fr;
             gap:24px;
             align-items:stretch;
         }
@@ -258,7 +271,7 @@ def inject_css():
 
         .mini-panel-body{
             font-size:14px;
-            line-height:1.6;
+            line-height:1.7;
             letter-spacing:-0.2px;
             color:#475467;
         }
@@ -273,12 +286,6 @@ def inject_css():
         }
 
         .section-kicker{
-            font-size:12px;
-            line-height:1.5;
-            color:#2563eb;
-            font-weight:800;
-            letter-spacing:.08em;
-            text-transform:uppercase;
             margin-bottom:6px;
         }
 
@@ -288,13 +295,6 @@ def inject_css():
             font-weight:700;
             color:#102a43;
             margin-bottom:4px;
-        }
-
-        .section-sub{
-            font-size:14px;
-            line-height:1.6;
-            color:#667085;
-            letter-spacing:-0.2px;
         }
 
         .card{
@@ -328,7 +328,9 @@ def inject_css():
             border:1px solid #e8eef7;
             border-radius:16px;
             padding:18px 16px;
-            min-height:170px;
+            min-height:220px;
+            display:flex;
+            flex-direction:column;
         }
 
         .timeline-no{
@@ -344,6 +346,7 @@ def inject_css():
             font-size:13px;
             font-weight:800;
             margin-bottom:14px;
+            flex-shrink:0;
         }
 
         .timeline-icon{
@@ -362,9 +365,11 @@ def inject_css():
 
         .timeline-text{
             font-size:14px;
-            line-height:1.6;
+            line-height:1.7;
             color:#64748b;
             letter-spacing:-0.2px;
+            white-space:normal;
+            word-break:keep-all;
         }
 
         .radar-shell{
@@ -375,9 +380,16 @@ def inject_css():
             flex-wrap:wrap;
         }
 
+        .radar-chart{
+            flex:0 0 360px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
         .legend-list{
             min-width:240px;
-            flex:1 1 240px;
+            flex:1 1 260px;
         }
 
         .legend-item{
@@ -531,8 +543,9 @@ def inject_css():
             padding:12px 0;
             border-bottom:1px solid #eef2f6;
             font-size:14px;
-            line-height:1.6;
+            line-height:1.7;
             color:#334155;
+            word-break:keep-all;
         }
 
         .clean-list li:last-child{
@@ -584,10 +597,19 @@ def inject_css():
             .grid-3{
                 grid-template-columns:1fr;
             }
+
+            .radar-shell{
+                flex-direction:column;
+                align-items:flex-start;
+            }
+
+            .radar-chart{
+                width:100%;
+                flex:1 1 auto;
+            }
         }
         </style>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -656,12 +678,12 @@ def split_lines(text):
             result.extend(split_lines(item))
         return result
 
-    text = str(text).replace("\r", "\n").strip()
+    text = str(text).replace("\\r", "\\n").strip()
     if not text:
         return []
 
     raw_parts = []
-    for part in re.split(r"\n|;", text):
+    for part in re.split(r"\\n|;", text):
         part = part.strip()
         if not part:
             continue
@@ -672,7 +694,7 @@ def split_lines(text):
 
     lines = []
     for line in raw_parts:
-        line = re.sub(r"^[\\-•·]\s*", "", line).strip()
+        line = re.sub(r"^[\\-•·]\\s*", "", line).strip()
         if line:
             lines.append(line)
     return lines
@@ -717,13 +739,13 @@ def get_contact_list(detail: dict):
 def clean_sentence(text: str):
     if not text:
         return ""
-    text = re.sub(r"^[\\-•·]\s*", "", str(text)).strip()
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"^[\\-•·]\\s*", "", str(text)).strip()
+    text = re.sub(r"\\s+", " ", text)
     return text
 
 
 def infer_domain(job_name: str, search_query: str, detail: dict):
-    text = f"{job_name} {search_query} {detail.get('summary','')} {detail.get('aptitude','')}".lower()
+    text = f"{job_name} {search_query} {detail.get('summary', '')} {detail.get('aptitude', '')}".lower()
     mapping = [
         ("IT 분야", ["it", "정보", "컴퓨터", "시스템", "소프트웨어", "네트워크", "데이터"]),
         ("보건·의료 분야", ["간호", "의료", "병원", "보건", "약", "임상", "치과"]),
@@ -746,6 +768,32 @@ def build_breadcrumb(job_name: str, search_query: str, detail: dict):
     return ["직업 탐색", domain, job_name]
 
 
+def normalize_keyword_token(token: str):
+    token = token.strip()
+    token = re.sub(r"[^\\w가-힣·ㆍ]", "", token)
+    token = token.strip("·ㆍ")
+
+    suffixes = [
+        "으로서", "으로는", "으로", "에게서", "에서는", "에서", "에게", "들과", "들과의",
+        "입니다", "한다", "하며", "하고", "하여", "하는", "하다", "되는", "된다", "되며",
+        "적인", "적인지", "적인데", "적인가", "적", "들을", "에서의", "에서만",
+        "에게도", "까지", "부터", "처럼", "보다", "조차", "마저", "이라", "이며", "이면",
+        "이고", "인데", "이나", "나", "은", "는", "이", "가", "을", "를", "의", "와", "과",
+        "도", "만"
+    ]
+
+    changed = True
+    while changed:
+        changed = False
+        for suffix in suffixes:
+            if len(token) > len(suffix) + 1 and token.endswith(suffix):
+                token = token[: -len(suffix)]
+                changed = True
+                break
+
+    return token.strip()
+
+
 def extract_keywords(detail: dict, limit: int = 8):
     text = " ".join(
         [
@@ -753,29 +801,36 @@ def extract_keywords(detail: dict, limit: int = 8):
             str(detail.get("summary", "")),
             str(detail.get("aptitude", "")),
             str(detail.get("empway", "")),
+            str(detail.get("prepareway", "")),
+            str(detail.get("training", "")),
         ]
     )
+
     candidates = re.findall(r"[A-Za-z가-힣·ㆍ]{2,20}", text)
 
     stopwords = {
-        "그리고","관련","직업","위해","통해","되는","한다","있다","있으며","것으로","정도",
-        "업무","필요","요구","사람","사람에게","유리하다","적합","직업인","경우","향후",
-        "자료","워크넷","정보","수준","능력","역할","기업","고객","기본적","기본적인","가능성",
-        "직장","고용","임금","평균","하위","상위","된다","하는","업무를","직업은","직업이",
-        "관련된","등의","등을","대한","자신의","자신이","수행","준비","교육"
+        "그리고", "관련", "직업", "위해", "통해", "되는", "한다", "있다", "있으며", "것으로",
+        "정도", "업무", "필요", "요구", "사람", "사람에게", "유리하다", "적합", "직업인",
+        "경우", "향후", "자료", "워크넷", "정보", "수준", "능력", "역할", "기업", "고객",
+        "기본적", "기본적인", "가능성", "직장", "고용", "임금", "평균", "하위", "상위",
+        "된다", "하는", "업무를", "직업은", "직업이", "관련된", "등의", "등을", "대한",
+        "자신의", "자신이", "수행", "준비", "교육", "활용", "전반적", "전반적인", "각종",
+        "존재", "현재", "사용자"
     }
 
     weighted = []
-    preferred = ["전략", "시스템", "분석", "기획", "설계", "커뮤니케이션", "문제해결", "책임감", "데이터", "고객", "운용", "진단", "컨설팅"]
+    preferred = ["시스템", "분석", "설계", "데이터", "기획", "문제해결", "커뮤니케이션", "기술", "네트워크", "지도", "공간"]
 
     for token in candidates:
-        token = token.strip("·ㆍ")
-        if len(token) < 2 or token in stopwords:
+        token = normalize_keyword_token(token)
+        if len(token) < 2 or token.lower() == "nan":
+            continue
+        if token in stopwords:
             continue
         weighted.append(token)
 
     counts = Counter(weighted)
-    top = [word for word, _ in counts.most_common(limit * 2)]
+    top = [word for word, _ in counts.most_common(limit * 3)]
 
     ordered = []
     for pref in preferred:
@@ -809,9 +864,9 @@ def derive_competency_scores(detail: dict):
         "논리적 사고": {"base": 58, "keywords": ["분석", "논리", "기획", "판단", "진단", "전략", "문제해결"]},
         "커뮤니케이션": {"base": 55, "keywords": ["고객", "의사소통", "설명", "협업", "조정", "서비스", "상담"]},
         "문제 해결": {"base": 57, "keywords": ["해결", "개선", "대응", "최적", "점검", "감리"]},
-        "기술 이해": {"base": 54, "keywords": ["시스템", "컴퓨터", "정보", "기계", "설비", "기술", "전산"]},
+        "기술 이해": {"base": 54, "keywords": ["시스템", "컴퓨터", "정보", "기계", "설비", "기술", "전산", "데이터베이스"]},
         "책임감": {"base": 56, "keywords": ["성실", "책임", "정확", "도덕성", "통제", "안전"]},
-        "분석력": {"base": 58, "keywords": ["자료", "수집", "조사", "평가", "검토", "통계", "분석"]},
+        "분석력": {"base": 58, "keywords": ["자료", "수집", "조사", "평가", "검토", "통계", "분석", "데이터"]},
     }
 
     scores = {}
@@ -831,8 +886,9 @@ def render_radar_svg(scores: dict):
     center = size / 2
     radius = 110
 
+    import math
+
     def point(angle_deg, r):
-        import math
         rad = math.radians(angle_deg - 90)
         x = center + r * math.cos(rad)
         y = center + r * math.sin(rad)
@@ -857,7 +913,7 @@ def render_radar_svg(scores: dict):
         axes.append(
             f'<line x1="{center}" y1="{center}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E5E7EB" stroke-width="1"/>'
         )
-        lx, ly = point(angle, radius + 26)
+        lx, ly = point(angle, radius + 28)
         label_nodes.append(
             f'<text x="{lx:.1f}" y="{ly:.1f}" fill="#64748B" font-size="12" font-weight="700" text-anchor="middle">{html.escape(label)}</text>'
         )
@@ -874,16 +930,18 @@ def render_radar_svg(scores: dict):
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>'
         )
 
-    return f"""
-    <svg width="340" height="340" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="직무 핵심 역량 차트">
-        <circle cx="{center}" cy="{center}" r="3" fill="#CBD5E1"/>
-        {''.join(grid_polys)}
-        {''.join(axes)}
-        <polygon points="{' '.join(poly_pts)}" fill="rgba(37,99,235,.18)" stroke="#2563EB" stroke-width="2.5"/>
-        {''.join(points_html)}
-        {''.join(label_nodes)}
-    </svg>
-    """
+    return textwrap.dedent(
+        f"""
+        <svg width="340" height="340" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="직무 핵심 역량 차트">
+            <circle cx="{center}" cy="{center}" r="3" fill="#CBD5E1"/>
+            {''.join(grid_polys)}
+            {''.join(axes)}
+            <polygon points="{' '.join(poly_pts)}" fill="rgba(37,99,235,.18)" stroke="#2563EB" stroke-width="2.5"/>
+            {''.join(points_html)}
+            {''.join(label_nodes)}
+        </svg>
+        """
+    ).strip()
 
 
 def parse_salary_metrics(text):
@@ -902,8 +960,8 @@ def parse_salary_metrics(text):
     cleaned = raw.replace(",", "")
 
     patterns = [
-        r"(하위|평균|상위)\s*(?:\(?\d+%?\)?)?\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
-        r"(하위|평균|상위)[^\d]{0,20}([0-9]+(?:\.[0-9]+)?)\s*만원",
+        r"(하위|평균|상위)\\s*(?:\\(?\\d+%?\\)?)?\\s*[:：]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*만원",
+        r"(하위|평균|상위)[^\\d]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*만원",
     ]
 
     metrics = {}
@@ -920,8 +978,8 @@ def parse_salary_metrics(text):
     return metrics
 
 
-def classify_outlook(text):
-    text = str(text)
+def classify_outlook(detail: dict):
+    text = f"{detail.get('employment', '')} {detail.get('job_possibility', '')}"
     if any(word in text for word in ["증가", "성장", "확대", "밝", "좋", "유망"]):
         return "상승", "매우 밝거나 확장 가능성이 있는 편입니다.", "status-up", "↗"
     if any(word in text for word in ["감소", "줄어", "축소", "낮아질", "어려울"]):
@@ -930,7 +988,7 @@ def classify_outlook(text):
 
 
 def infer_stress_signal(detail: dict):
-    text = f"{detail.get('job_possibility','')} {detail.get('summary','')} {detail.get('aptitude','')}"
+    text = f"{detail.get('job_possibility', '')} {detail.get('summary', '')} {detail.get('aptitude', '')}"
     score = 45
 
     if "정신적 스트레스는 심하지 않은" in text or "스트레스는 심하지 않은" in text:
@@ -960,15 +1018,16 @@ def make_one_line_definition(detail: dict):
     summary_lines = split_lines(detail.get("summary", ""))
     if summary_lines:
         return clean_sentence(summary_lines[0])
-    return f"{detail.get('job','이 직업')}는 필요한 정보를 수집하고 정리하여 현장에서 필요한 역할을 수행하는 직업입니다."
+    return f"{detail.get('job', '이 직업')}는 필요한 정보를 수집하고 정리하여 현장에서 필요한 역할을 수행하는 직업입니다."
 
 
 def get_role_steps(detail: dict):
     summary_lines = split_lines(detail.get("summary", ""))
     emp_lines = split_lines(detail.get("empway", ""))
     training_lines = split_lines(detail.get("training", ""))
+    prepare_lines = split_lines(detail.get("prepareway", ""))
 
-    merged = [clean_sentence(x) for x in (summary_lines + emp_lines + training_lines) if clean_sentence(x)]
+    merged = [clean_sentence(x) for x in (summary_lines + emp_lines + prepare_lines + training_lines) if clean_sentence(x)]
 
     default_titles = ["업무 맥락 파악", "핵심 역할 수행", "현장 대응 및 실행", "숙련도 확장"]
     icons = ["🔍", "🧩", "🛠️", "📈"]
@@ -979,10 +1038,10 @@ def get_role_steps(detail: dict):
 
     while len(steps) < 4:
         fallback = [
-            "직무 정보를 이해하고",
-            "핵심 업무를 수행하며",
-            "현장에서 필요한 대응을 익히고",
-            "경험을 통해 숙련도를 높입니다.",
+            "직무 정보를 이해하고 전체 흐름을 파악합니다.",
+            "핵심 업무를 구조적으로 수행합니다.",
+            "현장에서 필요한 대응과 실행을 익힙니다.",
+            "경험을 통해 숙련도와 확장성을 높입니다.",
         ]
         idx = len(steps)
         steps.append({"title": default_titles[idx], "text": fallback[idx], "icon": icons[idx]})
@@ -991,14 +1050,13 @@ def get_role_steps(detail: dict):
 
 
 def render_html_card(title: str, body_html: str):
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="card">
             <div class="mini-panel-title">{html.escape(title)}</div>
             <div class="mini-panel-body">{body_html}</div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -1012,8 +1070,8 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
         if idx < len(breadcrumb) - 1:
             crumb_html.append("<span>›</span>")
 
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="nav-shell">
             <div class="nav-breadcrumb">{''.join(crumb_html)}</div>
             <div class="nav-title">{html.escape(selected_job)} 탐색 리포트</div>
@@ -1021,8 +1079,7 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
                 상단에서 직업과 보고 싶은 정보 범위를 정하면, 아래에서 AI가 핵심 정의와 세부 인사이트를 구조적으로 정리합니다.
             </div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
     col1, col2 = st.columns([1.25, 1.75], gap="medium")
@@ -1044,16 +1101,15 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
         [f'<span class="filter-chip">{html.escape(item)}</span>' for item in selected_focus]
     ) or '<span class="filter-chip">전체 보기</span>'
 
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="context-shell">
             <div class="context-line">
                 <strong>{html.escape(selected)}</strong>에 대해 <strong>{html.escape(focus_text)}</strong> 정보를 중심으로 보여주고 있습니다.
             </div>
             <div class="filter-chip-row">{chips}</div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
     return selected, selected_focus
@@ -1080,8 +1136,8 @@ def render_brief_dashboard(detail: dict):
 
     scope_text = " · ".join(unique_keep_order(provided_scope)) if provided_scope else "직무 소개 중심 정보"
 
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="brief-shell">
             <div class="brief-kicker">The Insight</div>
             <div class="brief-title">AI 브리핑 대시보드</div>
@@ -1112,8 +1168,7 @@ def render_brief_dashboard(detail: dict):
                 </div>
             </div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -1122,18 +1177,18 @@ def render_role_section(detail: dict):
     cards = []
     for idx, step in enumerate(steps, start=1):
         cards.append(
-            f'''
+            f"""
             <div class="timeline-item">
                 <div class="timeline-no">{idx}</div>
                 <div class="timeline-icon">{step["icon"]}</div>
                 <div class="timeline-title">{html.escape(step["title"])}</div>
                 <div class="timeline-text">{html.escape(step["text"])}</div>
             </div>
-            '''
+            """
         )
 
-    st.markdown(
-        '''
+    render_html(
+        f"""
         <div class="section-shell">
             <div class="section-head">
                 <div class="section-kicker">Role & Task</div>
@@ -1141,23 +1196,23 @@ def render_role_section(detail: dict):
                 <div class="section-sub">긴 설명문 대신, 실제 업무 흐름처럼 읽히도록 단계형 구조로 정리했습니다.</div>
             </div>
             <div class="timeline">
-        ''',
-        unsafe_allow_html=True,
+                {''.join(cards)}
+            </div>
+        </div>
+        """
     )
-    st.markdown("".join(cards), unsafe_allow_html=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_capability_section(detail: dict):
     scores = derive_competency_scores(detail)
     radar_svg = render_radar_svg(scores)
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    top_name, top_value = sorted_scores[0]
+    top_name, _ = sorted_scores[0]
 
     legends = []
     for name, value in scores.items():
         legends.append(
-            f'''
+            f"""
             <div class="legend-item">
                 <div class="legend-top">
                     <div class="legend-name">{html.escape(name)}</div>
@@ -1165,11 +1220,11 @@ def render_capability_section(detail: dict):
                 </div>
                 <div class="legend-bar"><span style="width:{value}%"></span></div>
             </div>
-            '''
+            """
         )
 
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="section-shell">
             <div class="section-head">
                 <div class="section-kicker">Capability Profile</div>
@@ -1179,7 +1234,7 @@ def render_capability_section(detail: dict):
 
             <div class="card">
                 <div class="radar-shell">
-                    <div>{radar_svg}</div>
+                    <div class="radar-chart">{radar_svg}</div>
                     <div class="legend-list">
                         {''.join(legends)}
                     </div>
@@ -1190,13 +1245,12 @@ def render_capability_section(detail: dict):
                 </div>
             </div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
 
 def render_outlook_section(detail: dict):
-    status, desc, status_class, arrow = classify_outlook(detail.get("employment", ""))
+    status, desc, status_class, arrow = classify_outlook(detail)
     salary = parse_salary_metrics(detail.get("salery", ""))
     stress = infer_stress_signal(detail)
     possibility_lines = split_lines(detail.get("job_possibility", ""))
@@ -1207,27 +1261,27 @@ def render_outlook_section(detail: dict):
         for label in ["하위 25%", "중앙값/평균", "상위 25%"]:
             if label in salary:
                 salary_cards.append(
-                    f'''
+                    f"""
                     <div class="metric-card">
                         <div class="metric-label">{html.escape(label)}</div>
                         <div class="metric-value">{html.escape(salary[label])}</div>
                         <div class="metric-sub">제공된 임금 정보 기준</div>
                     </div>
-                    '''
+                    """
                 )
     else:
         salary_cards.append(
-            '''
+            """
             <div class="metric-card">
                 <div class="metric-label">임금 정보</div>
                 <div class="metric-value">별도 수치 없음</div>
                 <div class="metric-sub">원문 설명을 확인해 주세요.</div>
             </div>
-            '''
+            """
         )
 
-    st.markdown(
-        f'''
+    render_html(
+        f"""
         <div class="section-shell">
             <div class="section-head">
                 <div class="section-kicker">Outlook & Value</div>
@@ -1261,8 +1315,7 @@ def render_outlook_section(detail: dict):
                 </div>
             </div>
         </div>
-        ''',
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -1287,16 +1340,16 @@ def render_extension_section(detail: dict):
         if lines:
             prepare_parts.extend([f"{title}: {x}" for x in lines])
 
-    st.markdown(
-        '''
+    render_html(
+        """
         <div class="section-shell">
             <div class="section-head">
                 <div class="section-kicker">Extension</div>
                 <div class="section-title">다음 단계로 탐색을 확장해 보세요</div>
                 <div class="section-sub">연관 직업, 준비 방법, 관련 학과를 별도 모듈로 분리했습니다.</div>
             </div>
-        ''',
-        unsafe_allow_html=True,
+        </div>
+        """
     )
 
     col1, col2 = st.columns(2, gap="large")
@@ -1308,8 +1361,6 @@ def render_extension_section(detail: dict):
         render_html_card("관련 학과", render_list(majors))
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
         render_html_card("추가 정보", render_list(contacts))
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_detail_sections(detail: dict, focus_items: list):
@@ -1330,7 +1381,7 @@ def main():
 
     if not DATA_FILE.exists():
         st.error(
-            f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}\n\n"
+            f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}\\n\\n"
             "app.py와 같은 폴더에 career_jobs.xlsx가 있는지 확인해 주세요."
         )
         st.stop()
@@ -1344,14 +1395,13 @@ def main():
     results = search_jobs(df, search_query, top_n=30)
 
     if results.empty:
-        st.markdown(
-            '''
+        render_html(
+            """
             <div class="nav-shell">
                 <div class="nav-title">직업 탐색 리포트</div>
                 <div class="nav-sub">검색 결과가 없습니다. 다른 직업명이나 키워드로 다시 입력해 주세요.</div>
             </div>
-            ''',
-            unsafe_allow_html=True,
+            """
         )
         st.warning("검색 결과가 없습니다.")
         st.stop()
