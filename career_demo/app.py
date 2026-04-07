@@ -143,6 +143,81 @@ def split_lines(text) -> list[str]:
     return deduped
 
 
+def split_job_names(text) -> list[str]:
+    if is_missing_like(text):
+        return []
+
+    text = normalize_whitespace(str(text))
+    if not text:
+        return []
+
+    text = re.sub(r"\s*(?:\n|;|/|\||,|，)\s*", "\n", text)
+    parts: list[str] = []
+    for part in text.split("\n"):
+        part = re.sub(r"^\d+[.)]\s*", "", clean_sentence(part))
+        if part:
+            parts.append(part)
+    return unique_keep_order(parts)
+
+
+def split_sentences(text) -> list[str]:
+    if is_missing_like(text):
+        return []
+
+    text = normalize_whitespace(str(text))
+    if not text:
+        return []
+
+    text = re.sub(r"([.!?])\s+", r"\1\n", text)
+    text = re.sub(r"(다\.)\s*", r"\1\n", text)
+    text = re.sub(r"(요\.)\s*", r"\1\n", text)
+    text = re.sub(r"(함\.)\s*", r"\1\n", text)
+    text = re.sub(r"(됨\.)\s*", r"\1\n", text)
+
+    sentences: list[str] = []
+    for part in re.split(r"\n+", text):
+        part = clean_sentence(part)
+        if part:
+            sentences.append(part)
+    return unique_keep_order(sentences)
+
+
+def summarize_long_text(text, max_points: int = 4, max_chars: int = 118) -> list[str]:
+    sentences = split_sentences(text)
+    if not sentences:
+        sentences = split_lines(text)
+
+    if not sentences:
+        return []
+
+    keywords = ["전망", "증가", "감소", "수요", "시장", "고용", "확대", "축소", "유망", "전환", "성장"]
+    scored: list[tuple[float, int, str]] = []
+    for idx, sentence in enumerate(sentences):
+        score = 0.0
+        if idx == 0:
+            score += 6.0
+        score += sum(keyword in sentence for keyword in keywords) * 1.8
+        if 24 <= len(sentence) <= 120:
+            score += 1.5
+        elif len(sentence) <= 160:
+            score += 0.7
+        score -= idx * 0.12
+        scored.append((score, idx, shorten_text(sentence, max_chars)))
+
+    top = sorted(scored, key=lambda x: (-x[0], x[1]))[:max_points]
+    top = sorted(top, key=lambda x: x[1])
+    return unique_keep_order([sentence for _, _, sentence in top])
+
+
+def format_sentences_as_paragraphs(text) -> str:
+    sentences = split_sentences(text)
+    if not sentences:
+        sentences = split_lines(text)
+    if not sentences:
+        return ""
+    return "".join(f"<p>{html.escape(sentence)}</p>" for sentence in sentences)
+
+
 def unique_keep_order(items: list[str]) -> list[str]:
     seen = set()
     result = []
@@ -171,28 +246,6 @@ def safe_float(value):
         return float(value)
     except Exception:
         return None
-
-
-def combine_pcnt_value(integer_part, decimal_part):
-    whole = safe_float(integer_part)
-    decimal = safe_float(decimal_part)
-
-    if whole is None and decimal is None:
-        return None
-
-    if whole is None:
-        whole = 0.0
-    if decimal is None:
-        decimal = 0.0
-
-    if decimal >= 100:
-        return whole
-
-    if decimal >= 10:
-        digits = len(str(int(decimal)))
-        return whole + (decimal / (10 ** digits))
-
-    return whole + (decimal / 10)
 
 
 # -----------------------------
@@ -302,7 +355,7 @@ def get_major_list(row: pd.Series) -> list[str]:
 
 
 def get_similar_jobs(row: pd.Series) -> list[str]:
-    return unique_keep_order(split_lines(row.get("similarJob", "")))
+    return split_job_names(row.get("similarJob", ""))
 
 
 def get_certifications(row: pd.Series) -> list[str]:
@@ -423,51 +476,45 @@ def filter_results(
 # Visualization helpers
 # -----------------------------
 def build_gender_chart(detail: pd.Series):
-    gender_rows = [
-        ("남성", combine_pcnt_value(detail.get("PCNT1_남자"), detail.get("PCNT2_남자"))),
-        ("여성", combine_pcnt_value(detail.get("PCNT1_여자"), detail.get("PCNT2_여자"))),
+    gender_cols = [
+        ("남성", safe_float(detail.get("PCNT1_남자"))),
+        ("여성", safe_float(detail.get("PCNT1_여자"))),
     ]
-    chart_df = pd.DataFrame(gender_rows, columns=["구분", "값"])
+    chart_df = pd.DataFrame(gender_cols, columns=["구분", "값"])
     chart_df = chart_df.dropna()
     if chart_df.empty or chart_df["값"].sum() == 0:
         return None
 
-    fig = px.pie(chart_df, values="값", names="구분", hole=0.48)
+    fig = px.pie(chart_df, values="값", names="구분", hole=0.45)
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
         legend_title_text="",
         height=320,
     )
-    fig.update_traces(
-        textposition="inside",
-        texttemplate="%{label}<br>%{value:.1f}%",
-        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
-    )
+    fig.update_traces(textposition="inside", textinfo="percent+label")
     return fig
 
 
 def build_age_chart(detail: pd.Series):
     age_rows = []
     for label in ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]:
-        value = combine_pcnt_value(detail.get(f"PCNT1_{label}"), detail.get(f"PCNT2_{label}"))
-        if value is not None:
-            age_rows.append({"연령대": label, "값": value})
+        pcnt1 = safe_float(detail.get(f"PCNT1_{label}"))
+        pcnt2 = safe_float(detail.get(f"PCNT2_{label}"))
+        if pcnt1 is not None:
+            age_rows.append({"연령대": label, "지표": "PCNT1", "값": pcnt1})
+        if pcnt2 is not None:
+            age_rows.append({"연령대": label, "지표": "PCNT2", "값": pcnt2})
 
     chart_df = pd.DataFrame(age_rows)
     if chart_df.empty:
         return None
 
-    fig = px.bar(chart_df, x="연령대", y="값", text="값")
-    fig.update_traces(
-        texttemplate="%{text:.1f}%",
-        textposition="outside",
-        hovertemplate="%{x}: %{y:.1f}%<extra></extra>",
-    )
+    fig = px.bar(chart_df, x="연령대", y="값", color="지표", barmode="group")
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
-        showlegend=False,
+        legend_title_text="",
         xaxis_title="",
-        yaxis_title="관심 비율(%)",
+        yaxis_title="지표값",
         height=320,
     )
     return fig
@@ -524,6 +571,24 @@ def inject_css() -> None:
         }
 
         html, body, [class*="css"] { color: var(--text); }
+
+        header[data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        .stAppToolbar,
+        [data-testid="stStatusWidget"],
+        [data-testid="stHeaderActionElements"],
+        .stDeployButton,
+        div[data-testid="stDecoration"]{
+            display:none !important;
+            visibility:hidden !important;
+            height:0 !important;
+        }
+        #MainMenu,
+        footer{
+            visibility:hidden !important;
+            display:none !important;
+        }
+
         .stApp {
             background:
                 radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 20%),
@@ -890,6 +955,65 @@ def inject_css() -> None:
             font-size:13px;
             font-weight:700;
         }
+        .similar-job-grid{
+            display:grid;
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:10px;
+        }
+        .similar-job-item{
+            display:flex;
+            align-items:flex-start;
+            gap:8px;
+            min-height:54px;
+            padding:12px 13px;
+            border-radius:14px;
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            color:#1d4ed8;
+            font-size:13px;
+            line-height:1.58;
+            font-weight:700;
+            word-break:keep-all;
+        }
+        .similar-job-bullet{
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            background:#2563eb;
+            margin-top:6px;
+            flex-shrink:0;
+        }
+        .outlook-card{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid #e8eef7;
+            border-radius:18px;
+            padding:18px;
+            box-shadow:0 4px 16px rgba(15,23,42,.03);
+        }
+        .outlook-summary{
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            border-radius:16px;
+            padding:16px;
+            margin-bottom:14px;
+        }
+        .outlook-summary-title{
+            font-size:13px;
+            color:#1d4ed8;
+            font-weight:800;
+            margin-bottom:10px;
+        }
+        .outlook-body{
+            font-size:14px;
+            line-height:1.82;
+            color:#475467;
+        }
+        .outlook-body p{
+            margin:0 0 10px 0;
+        }
+        .outlook-body p:last-child{
+            margin-bottom:0;
+        }
         .soft-card{
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
@@ -1043,18 +1167,62 @@ def inject_css() -> None:
 # Page rendering helpers
 # -----------------------------
 def render_hero(df: pd.DataFrame) -> None:
+    major_count = sum(1 for col in df.columns if col.startswith("major_"))
     render_html(
         f"""
         <div class="hero">
             <div class="hero-kicker">Job-Explorer AI</div>
-            <div class="hero-title">미래의 직업을 조금 더 자연스럽게 탐색해 보세요</div>
+            <div class="hero-title">미래의 직업을 검색하세요</div>
             <div class="hero-sub">
-                직업명만 찾는 검색을 넘어, 관심사와 일의 성격을 문장처럼 입력하면 관련 직업을 해석형으로 정리해 보여주는 AI 기반 직업 탐색 페이지입니다.
+                키워드 기반 검색, 직무 요약, 준비 경로, 전공·자격 정보, 통계 차트를 한 화면에서 탐색할 수 있도록 구성한 AI 기반 직업 데이터 큐레이션 플랫폼입니다.
             </div>
             <div class="glass-row">
                 <span class="glass-chip">직업 데이터 {len(df):,}건</span>
-                <span class="glass-chip">전공·자격·전망 정보 통합</span>
-                <span class="glass-chip">성별·연령 통계 시각화 제공</span>
+                <span class="glass-chip">연관 전공 정보 제공</span>
+                <span class="glass-chip">NCS·전망·통계 정보 통합</span>
+            </div>
+        </div>
+        """
+    )
+
+
+def render_top_stats(df: pd.DataFrame) -> None:
+    salary_with_value = int(df["salary_amount"].notna().sum())
+    good_outlook = int((df["employment_status"] == "좋음").sum())
+    major_unique = len(sorted({major for majors in df["major_list"] for major in majors}))
+    cert_count = int(df["certification_list"].map(len).sum())
+
+    render_html(
+        f"""
+        <div class="panel">
+            <div class="panel-head">
+                <div>
+                    <div class="section-kicker">Data Snapshot</div>
+                    <div class="section-title">직업 데이터 현황</div>
+                    <div class="section-sub">현재 탐색 가능한 직업 데이터의 전체 규모와 정보 범위를 요약했습니다.</div>
+                </div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">전체 직업 수</div>
+                    <div class="stat-value">{len(df):,}</div>
+                    <div class="stat-sub">현재 탐색 가능한 전체 직업 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">임금 정보 보유</div>
+                    <div class="stat-value">{salary_with_value:,}</div>
+                    <div class="stat-sub">임금 정보가 제공되는 직업 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">전망 좋음 직업</div>
+                    <div class="stat-value">{good_outlook:,}</div>
+                    <div class="stat-sub">전망이 긍정적으로 읽히는 직업 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">연결 전공 / 자격 정보</div>
+                    <div class="stat-value">{major_unique:,} / {cert_count:,}</div>
+                    <div class="stat-sub">전공 정보와 자격 정보의 누적 연결 수</div>
+                </div>
             </div>
         </div>
         """
@@ -1218,16 +1386,22 @@ def render_profile_section(detail: pd.Series) -> None:
             """
         )
     with col2:
-        similar_jobs = detail.get("similar_job_list", [])[:6]
+        similar_jobs = detail.get("similar_job_list", [])[:8]
         if similar_jobs:
-            pills = "".join([f'<span class="pill">{html.escape(item)}</span>' for item in similar_jobs])
+            cards = "".join(
+                [
+                    f'<div class="similar-job-item"><span class="similar-job-bullet"></span><span>{html.escape(item)}</span></div>'
+                    for item in similar_jobs
+                ]
+            )
+            similar_body = f'<div class="similar-job-grid">{cards}</div>'
         else:
-            pills = '<div class="empty-text">등록된 유사 직업 정보가 없습니다.</div>'
+            similar_body = '<div class="empty-text">등록된 유사 직업 정보가 없습니다.</div>'
         render_html(
             f"""
             <div class="soft-card">
                 <div class="section-title" style="font-size:18px; margin-bottom:10px;">유사 직업</div>
-                <div class="pill-wrap">{pills}</div>
+                {similar_body}
             </div>
             """
         )
@@ -1466,9 +1640,35 @@ def render_capability_section(detail: pd.Series) -> None:
         )
 
 
+def render_outlook_text_panel(title: str, raw_text, empty_message: str) -> None:
+    summary_points = summarize_long_text(raw_text, max_points=4, max_chars=118)
+    full_html = format_sentences_as_paragraphs(raw_text)
+
+    if not summary_points and not full_html:
+        render_html(f"<div class='outlook-card'><div class='empty-text'>{html.escape(empty_message)}</div></div>")
+        return
+
+    summary_html = "".join([f"<li>{html.escape(point)}</li>" for point in summary_points]) if summary_points else "<li>요약 가능한 핵심 문장이 충분하지 않습니다.</li>"
+
+    render_html(
+        f"""
+        <div class="outlook-card">
+            <div class="outlook-summary">
+                <div class="outlook-summary-title">한눈에 보기</div>
+                <ul class="insight-list">{summary_html}</ul>
+            </div>
+        </div>
+        """
+    )
+
+    with st.expander(f"{title} 세부 설명 보기", expanded=False):
+        if full_html:
+            render_html(f"<div class='outlook-body'>{full_html}</div>")
+        else:
+            st.info(empty_message)
+
+
 def render_market_section(detail: pd.Series) -> None:
-    employment_text = split_lines(detail.get("employment", ""))
-    possibility_text = split_lines(detail.get("job_possibility", ""))
     salary_amount = extract_salary_amount(detail.get("salery", ""))
     salary_bucket = detail.get("salary_bucket", "정보 없음")
     employment_status = detail.get("employment_status", "보통")
@@ -1516,27 +1716,17 @@ def render_market_section(detail: pd.Series) -> None:
     with col2:
         tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
         with tab1:
-            if employment_text:
-                render_html(
-                    f"""
-                    <div class="soft-card">
-                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in employment_text])}</ul>
-                    </div>
-                    """
-                )
-            else:
-                render_html("<div class='soft-card'><div class='empty-text'>고용전망 설명이 없습니다.</div></div>")
+            render_outlook_text_panel(
+                title="고용전망",
+                raw_text=detail.get("employment", ""),
+                empty_message="고용전망 설명이 없습니다.",
+            )
         with tab2:
-            if possibility_text:
-                render_html(
-                    f"""
-                    <div class="soft-card">
-                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in possibility_text])}</ul>
-                    </div>
-                    """
-                )
-            else:
-                render_html("<div class='soft-card'><div class='empty-text'>발전가능성 설명이 없습니다.</div></div>")
+            render_outlook_text_panel(
+                title="발전가능성",
+                raw_text=detail.get("job_possibility", ""),
+                empty_message="발전가능성 설명이 없습니다.",
+            )
 
 
 def render_chart_section(detail: pd.Series) -> None:
@@ -1545,9 +1735,9 @@ def render_chart_section(detail: pd.Series) -> None:
         <div class="panel">
             <div class="panel-head">
                 <div>
-                    <div class="section-kicker">Interest Analytics</div>
+                    <div class="section-kicker">PCNT Analytics</div>
                     <div class="section-title">데이터 인사이트</div>
-                    <div class="section-sub">성별과 연령대 기준 관심 비율을 읽기 쉽게 정리했습니다.</div>
+                    <div class="section-sub">관심도 분포를 성별과 연령대 기준으로 시각화했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1613,6 +1803,7 @@ def ensure_session_defaults() -> None:
 
 def render_main_page(df: pd.DataFrame) -> None:
     render_hero(df)
+    render_top_stats(df)
 
     suggestion_queries = [
         "컴퓨터와 관련된 일",
