@@ -268,6 +268,27 @@ def combine_pcnt_value(integer_part, decimal_part):
     return whole + (decimal / 10)
 
 
+def normalize_search_token(token: str) -> str:
+    token = clean_sentence(token).lower()
+    token = re.sub(r"[^a-z0-9가-힣]", "", token)
+    suffixes = [
+        "으로부터", "로부터", "에게서", "에서의", "에서는", "에서", "으로는", "으로", "에게", "와의", "과의",
+        "이라면", "라면", "이라고", "라고", "처럼", "까지", "부터", "보다", "마저", "조차", "만의", "만",
+        "이나", "나", "들", "적인", "적인데", "적인지", "하는", "하다", "하며", "하고", "하여", "되는",
+        "되는", "되는", "같은", "관련된", "관련", "직무", "직업", "분야", "성격", "분위기", "업무", "정보",
+        "에서", "으로", "와", "과", "은", "는", "이", "가", "을", "를", "의", "도"
+    ]
+    changed = True
+    while changed and len(token) > 1:
+        changed = False
+        for suffix in sorted(set(suffixes), key=len, reverse=True):
+            if len(token) > len(suffix) + 1 and token.endswith(suffix):
+                token = token[:-len(suffix)]
+                changed = True
+                break
+    return token.strip()
+
+
 # -----------------------------
 # Data loading and preparation
 # -----------------------------
@@ -398,15 +419,27 @@ def build_search_blob(row: pd.Series) -> str:
 # -----------------------------
 # Search / filter logic
 # -----------------------------
-def extract_search_terms(query: str) -> list[str]:
+def extract_display_keywords(query: str) -> list[str]:
     if not query:
         return []
 
     raw_tokens = re.findall(r"[A-Za-z가-힣0-9]{2,}", query.lower())
-    tokens: list[str] = []
+    keywords: list[str] = []
+    seen = set()
     for token in raw_tokens:
-        if token in KOREAN_STOPWORDS:
+        token = normalize_search_token(token)
+        if not token or token in KOREAN_STOPWORDS:
             continue
+        if token not in seen:
+            seen.add(token)
+            keywords.append(token)
+    return keywords
+
+
+def extract_search_terms(query: str) -> list[str]:
+    base_tokens = extract_display_keywords(query)
+    tokens: list[str] = []
+    for token in base_tokens:
         tokens.append(token)
         if token in SYNONYM_MAP:
             tokens.extend([item.lower() for item in SYNONYM_MAP[token]])
@@ -414,10 +447,33 @@ def extract_search_terms(query: str) -> list[str]:
     unique_tokens: list[str] = []
     seen = set()
     for token in tokens:
+        token = normalize_search_token(token)
+        if not token or token in KOREAN_STOPWORDS:
+            continue
         if token not in seen:
             seen.add(token)
             unique_tokens.append(token)
     return unique_tokens
+
+
+def extract_related_topics(filtered: pd.DataFrame, limit: int = 8) -> list[str]:
+    topics: list[str] = []
+    for _, row in filtered.head(10).iterrows():
+        raw_items = []
+        raw_items.extend(row.get("similar_job_list", [])[:3])
+        raw_items.extend(row.get("major_list", [])[:2])
+
+        for item in raw_items:
+            split_items = split_job_names(item)
+            if not split_items:
+                split_items = split_lines(item)
+
+            for split_item in split_items:
+                cleaned = clean_sentence(split_item)
+                if cleaned and len(cleaned) <= 40:
+                    topics.append(cleaned)
+
+    return [item for item, _ in Counter(topics).most_common(limit)]
 
 
 def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float:
@@ -1342,14 +1398,10 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
         )
         return
 
-    tokens = extract_search_terms(query)[:6]
-    token_html = "".join([f'<span class="meta-chip">{html.escape(token)}</span>' for token in tokens])
+    display_keywords = extract_display_keywords(query)[:6]
+    token_html = "".join([f'<span class="meta-chip">{html.escape(token)}</span>' for token in display_keywords])
 
-    tag_pool = []
-    for _, row in filtered.head(8).iterrows():
-        tag_pool.extend(row.get("similar_job_list", [])[:2])
-        tag_pool.extend(row.get("major_list", [])[:1])
-    related_tags = [item for item, _ in Counter(tag_pool).most_common(5)]
+    related_tags = extract_related_topics(filtered, limit=8)
     related_html = "".join([f'<span class="meta-chip">{html.escape(tag)}</span>' for tag in related_tags])
 
     if filtered.empty:
