@@ -172,6 +172,82 @@ def safe_float(value):
         return None
 
 
+def split_sentences(text) -> list[str]:
+    cleaned = normalize_whitespace(text)
+    if not cleaned:
+        return []
+
+    cleaned = re.sub(r"([.!?])", r"\1\n", cleaned)
+    cleaned = re.sub(r"다\.(?=\S)", "다.\n", cleaned)
+    cleaned = re.sub(r"요\.(?=\S)", "요.\n", cleaned)
+
+    parts = re.split(r"\n+", cleaned)
+    sentences: list[str] = []
+    for part in parts:
+        part = clean_sentence(part)
+        if not part:
+            continue
+        if len(part) < 8:
+            continue
+        sentences.append(part)
+    return unique_keep_order(sentences)
+
+
+def format_compact_bullets(text, max_items: int = 3, max_len: int = 90, keywords: list[str] | None = None) -> list[str]:
+    sentences = split_sentences(text)
+    if not sentences:
+        lines = split_lines(text)
+        return [shorten_text(line, max_len) for line in lines[:max_items] if line]
+
+    keywords = keywords or []
+    scored: list[tuple[float, str]] = []
+    for idx, sentence in enumerate(sentences):
+        score = 0.0
+        if idx == 0:
+            score += 2.4
+        if 18 <= len(sentence) <= max_len + 30:
+            score += 2.0
+        elif len(sentence) < 18:
+            score -= 1.0
+        else:
+            score += 0.8
+        for keyword in keywords:
+            if keyword and keyword in sentence:
+                score += 2.2
+        if any(token in sentence for token in ["필요", "준비", "취득", "전공", "채용", "실무", "훈련", "전망", "증가", "감소", "유리", "합격"]):
+            score += 1.4
+        if any(token in sentence for token in ["자료:", "출처:"]):
+            score -= 1.5
+        scored.append((score, sentence))
+
+    scored.sort(key=lambda x: (-x[0], sentences.index(x[1])))
+
+    selected: list[str] = []
+    for _, sentence in scored:
+        compact = shorten_text(sentence, max_len)
+        if compact not in selected:
+            selected.append(compact)
+        if len(selected) >= max_items:
+            break
+
+    if not selected:
+        return [shorten_text(sentence, max_len) for sentence in sentences[:max_items]]
+    return selected
+
+
+def summarize_text_block(text, summary_items: int = 3, summary_len: int = 100, keywords: list[str] | None = None) -> dict:
+    raw_lines = split_lines(text)
+    raw_sentences = split_sentences(text)
+    bullets = format_compact_bullets(text, max_items=summary_items, max_len=summary_len, keywords=keywords)
+    detail_items = raw_sentences if raw_sentences else raw_lines
+    detail_items = unique_keep_order(detail_items)
+    return {
+        "bullets": bullets,
+        "details": detail_items,
+        "is_long": len(" ".join(detail_items)) > summary_len * 2 or len(detail_items) > summary_items,
+    }
+
+
 # -----------------------------
 # Data loading and preparation
 # -----------------------------
@@ -787,6 +863,51 @@ def inject_css() -> None:
             white-space:normal;
             word-break:keep-all;
         }
+        .timeline-list,
+        .insight-list{
+            list-style:none;
+            padding-left:0;
+            margin:0;
+        }
+        .timeline-list li,
+        .insight-list li{
+            position:relative;
+            padding-left:14px;
+            margin-bottom:8px;
+            font-size:14px;
+            line-height:1.75;
+            color:#475467;
+            word-break:keep-all;
+        }
+        .timeline-list li:last-child,
+        .insight-list li:last-child{
+            margin-bottom:0;
+        }
+        .timeline-list li::before,
+        .insight-list li::before{
+            content:"•";
+            position:absolute;
+            left:0;
+            top:0;
+            color:#2563eb;
+            font-weight:800;
+        }
+        .insight-box{
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            border-radius:16px;
+            padding:16px;
+        }
+        .insight-grid-2{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px;
+        }
+        .detail-note{
+            font-size:12px;
+            color:#667085;
+            margin-top:10px;
+        }
         .empty-text{
             font-size:14px;
             line-height:1.7;
@@ -822,7 +943,7 @@ def inject_css() -> None:
             .stats-row, .result-grid{ grid-template-columns:1fr 1fr; }
         }
         @media (max-width: 768px){
-            .stats-row, .result-grid{ grid-template-columns:1fr; }
+            .stats-row, .result-grid, .insight-grid-2{ grid-template-columns:1fr; }
         }
         </style>
         """
@@ -1003,25 +1124,34 @@ def render_profile_section(detail: pd.Series) -> None:
         )
 
 
-def get_roadmap_steps(detail: pd.Series) -> list[dict[str, str]]:
-    summary_lines = split_lines(detail.get("summary", ""))
-    prepare_lines = split_lines(detail.get("prepareway", ""))
-    training_lines = split_lines(detail.get("training", ""))
-    empway_lines = split_lines(detail.get("empway", ""))
+def get_roadmap_steps(detail: pd.Series) -> list[dict[str, object]]:
+    roadmap_specs = [
+        ("1", "직무 이해", detail.get("summary", ""), ["역할", "수행", "담당", "지원", "분석"]),
+        ("2", "진입 준비", detail.get("prepareway", ""), ["필요", "학력", "자격", "전공", "준비", "취득"]),
+        ("3", "훈련·실무", detail.get("training", ""), ["훈련", "실습", "현장", "실무", "적응"]),
+        ("4", "확장 경로", detail.get("empway", ""), ["채용", "진출", "합격", "경력", "확장"]),
+    ]
 
-    fallback_text = {
-        "직무 이해": summary_lines[0] if summary_lines else "직무 개요와 핵심 역할을 먼저 이해합니다.",
-        "진입 준비": prepare_lines[0] if prepare_lines else "진입을 위한 학력, 교과 이수, 자격 요건을 확인합니다.",
-        "훈련·실무": training_lines[0] if training_lines else "현장 훈련 또는 실무 적응 과정을 거칩니다.",
-        "확장 경로": empway_lines[0] if empway_lines else "채용·배치·경력 확장 경로를 점검합니다.",
+    fallback_map = {
+        "직무 이해": "직무 개요와 핵심 역할을 먼저 이해합니다.",
+        "진입 준비": "진입을 위한 학력, 교과 이수, 자격 요건을 확인합니다.",
+        "훈련·실무": "현장 훈련 또는 실무 적응 과정을 거칩니다.",
+        "확장 경로": "채용·배치·경력 확장 경로를 점검합니다.",
     }
 
-    return [
-        {"no": "1", "title": "직무 이해", "text": fallback_text["직무 이해"]},
-        {"no": "2", "title": "진입 준비", "text": fallback_text["진입 준비"]},
-        {"no": "3", "title": "훈련·실무", "text": fallback_text["훈련·실무"]},
-        {"no": "4", "title": "확장 경로", "text": fallback_text["확장 경로"]},
-    ]
+    steps: list[dict[str, object]] = []
+    for no, title, source_text, keywords in roadmap_specs:
+        summary = summarize_text_block(source_text, summary_items=3, summary_len=82, keywords=keywords)
+        bullets = summary["bullets"] or [fallback_map[title]]
+        details = summary["details"] or [fallback_map[title]]
+        steps.append({
+            "no": no,
+            "title": title,
+            "bullets": bullets,
+            "details": details,
+            "raw": clean_sentence(source_text) if source_text else fallback_map[title],
+        })
+    return steps
 
 
 def render_roadmap_section(detail: pd.Series) -> None:
@@ -1043,12 +1173,25 @@ def render_roadmap_section(detail: pd.Series) -> None:
     cols = st.columns(4, gap="medium")
     for col, step in zip(cols, steps):
         with col:
+            bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in step["bullets"]])
             render_html(
                 f"""
                 <div class="timeline-card">
                     <div class="timeline-no">{html.escape(step['no'])}</div>
                     <div class="timeline-title">{html.escape(step['title'])}</div>
-                    <div class="timeline-text">{html.escape(clean_sentence(step['text']))}</div>
+                    <ul class="timeline-list">{bullet_html}</ul>
+                </div>
+                """
+            )
+
+    with st.expander("로드맵 세부 설명 보기"):
+        for step in steps:
+            detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in step["details"]])
+            render_html(
+                f"""
+                <div class="soft-card" style="margin-bottom:14px;">
+                    <div class="section-title" style="font-size:17px; margin-bottom:10px;">{html.escape(step['no'])}. {html.escape(step['title'])}</div>
+                    <ul class="bullet-list">{detail_html}</ul>
                 </div>
                 """
             )
@@ -1226,8 +1369,10 @@ def render_capability_section(detail: pd.Series) -> None:
 
 
 def render_market_section(detail: pd.Series) -> None:
-    employment_text = split_lines(detail.get("employment", ""))
-    possibility_text = split_lines(detail.get("job_possibility", ""))
+    employment_text_raw = detail.get("employment", "")
+    possibility_text_raw = detail.get("job_possibility", "")
+    employment_summary = summarize_text_block(employment_text_raw, summary_items=3, summary_len=105, keywords=["증가", "감소", "전망", "수요", "취업", "고용"])
+    possibility_summary = summarize_text_block(possibility_text_raw, summary_items=3, summary_len=105, keywords=["발전", "확장", "진출", "전문화", "성장", "경력"])
     salary_amount = extract_salary_amount(detail.get("salery", ""))
     salary_bucket = detail.get("salary_bucket", "정보 없음")
     employment_status = detail.get("employment_status", "보통")
@@ -1239,7 +1384,7 @@ def render_market_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Market Insight</div>
                     <div class="section-title">시장 지표</div>
-                    <div class="section-sub">임금과 전망 정보를 한눈에 읽을 수 있도록 요약했습니다.</div>
+                    <div class="section-sub">긴 설명문은 핵심 포인트와 세부 설명으로 나누어 읽기 쉽게 재구성했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1272,28 +1417,44 @@ def render_market_section(detail: pd.Series) -> None:
         gauge = build_salary_gauge(salary_amount)
         if gauge is not None:
             st.plotly_chart(gauge, use_container_width=True, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
+
     with col2:
         tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
         with tab1:
-            if employment_text:
+            bullets = employment_summary["bullets"]
+            if bullets:
+                bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in bullets])
                 render_html(
                     f"""
-                    <div class="soft-card">
-                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in employment_text])}</ul>
+                    <div class="insight-box">
+                        <div class="section-title" style="font-size:18px; margin-bottom:10px;">한눈에 보기</div>
+                        <ul class="insight-list">{bullet_html}</ul>
                     </div>
                     """
                 )
+                if employment_summary["details"]:
+                    with st.expander("고용전망 세부 설명 보기"):
+                        detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in employment_summary["details"]])
+                        render_html(f"<div class='soft-card'><ul class='bullet-list'>{detail_html}</ul></div>")
             else:
                 render_html("<div class='soft-card'><div class='empty-text'>고용전망 설명이 없습니다.</div></div>")
+
         with tab2:
-            if possibility_text:
+            bullets = possibility_summary["bullets"]
+            if bullets:
+                bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in bullets])
                 render_html(
                     f"""
-                    <div class="soft-card">
-                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in possibility_text])}</ul>
+                    <div class="insight-box">
+                        <div class="section-title" style="font-size:18px; margin-bottom:10px;">한눈에 보기</div>
+                        <ul class="insight-list">{bullet_html}</ul>
                     </div>
                     """
                 )
+                if possibility_summary["details"]:
+                    with st.expander("발전가능성 세부 설명 보기"):
+                        detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in possibility_summary["details"]])
+                        render_html(f"<div class='soft-card'><ul class='bullet-list'>{detail_html}</ul></div>")
             else:
                 render_html("<div class='soft-card'><div class='empty-text'>발전가능성 설명이 없습니다.</div></div>")
 
