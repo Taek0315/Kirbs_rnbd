@@ -1948,9 +1948,6 @@ def ensure_session_defaults() -> None:
 
 
 def render_main_page(df: pd.DataFrame) -> None:
-    render_hero(df)
-    render_top_stats(df)
-
     suggestion_queries = [
         "컴퓨터와 관련된 일",
         "사람을 돕는 직업",
