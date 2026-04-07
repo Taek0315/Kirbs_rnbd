@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -248,6 +249,25 @@ def safe_float(value):
         return None
 
 
+def combine_pcnt_value(integer_part, decimal_part):
+    whole = safe_float(integer_part)
+    decimal = safe_float(decimal_part)
+
+    if whole is None and decimal is None:
+        return None
+    if whole is None:
+        whole = 0.0
+    if decimal is None:
+        decimal = 0.0
+
+    if decimal >= 100:
+        return whole
+    if decimal >= 10:
+        digits = len(str(int(decimal)))
+        return whole + (decimal / (10 ** digits))
+    return whole + (decimal / 10)
+
+
 # -----------------------------
 # Data loading and preparation
 # -----------------------------
@@ -402,7 +422,7 @@ def extract_search_terms(query: str) -> list[str]:
 
 def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float:
     if not query.strip():
-        return 1.0
+        return 0.0
 
     job_text = str(row.get("job", "")).lower()
     summary_text = str(row.get("summary", "")).lower()
@@ -439,11 +459,13 @@ def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float
 
 
 def search_jobs(df: pd.DataFrame, query: str) -> pd.DataFrame:
+    if not query.strip():
+        return df.iloc[0:0].copy()
+
     tokens = extract_search_terms(query)
     results = df.copy()
     results["search_score"] = results.apply(lambda row: compute_search_score(row, query, tokens), axis=1)
-    if query.strip():
-        results = results[results["search_score"] > 0]
+    results = results[results["search_score"] > 0]
     return results.sort_values(["search_score", "job"], ascending=[False, True]).reset_index(drop=True)
 
 
@@ -476,11 +498,11 @@ def filter_results(
 # Visualization helpers
 # -----------------------------
 def build_gender_chart(detail: pd.Series):
-    gender_cols = [
-        ("남성", safe_float(detail.get("PCNT1_남자"))),
-        ("여성", safe_float(detail.get("PCNT1_여자"))),
+    gender_rows = [
+        ("남성", combine_pcnt_value(detail.get("PCNT1_남자"), detail.get("PCNT2_남자"))),
+        ("여성", combine_pcnt_value(detail.get("PCNT1_여자"), detail.get("PCNT2_여자"))),
     ]
-    chart_df = pd.DataFrame(gender_cols, columns=["구분", "값"])
+    chart_df = pd.DataFrame(gender_rows, columns=["구분", "값"])
     chart_df = chart_df.dropna()
     if chart_df.empty or chart_df["값"].sum() == 0:
         return None
@@ -491,30 +513,36 @@ def build_gender_chart(detail: pd.Series):
         legend_title_text="",
         height=320,
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
+    fig.update_traces(
+        textposition="inside",
+        texttemplate="%{label}<br>%{value:.1f}%",
+        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
+    )
     return fig
 
 
 def build_age_chart(detail: pd.Series):
     age_rows = []
     for label in ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]:
-        pcnt1 = safe_float(detail.get(f"PCNT1_{label}"))
-        pcnt2 = safe_float(detail.get(f"PCNT2_{label}"))
-        if pcnt1 is not None:
-            age_rows.append({"연령대": label, "지표": "PCNT1", "값": pcnt1})
-        if pcnt2 is not None:
-            age_rows.append({"연령대": label, "지표": "PCNT2", "값": pcnt2})
+        value = combine_pcnt_value(detail.get(f"PCNT1_{label}"), detail.get(f"PCNT2_{label}"))
+        if value is not None:
+            age_rows.append({"연령대": label, "값": value})
 
     chart_df = pd.DataFrame(age_rows)
     if chart_df.empty:
         return None
 
-    fig = px.bar(chart_df, x="연령대", y="값", color="지표", barmode="group")
+    fig = px.bar(chart_df, x="연령대", y="값", text="값")
+    fig.update_traces(
+        texttemplate="%{text:.1f}%",
+        textposition="outside",
+        hovertemplate="%{x}: %{y:.1f}%<extra></extra>",
+    )
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
-        legend_title_text="",
+        showlegend=False,
         xaxis_title="",
-        yaxis_title="지표값",
+        yaxis_title="관심 비율(%)",
         height=320,
     )
     return fig
@@ -549,7 +577,6 @@ def build_salary_gauge(amount: float | None):
 # -----------------------------
 # UI styling
 # -----------------------------
-
 def inject_css() -> None:
     render_html(
         """
@@ -693,37 +720,6 @@ def inject_css() -> None:
             color:#64748b;
         }
 
-        .stats-row{
-            display:grid;
-            grid-template-columns:repeat(4, minmax(0, 1fr));
-            gap:14px;
-            margin-top:16px;
-        }
-        .stat-card{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid #dbe7fb;
-            border-radius:18px;
-            padding:18px 16px;
-        }
-        .stat-label{
-            font-size:12px;
-            color:#667085;
-            font-weight:700;
-            margin-bottom:8px;
-        }
-        .stat-value{
-            font-size:24px;
-            line-height:1.2;
-            color:#0f172a;
-            font-weight:800;
-            margin-bottom:5px;
-        }
-        .stat-sub{
-            font-size:13px;
-            color:#64748b;
-            line-height:1.55;
-        }
-
         .ai-search-shell{
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
@@ -765,7 +761,6 @@ def inject_css() -> None:
             70%{ box-shadow:0 0 0 8px rgba(37,99,235,0); }
             100%{ box-shadow:0 0 0 0 rgba(37,99,235,0); }
         }
-        .suggestion-row,
         .filter-meta{
             display:flex;
             flex-wrap:wrap;
@@ -820,11 +815,150 @@ def inject_css() -> None:
             color:#475467;
         }
 
-        .result-grid{
+        .search-idle{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px dashed #cfe0ff;
+            border-radius:22px;
+            padding:28px 24px;
+            margin-top:16px;
+            margin-bottom:12px;
+        }
+        .search-idle-title{
+            font-size:20px;
+            line-height:1.4;
+            font-weight:800;
+            color:#102a43;
+            margin-bottom:8px;
+        }
+        .search-idle-text{
+            font-size:14px;
+            line-height:1.72;
+            color:#64748b;
+        }
+
+        .ai-loading-shell{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid var(--line);
+            border-radius:22px;
+            padding:22px;
+            box-shadow:var(--shadow);
+            margin-top:18px;
+            margin-bottom:20px;
+        }
+        .ai-loading-top{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-bottom:12px;
+        }
+        .ai-loading-title{
+            font-size:22px;
+            line-height:1.4;
+            font-weight:800;
+            color:#102a43;
+            margin-bottom:6px;
+            letter-spacing:-0.02em;
+        }
+        .ai-loading-sub{
+            font-size:14px;
+            line-height:1.7;
+            color:#64748b;
+        }
+        .ai-stage-box{
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            border-radius:18px;
+            padding:16px;
+            margin-top:14px;
+            margin-bottom:14px;
+        }
+        .ai-stage-label{
+            font-size:12px;
+            color:#2563eb;
+            font-weight:800;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+            margin-bottom:8px;
+        }
+        .ai-stage-title{
+            font-size:18px;
+            line-height:1.45;
+            font-weight:800;
+            color:#0f172a;
+            margin-bottom:6px;
+        }
+        .ai-stage-desc{
+            font-size:13px;
+            line-height:1.68;
+            color:#475467;
+        }
+        .ai-progress{
+            width:100%;
+            height:10px;
+            background:#e8eef7;
+            border-radius:999px;
+            overflow:hidden;
+            margin-top:14px;
+        }
+        .ai-progress-bar{
+            height:100%;
+            border-radius:999px;
+            background:linear-gradient(90deg, #173b74 0%, #2563eb 100%);
+            transition:width .28s ease;
+        }
+        .skeleton-grid{
             display:grid;
             grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:18px;
+            gap:16px;
+            margin-top:16px;
         }
+        .skeleton-card{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid #e6ebf2;
+            border-radius:18px;
+            padding:18px;
+            min-height:186px;
+        }
+        .skeleton-line{
+            width:100%;
+            height:12px;
+            border-radius:999px;
+            background:linear-gradient(90deg, #eef3fb 25%, #dde7f7 37%, #eef3fb 63%);
+            background-size:400% 100%;
+            animation:skeletonFlow 1.3s ease-in-out infinite;
+            margin-bottom:12px;
+        }
+        .skeleton-line.short{ width:42%; }
+        .skeleton-line.mid{ width:72%; }
+        .skeleton-pill-row{
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            margin-top:16px;
+        }
+        .skeleton-pill{
+            width:82px;
+            height:28px;
+            border-radius:999px;
+            background:linear-gradient(90deg, #eef3fb 25%, #dde7f7 37%, #eef3fb 63%);
+            background-size:400% 100%;
+            animation:skeletonFlow 1.3s ease-in-out infinite;
+        }
+        @keyframes skeletonFlow{
+            0%{ background-position:100% 50%; }
+            100%{ background-position:0 50%; }
+        }
+
+        .result-card-wrap{
+            animation:fadeUpCard .55s ease both;
+        }
+        @keyframes fadeUpCard{
+            0%{ opacity:0; transform:translateY(18px); }
+            100%{ opacity:1; transform:translateY(0); }
+        }
+
         .result-card{
             position:relative;
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
@@ -1070,13 +1204,11 @@ def inject_css() -> None:
             white-space:normal;
             word-break:keep-all;
         }
-        .timeline-list,
         .insight-list{
             list-style:none;
             padding-left:0;
             margin:0;
         }
-        .timeline-list li,
         .insight-list li{
             position:relative;
             padding-left:14px;
@@ -1086,11 +1218,9 @@ def inject_css() -> None:
             color:#475467;
             word-break:keep-all;
         }
-        .timeline-list li:last-child,
         .insight-list li:last-child{
             margin-bottom:0;
         }
-        .timeline-list li::before,
         .insight-list li::before{
             content:"•";
             position:absolute;
@@ -1098,22 +1228,6 @@ def inject_css() -> None:
             top:0;
             color:#2563eb;
             font-weight:800;
-        }
-        .insight-box{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:18px;
-            padding:18px;
-        }
-        .insight-grid-2{
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:16px;
-        }
-        .detail-note{
-            font-size:12px;
-            color:#667085;
-            margin-top:10px;
         }
         .empty-text{
             font-size:14px;
@@ -1152,10 +1266,10 @@ def inject_css() -> None:
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
 
         @media (max-width: 1100px){
-            .stats-row, .result-grid, .brief-grid{ grid-template-columns:1fr 1fr; }
+            .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
         }
         @media (max-width: 768px){
-            .stats-row, .result-grid, .insight-grid-2, .brief-grid{ grid-template-columns:1fr; }
+            .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
         }
         </style>
@@ -1167,7 +1281,6 @@ def inject_css() -> None:
 # Page rendering helpers
 # -----------------------------
 def render_hero(df: pd.DataFrame) -> None:
-    major_count = sum(1 for col in df.columns if col.startswith("major_"))
     render_html(
         f"""
         <div class="hero">
@@ -1184,50 +1297,6 @@ def render_hero(df: pd.DataFrame) -> None:
         </div>
         """
     )
-
-
-def render_top_stats(df: pd.DataFrame) -> None:
-    salary_with_value = int(df["salary_amount"].notna().sum())
-    good_outlook = int((df["employment_status"] == "좋음").sum())
-    major_unique = len(sorted({major for majors in df["major_list"] for major in majors}))
-    cert_count = int(df["certification_list"].map(len).sum())
-
-    render_html(
-        f"""
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">Data Snapshot</div>
-                    <div class="section-title">직업 데이터 현황</div>
-                    <div class="section-sub">현재 탐색 가능한 직업 데이터의 전체 규모와 정보 범위를 요약했습니다.</div>
-                </div>
-            </div>
-            <div class="stats-row">
-                <div class="stat-card">
-                    <div class="stat-label">전체 직업 수</div>
-                    <div class="stat-value">{len(df):,}</div>
-                    <div class="stat-sub">현재 탐색 가능한 전체 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">임금 정보 보유</div>
-                    <div class="stat-value">{salary_with_value:,}</div>
-                    <div class="stat-sub">임금 정보가 제공되는 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">전망 좋음 직업</div>
-                    <div class="stat-value">{good_outlook:,}</div>
-                    <div class="stat-sub">전망이 긍정적으로 읽히는 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">연결 전공 / 자격 정보</div>
-                    <div class="stat-value">{major_unique:,} / {cert_count:,}</div>
-                    <div class="stat-sub">전공 정보와 자격 정보의 누적 연결 수</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
 
 
 def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
@@ -1319,7 +1388,92 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
     )
 
 
-def render_result_card(row: pd.Series) -> None:
+def render_pre_search_state() -> None:
+    render_html(
+        """
+        <div class="search-idle">
+            <div class="search-idle-title">AI 탐색어를 입력하면 직업 후보를 정리해 보여드립니다</div>
+            <div class="search-idle-text">
+                아직 탐색이 시작되지 않아 결과 목록은 표시하지 않고 있습니다. 위 입력창에 관심 있는 직업, 일의 성격, 원하는 분위기를 문장처럼 입력해 보세요.
+            </div>
+        </div>
+        """
+    )
+
+
+def render_ai_search_animation(query: str) -> None:
+    stages = [
+        ("탐색 의도를 해석하고 있습니다", "입력한 문장을 직업명, 관심사, 업무 성격, 연관 키워드로 분해하고 있습니다."),
+        ("직업 데이터와 의미를 연결하고 있습니다", "직무 소개, 적성, 유사 직무, 전공 정보를 함께 스캔하여 관련성이 높은 후보를 좁히고 있습니다."),
+        ("결과를 큐레이션하고 있습니다", "가독성이 좋은 순서로 후보를 정렬하고, 바로 읽을 수 있는 탐색 브리핑을 준비하고 있습니다."),
+    ]
+
+    placeholder = st.empty()
+
+    for idx, (title, desc) in enumerate(stages, start=1):
+        progress = int((idx / len(stages)) * 100)
+        placeholder.markdown(
+            textwrap.dedent(
+                f"""
+                <div class="ai-loading-shell">
+                    <div class="ai-loading-top">
+                        <div>
+                            <div class="section-kicker">AI Search Running</div>
+                            <div class="ai-loading-title">AI가 탐색을 진행하고 있습니다</div>
+                            <div class="ai-loading-sub">탐색어 <strong>{html.escape(query)}</strong> 를 바탕으로 관련 직업을 정교하게 선별하는 중입니다.</div>
+                        </div>
+                        <div class="ai-badge"><span class="ai-dot"></span>분석 중</div>
+                    </div>
+                    <div class="ai-stage-box">
+                        <div class="ai-stage-label">STEP {idx}</div>
+                        <div class="ai-stage-title">{html.escape(title)}</div>
+                        <div class="ai-stage-desc">{html.escape(desc)}</div>
+                        <div class="ai-progress">
+                            <div class="ai-progress-bar" style="width:{progress}%"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-grid">
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line mid"></div>
+                            <div class="skeleton-pill-row">
+                                <div class="skeleton-pill"></div>
+                                <div class="skeleton-pill"></div>
+                                <div class="skeleton-pill"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line mid"></div>
+                            <div class="skeleton-pill-row">
+                                <div class="skeleton-pill"></div>
+                                <div class="skeleton-pill"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line mid"></div>
+                            <div class="skeleton-pill-row">
+                                <div class="skeleton-pill"></div>
+                                <div class="skeleton-pill"></div>
+                                <div class="skeleton-pill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """
+            ),
+            unsafe_allow_html=True,
+        )
+        time.sleep(0.55 if idx < len(stages) else 0.45)
+
+    placeholder.empty()
+
+
+def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
     tags = row.get("similar_job_list", [])[:3]
     if not tags:
         tags = row.get("major_list", [])[:3]
@@ -1335,18 +1489,20 @@ def render_result_card(row: pd.Series) -> None:
 
     render_html(
         f"""
-        <div class="result-card">
-            <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
-            <div class="job-summary">{html.escape(summary)}</div>
-            <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
-            <div class="metric-row">
-                <div class="mini-metric">
-                    <div class="mini-label">임금 수준</div>
-                    <div class="mini-value">{html.escape(salary_label)} · {html.escape(str(row.get('salary_bucket', '정보 없음')))}</div>
-                </div>
-                <div class="mini-metric">
-                    <div class="mini-label">고용 전망</div>
-                    <div class="mini-value">{html.escape(str(row.get('employment_status', '보통')))}</div>
+        <div class="result-card-wrap" style="animation-delay:{delay_ms}ms;">
+            <div class="result-card">
+                <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
+                <div class="job-summary">{html.escape(summary)}</div>
+                <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
+                <div class="metric-row">
+                    <div class="mini-metric">
+                        <div class="mini-label">임금 수준</div>
+                        <div class="mini-value">{html.escape(salary_label)} · {html.escape(str(row.get('salary_bucket', '정보 없음')))}</div>
+                    </div>
+                    <div class="mini-metric">
+                        <div class="mini-label">고용 전망</div>
+                        <div class="mini-value">{html.escape(str(row.get('employment_status', '보통')))}</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1798,12 +1954,11 @@ def ensure_session_defaults() -> None:
     st.session_state.setdefault("search_input", "")
     st.session_state.setdefault("committed_query", "")
     st.session_state.setdefault("trigger_ai_search", False)
-
+    st.session_state.setdefault("page_number", 1)
 
 
 def render_main_page(df: pd.DataFrame) -> None:
     render_hero(df)
-    render_top_stats(df)
 
     suggestion_queries = [
         "컴퓨터와 관련된 일",
@@ -1838,6 +1993,7 @@ def render_main_page(df: pd.DataFrame) -> None:
                 st.session_state.search_input = suggestion
                 st.session_state.committed_query = suggestion
                 st.session_state.trigger_ai_search = True
+                st.session_state.page_number = 1
                 rerun_app()
 
     with st.form("ai_search_form", clear_on_submit=False):
@@ -1855,12 +2011,14 @@ def render_main_page(df: pd.DataFrame) -> None:
     if submitted:
         st.session_state.committed_query = st.session_state.get("search_input", "").strip()
         st.session_state.trigger_ai_search = True
+        st.session_state.page_number = 1
         rerun_app()
 
     if reset_clicked:
         st.session_state.search_input = ""
         st.session_state.committed_query = ""
         st.session_state.trigger_ai_search = False
+        st.session_state.page_number = 1
         rerun_app()
 
     col1, col2, col3 = st.columns([1.6, 0.9, 0.9], gap="medium")
@@ -1871,12 +2029,16 @@ def render_main_page(df: pd.DataFrame) -> None:
     with col3:
         employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
 
-    if st.session_state.get("trigger_ai_search"):
-        with st.spinner("AI가 탐색어와 직업 데이터를 연결하고 있습니다..."):
-            time.sleep(0.45)
+    search_query = st.session_state.get("committed_query", "").strip()
+
+    if st.session_state.get("trigger_ai_search") and search_query:
+        render_ai_search_animation(search_query)
         st.session_state.trigger_ai_search = False
 
-    search_query = st.session_state.get("committed_query", "")
+    if not search_query:
+        render_ai_search_brief("", df.iloc[0:0], df.iloc[0:0])
+        render_pre_search_state()
+        return
 
     searched = search_jobs(df, search_query)
     filtered = filter_results(searched, selected_majors, salary_filters, employment_filters)
@@ -1890,7 +2052,15 @@ def render_main_page(df: pd.DataFrame) -> None:
 
     per_page = 12
     page_count = max(1, (len(filtered) - 1) // per_page + 1)
-    current_page = st.number_input("페이지", min_value=1, max_value=page_count, value=1, step=1)
+    current_page = st.number_input(
+        "페이지",
+        min_value=1,
+        max_value=page_count,
+        value=min(st.session_state.get("page_number", 1), page_count),
+        step=1,
+        key="page_number_input",
+    )
+    st.session_state.page_number = int(current_page)
     start = (current_page - 1) * per_page
     end = start + per_page
     page_df = filtered.iloc[start:end].reset_index(drop=True)
@@ -1898,7 +2068,7 @@ def render_main_page(df: pd.DataFrame) -> None:
     cols = st.columns(3, gap="large")
     for idx, (_, row) in enumerate(page_df.iterrows()):
         with cols[idx % 3]:
-            render_result_card(row)
+            render_result_card(row, delay_ms=idx * 120)
             if st.button(f"상세 보기 · {row['job']}", key=f"open_{start+idx}", use_container_width=True):
                 st.session_state.selected_job = row["job"]
                 st.session_state.page = "detail"
