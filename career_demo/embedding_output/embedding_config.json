@@ -1,0 +1,24 @@
+{
+  "input_file": "C:\\Users\\user\\Documents\\GitHub\\Kirbs_rnbd\\career_demo\\career_jobs.xlsx",
+  "model_name": "intfloat/multilingual-e5-base",
+  "row_count": 454,
+  "embedding_dim": 768,
+  "normalize_embeddings": true,
+  "batch_size": 32,
+  "major_prefix": "major_",
+  "contact_prefix": "contact_",
+  "text_columns": [
+    "job",
+    "summary",
+    "similarJob",
+    "aptitude",
+    "empway",
+    "prepareway",
+    "training",
+    "certification",
+    "employment",
+    "job_possibility",
+    "capacity_1",
+    "capacity_all"
+  ]
+}

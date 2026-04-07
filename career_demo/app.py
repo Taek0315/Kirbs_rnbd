@@ -5,10 +5,12 @@ from pathlib import Path
 import html
 import time
 import re
+import json
 import textwrap
 from collections import Counter
 from difflib import SequenceMatcher
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -16,6 +18,11 @@ import streamlit as st
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "career_jobs.xlsx"
+EMBEDDING_DIR = BASE_DIR / "embedding_output"
+EMBED_META_FILE = EMBEDDING_DIR / "career_jobs_embedding_meta.xlsx"
+EMBED_ARRAY_FILE = EMBEDDING_DIR / "career_jobs_embeddings.npy"
+EMBED_CONFIG_FILE = EMBEDDING_DIR / "embedding_config.json"
+SEMANTIC_THRESHOLD = 0.34
 
 st.set_page_config(
     page_title="AI 직업 탐색 리포트",
@@ -289,6 +296,89 @@ def normalize_search_token(token: str) -> str:
     return token.strip()
 
 
+def build_embedding_key(jobdic_seq, job_name: str) -> str:
+    if not is_missing_like(jobdic_seq):
+        try:
+            return f"id::{int(float(jobdic_seq))}"
+        except Exception:
+            return f"id::{clean_sentence(str(jobdic_seq))}"
+    return f"job::{clean_sentence(str(job_name)).lower()}"
+
+
+@st.cache_data(show_spinner=False)
+def load_embedding_assets(
+    meta_path: Path = EMBED_META_FILE,
+    array_path: Path = EMBED_ARRAY_FILE,
+    config_path: Path = EMBED_CONFIG_FILE,
+):
+    if not (meta_path.exists() and array_path.exists() and config_path.exists()):
+        return None
+
+    meta = pd.read_excel(meta_path)
+    embeddings = np.load(array_path)
+
+    if len(meta) != len(embeddings):
+        return None
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    keys = [
+        build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
+        for _, row in meta.iterrows()
+    ]
+    key_to_index = {key: idx for idx, key in enumerate(keys)}
+
+    return {
+        "meta": meta,
+        "embeddings": embeddings.astype(np.float32),
+        "key_to_index": key_to_index,
+        "model_name": config.get("model_name", "intfloat/multilingual-e5-base"),
+        "normalize_embeddings": bool(config.get("normalize_embeddings", True)),
+    }
+
+
+@st.cache_resource(show_spinner=False)
+def load_embedding_model(model_name: str):
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer(model_name)
+
+
+def compute_semantic_scores(df: pd.DataFrame, query: str) -> np.ndarray:
+    if df.empty or not query.strip():
+        return np.zeros(len(df), dtype=np.float32)
+
+    assets = load_embedding_assets()
+    if not assets:
+        return np.zeros(len(df), dtype=np.float32)
+
+    try:
+        model = load_embedding_model(assets["model_name"])
+        query_vec = model.encode(
+            [f"query: {normalize_whitespace(query)}"],
+            convert_to_numpy=True,
+            normalize_embeddings=assets["normalize_embeddings"],
+            show_progress_bar=False,
+        )[0].astype(np.float32)
+    except Exception:
+        return np.zeros(len(df), dtype=np.float32)
+
+    positions = []
+    embedding_indices = []
+    for pos, (_, row) in enumerate(df.iterrows()):
+        key = build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
+        idx = assets["key_to_index"].get(key)
+        if idx is not None:
+            positions.append(pos)
+            embedding_indices.append(idx)
+
+    scores = np.zeros(len(df), dtype=np.float32)
+    if positions:
+        matrix = assets["embeddings"][embedding_indices]
+        scores[np.array(positions, dtype=int)] = matrix @ query_vec
+    return scores
+
+
 # -----------------------------
 # Data loading and preparation
 # -----------------------------
@@ -521,8 +611,23 @@ def search_jobs(df: pd.DataFrame, query: str) -> pd.DataFrame:
     tokens = extract_search_terms(query)
     results = df.copy()
     results["search_score"] = results.apply(lambda row: compute_search_score(row, query, tokens), axis=1)
-    results = results[results["search_score"] > 0]
-    return results.sort_values(["search_score", "job"], ascending=[False, True]).reset_index(drop=True)
+
+    semantic_scores = compute_semantic_scores(results, query)
+    results["semantic_score"] = semantic_scores
+    results["semantic_boost"] = results["semantic_score"].map(
+        lambda x: max(0.0, float(x) - SEMANTIC_THRESHOLD) * 35.0
+    )
+    results["combined_search_score"] = results["search_score"] + results["semantic_boost"]
+
+    results = results[
+        (results["search_score"] > 0) |
+        (results["semantic_score"] >= SEMANTIC_THRESHOLD)
+    ]
+
+    return results.sort_values(
+        ["combined_search_score", "search_score", "semantic_score", "job"],
+        ascending=[False, False, False, True],
+    ).reset_index(drop=True)
 
 
 def filter_results(
