@@ -844,7 +844,7 @@ def render_hero(df: pd.DataFrame) -> None:
             </div>
             <div class="glass-row">
                 <span class="glass-chip">직업 데이터 {len(df):,}건</span>
-                <span class="glass-chip">전공 컬럼 {major_count}개 연동</span>
+                <span class="glass-chip">연관 전공 정보 제공</span>
                 <span class="glass-chip">NCS·전망·통계 정보 통합</span>
             </div>
         </div>
@@ -865,29 +865,29 @@ def render_top_stats(df: pd.DataFrame) -> None:
                 <div>
                     <div class="section-kicker">Data Snapshot</div>
                     <div class="section-title">직업 데이터 현황</div>
-                    <div class="section-sub">업로드된 career_jobs.xlsx 기준으로 탐색 가능한 전체 범위를 요약했습니다.</div>
+                    <div class="section-sub">현재 탐색 가능한 직업 데이터의 전체 규모와 정보 범위를 요약했습니다.</div>
                 </div>
             </div>
             <div class="stats-row">
                 <div class="stat-card">
                     <div class="stat-label">전체 직업 수</div>
                     <div class="stat-value">{len(df):,}</div>
-                    <div class="stat-sub">job 컬럼 기준 유효 직업 수</div>
+                    <div class="stat-sub">현재 탐색 가능한 전체 직업 수</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">임금 정보 보유</div>
                     <div class="stat-value">{salary_with_value:,}</div>
-                    <div class="stat-sub">salery 컬럼에서 수치 추출 가능</div>
+                    <div class="stat-sub">임금 정보가 제공되는 직업 수</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">전망 좋음 직업</div>
                     <div class="stat-value">{good_outlook:,}</div>
-                    <div class="stat-sub">employment·job_possibility 기반</div>
+                    <div class="stat-sub">전망이 긍정적으로 읽히는 직업 수</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">연결 전공 / 자격 정보</div>
                     <div class="stat-value">{major_unique:,} / {cert_count:,}</div>
-                    <div class="stat-sub">major_1~21, certification 기준</div>
+                    <div class="stat-sub">전공 정보와 자격 정보의 누적 연결 수</div>
                 </div>
             </div>
         </div>
@@ -907,7 +907,7 @@ def render_search_panel(total_count: int, filtered_count: int, query: str) -> No
         <div class="search-banner">
             <div class="section-kicker">Search & Filter</div>
             <div class="section-title">키워드와 조건으로 직업을 좁혀보세요</div>
-            <div class="section-sub">job, summary, similarJob, aptitude, major 정보를 함께 반영하여 검색합니다.</div>
+            <div class="section-sub">직업명, 소개, 유사 직무, 적성, 전공 정보를 종합해 검색합니다.</div>
             <div class="filter-meta">{chips_html}</div>
         </div>
         """
@@ -960,7 +960,7 @@ def render_profile_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Job Profile</div>
                     <div class="section-title">직무 프로필</div>
-                    <div class="section-sub">직업명과 summary 전문을 읽기 쉬운 문장 단위로 구조화했습니다.</div>
+                    <div class="section-sub">직업의 핵심 역할과 특징을 문장 단위로 정리했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1032,7 +1032,7 @@ def render_roadmap_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">How To Be</div>
                     <div class="section-title">로드맵</div>
-                    <div class="section-sub">prepareway, training, empway를 바탕으로 단계형 로드맵으로 재구성했습니다.</div>
+                    <div class="section-sub">진입부터 실무 적응, 이후 확장까지의 흐름을 단계형으로 정리했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1054,16 +1054,112 @@ def render_roadmap_section(detail: pd.Series) -> None:
             )
 
 
+def trim_phrase_edges(phrase: str) -> str:
+    phrase = normalize_whitespace(phrase)
+    phrase = re.sub(r"^[\-•·▪■]\s*", "", phrase)
+    phrase = re.sub(r"^(또|그리고|또한|즉|예를 들어)\s+", "", phrase)
+    phrase = re.sub(r"^(?:와|과|및)\s+", "", phrase)
+    phrase = re.sub(r"^(이 직업은|해당 직무는|해당 직업은|[가-힣A-Za-z0-9·]+는|[가-힣A-Za-z0-9·]+은|[가-힣A-Za-z0-9·]+이|[가-힣A-Za-z0-9·]+가)\s+", "", phrase)
+    phrase = re.sub(r"\s*(이|가|은|는|을|를)\s*(필요하다|필요하며|요구된다|요구되며|있어야 한다|있어야 하며|중요하다|유리하다|적합하다).*$", "", phrase)
+    phrase = re.sub(r"\s*(등의|등)\s*$", "", phrase)
+    phrase = re.sub(r"\s+", " ", phrase).strip(" ,.;:-")
+    return phrase
+
+
 def extract_keywords_from_text(text: str, limit: int = 14) -> list[str]:
-    text = normalize_whitespace(text).lower()
-    tokens = re.findall(r"[A-Za-z가-힣]{2,20}", text)
+    raw = normalize_whitespace(text)
+    if not raw:
+        return []
+
     stopwords = KOREAN_STOPWORDS | {
         "있다", "필요", "요구", "된다", "수준", "능력", "업무", "사람", "위한", "수행", "직업",
         "학생", "교육", "관련", "통해", "평가", "준비", "훈련", "현장", "취득", "과정", "정도",
+        "사람들에게", "사람에게", "적합하며", "유리하다", "필요하다", "필요하며", "요구된다", "요구되며",
+        "가진", "가지는", "가지고", "있어야", "있으며", "많으므로", "그러므로", "때문에", "전반적인",
     }
-    cleaned = [token for token in tokens if token not in stopwords]
-    counts = Counter(cleaned)
-    return [word for word, _ in counts.most_common(limit)]
+
+    phrase_endings = [
+        "의사소통 능력", "글쓰기 능력", "문제 해결 능력", "논리적 사고", "분석적 사고",
+        "응용능력", "자료처리능력", "의사소통능력", "언어전달능력", "문제해결능력", "사무능력",
+        "활용능력", "사고능력", "통제력", "리더십", "판단력", "분석력", "사고력", "책임감",
+        "사명의식", "창의력", "집중력", "인내심", "협동심", "대인관계", "자기통제력", "사회성",
+        "정직성", "신뢰성", "꼼꼼함", "윤리의식", "응용력", "열정", "애정", "혁신", "성취",
+        "끈기", "체력", "역량", "지식", "능력",
+    ]
+    phrase_endings = sorted(phrase_endings, key=len, reverse=True)
+    phrase_pattern = r"([가-힣A-Za-z·/ ]{1,28}?(?:" + "|".join(re.escape(x) for x in phrase_endings) + r"))"
+
+    candidates = []
+    fragments = []
+    for line in split_lines(raw):
+        parts = re.split(r",|;|/|·", line)
+        fragments.extend([normalize_whitespace(part) for part in parts if normalize_whitespace(part)])
+
+    for frag in fragments:
+        matches = [m.group(1) for m in re.finditer(phrase_pattern, frag)]
+        if matches:
+            candidates.extend(matches)
+        else:
+            frag = trim_phrase_edges(frag)
+            if 2 <= len(frag) <= 14 and " " not in frag:
+                candidates.append(frag)
+
+    scored = []
+    seen = set()
+    for phrase in candidates:
+        phrase = trim_phrase_edges(phrase)
+        if not phrase:
+            continue
+        if phrase.lower() in stopwords:
+            continue
+        if len(phrase) < 2 or len(phrase) > 22:
+            continue
+        if phrase.startswith(("과 ", "와 ", "및 ")):
+            continue
+
+        score = 0.0
+        if " " in phrase:
+            score += 5.0
+        if any(phrase.endswith(end) for end in phrase_endings):
+            score += 4.0
+        if 4 <= len(phrase) <= 14:
+            score += 3.0
+        elif len(phrase) <= 18:
+            score += 1.5
+        if any(marker in phrase for marker in ["로서", "때문", "이므로", "많으므로", "사람", "업무"]):
+            score -= 3.0
+        if phrase in {"교육", "학생", "직무", "사람", "업무"}:
+            score -= 5.0
+
+        key = phrase.lower()
+        if key in seen:
+            continue
+        scored.append((score, phrase))
+        seen.add(key)
+
+    scored.sort(key=lambda x: (-x[0], len(x[1])))
+
+    selected = []
+    for _, phrase in scored:
+        if any(phrase != kept and phrase in kept for kept in selected):
+            continue
+        selected.append(phrase)
+        if len(selected) >= limit:
+            break
+
+    if not selected:
+        tokens = re.findall(r"[A-Za-z가-힣]{2,20}", raw.lower())
+        fallback = []
+        for token in tokens:
+            if token in stopwords:
+                continue
+            if token not in fallback:
+                fallback.append(token)
+            if len(fallback) >= limit:
+                break
+        return fallback
+
+    return selected
 
 
 def render_capability_section(detail: pd.Series) -> None:
@@ -1082,7 +1178,7 @@ def render_capability_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Competency & Qualification</div>
                     <div class="section-title">역량 및 자격</div>
-                    <div class="section-sub">aptitude 텍스트에서 핵심 키워드를 추출하고 certification 정보를 리스트화했습니다.</div>
+                    <div class="section-sub">직무에 어울리는 적성과 준비에 도움이 되는 자격 정보를 함께 정리했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1143,7 +1239,7 @@ def render_market_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Market Insight</div>
                     <div class="section-title">시장 지표</div>
-                    <div class="section-sub">salery, employment, job_possibility를 읽기 쉬운 요약 카드와 차트로 재구성했습니다.</div>
+                    <div class="section-sub">임금과 전망 정보를 한눈에 읽을 수 있도록 요약했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1210,7 +1306,7 @@ def render_chart_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">PCNT Analytics</div>
                     <div class="section-title">데이터 인사이트</div>
-                    <div class="section-sub">PCNT 컬럼을 이용해 성별 관심도와 연령대별 지표를 시각화했습니다.</div>
+                    <div class="section-sub">관심도 분포를 성별과 연령대 기준으로 시각화했습니다.</div>
                 </div>
             </div>
         </div>
