@@ -25,7 +25,6 @@ def inject_css():
             --bg:#f5f7fb;
             --panel:#ffffff;
             --line:#e6ebf2;
-            --line-strong:#d9e2ee;
             --text:#0f172a;
             --muted:#667085;
             --blue:#2563eb;
@@ -61,13 +60,13 @@ def inject_css():
         }
 
         .nav-shell {
-            background: rgba(255,255,255,.92);
+            background: rgba(255,255,255,.94);
             border: 1px solid var(--line);
             border-radius: 20px;
             box-shadow: var(--shadow);
             padding: 18px 20px 14px 20px;
-            margin-bottom: 24px;
-            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+            backdrop-filter: blur(8px);
         }
 
         .nav-breadcrumb {
@@ -106,7 +105,7 @@ def inject_css():
             border:1px solid #dbe7fb;
             border-radius:16px;
             padding:14px 16px;
-            margin-bottom:18px;
+            margin-bottom:20px;
         }
 
         .context-line{
@@ -264,37 +263,6 @@ def inject_css():
             color:#475467;
         }
 
-        .meter-label{
-            font-size:12px;
-            line-height:1.5;
-            color:#667085;
-            font-weight:700;
-            margin-bottom:10px;
-        }
-
-        .meter-shell{
-            width:100%;
-            height:12px;
-            background:#edf2f7;
-            border-radius:999px;
-            overflow:hidden;
-            margin-bottom:10px;
-        }
-
-        .meter-fill{
-            height:100%;
-            border-radius:999px;
-            background:linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
-        }
-
-        .meter-score{
-            font-size:28px;
-            line-height:1.3;
-            font-weight:800;
-            color:#0f172a;
-            margin-bottom:4px;
-        }
-
         .section-shell{
             background:transparent;
             margin-bottom:28px;
@@ -356,7 +324,6 @@ def inject_css():
         }
 
         .timeline-item{
-            position:relative;
             background:#fbfdff;
             border:1px solid #e8eef7;
             border-radius:16px;
@@ -629,9 +596,66 @@ def get_data():
     return load_job_data(DATA_FILE)
 
 
-def split_lines(text: str):
-    if text is None or (isinstance(text, float) and pd.isna(text)):
+def is_missing_like(value):
+    if value is None:
+        return True
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped == "" or stripped.lower() == "nan"
+
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+
+    try:
+        na_result = pd.isna(value)
+    except Exception:
+        return False
+
+    if isinstance(na_result, bool):
+        return na_result
+
+    return False
+
+
+def normalize_to_strings(value):
+    if is_missing_like(value):
         return []
+
+    if isinstance(value, str):
+        return [value.strip()]
+
+    if isinstance(value, dict):
+        result = []
+        for item in value.values():
+            result.extend(normalize_to_strings(item))
+        return result
+
+    if isinstance(value, (list, tuple, set)):
+        result = []
+        for item in value:
+            result.extend(normalize_to_strings(item))
+        return result
+
+    return [str(value).strip()]
+
+
+def split_lines(text):
+    if is_missing_like(text):
+        return []
+
+    if isinstance(text, (list, tuple, set)):
+        result = []
+        for item in text:
+            result.extend(split_lines(item))
+        return result
+
+    if isinstance(text, dict):
+        result = []
+        for item in text.values():
+            result.extend(split_lines(item))
+        return result
+
     text = str(text).replace("\r", "\n").strip()
     if not text:
         return []
@@ -654,16 +678,6 @@ def split_lines(text: str):
     return lines
 
 
-def collect_prefixed_values(detail: dict, prefix: str):
-    items = []
-    for key, value in detail.items():
-        if key.startswith(prefix) and value is not None and not pd.isna(value):
-            value = str(value).strip()
-            if value and value.lower() != "nan":
-                items.append(value)
-    return items
-
-
 def unique_keep_order(items):
     seen = set()
     result = []
@@ -677,18 +691,25 @@ def unique_keep_order(items):
     return result
 
 
+def collect_prefixed_values(detail: dict, prefix: str):
+    items = []
+    for key, value in detail.items():
+        if key.startswith(prefix):
+            items.extend(normalize_to_strings(value))
+    return unique_keep_order(items)
+
+
 def get_similar_jobs(detail: dict):
     return unique_keep_order(split_lines(detail.get("similarJob", "")))
 
 
 def get_major_list(detail: dict):
-    return unique_keep_order(collect_prefixed_values(detail, "major_"))
+    return collect_prefixed_values(detail, "major_")
 
 
 def get_contact_list(detail: dict):
     contacts = []
-    if isinstance(detail.get("contact_list"), list):
-        contacts.extend(detail.get("contact_list"))
+    contacts.extend(normalize_to_strings(detail.get("contact_list")))
     contacts.extend(collect_prefixed_values(detail, "contact_"))
     return unique_keep_order(contacts)
 
@@ -735,6 +756,7 @@ def extract_keywords(detail: dict, limit: int = 8):
         ]
     )
     candidates = re.findall(r"[A-Za-z가-힣·ㆍ]{2,20}", text)
+
     stopwords = {
         "그리고","관련","직업","위해","통해","되는","한다","있다","있으며","것으로","정도",
         "업무","필요","요구","사람","사람에게","유리하다","적합","직업인","경우","향후",
@@ -742,8 +764,10 @@ def extract_keywords(detail: dict, limit: int = 8):
         "직장","고용","임금","평균","하위","상위","된다","하는","업무를","직업은","직업이",
         "관련된","등의","등을","대한","자신의","자신이","수행","준비","교육"
     }
+
     weighted = []
     preferred = ["전략", "시스템", "분석", "기획", "설계", "커뮤니케이션", "문제해결", "책임감", "데이터", "고객", "운용", "진단", "컨설팅"]
+
     for token in candidates:
         token = token.strip("·ㆍ")
         if len(token) < 2 or token in stopwords:
@@ -755,10 +779,10 @@ def extract_keywords(detail: dict, limit: int = 8):
 
     ordered = []
     for pref in preferred:
-        if any(pref in word for word in top):
-            matched = next(word for word in top if pref in word)
-            if matched not in ordered:
-                ordered.append(matched)
+        for word in top:
+            if pref in word and word not in ordered:
+                ordered.append(word)
+                break
 
     for token in top:
         if token not in ordered:
@@ -774,6 +798,8 @@ def derive_competency_scores(detail: dict):
         [
             str(detail.get("summary", "")),
             str(detail.get("aptitude", "")),
+            str(detail.get("capacity_1", "")),
+            str(detail.get("capacity_all", "")),
             str(detail.get("empway", "")),
             str(detail.get("training", "")),
         ]
@@ -828,7 +854,9 @@ def render_radar_svg(scores: dict):
     label_nodes = []
     for label, angle in zip(labels, angles):
         x, y = point(angle, radius)
-        axes.append(f'<line x1="{center}" y1="{center}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E5E7EB" stroke-width="1"/>')
+        axes.append(
+            f'<line x1="{center}" y1="{center}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E5E7EB" stroke-width="1"/>'
+        )
         lx, ly = point(angle, radius + 26)
         label_nodes.append(
             f'<text x="{lx:.1f}" y="{ly:.1f}" fill="#64748B" font-size="12" font-weight="700" text-anchor="middle">{html.escape(label)}</text>'
@@ -842,10 +870,12 @@ def render_radar_svg(scores: dict):
     points_html = []
     for value, angle in zip(values, angles):
         x, y = point(angle, radius * value / 100)
-        points_html.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>')
+        points_html.append(
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>'
+        )
 
     return f"""
-    <svg width="340" height="340" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="역량 레이더 차트">
+    <svg width="340" height="340" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="직무 핵심 역량 차트">
         <circle cx="{center}" cy="{center}" r="3" fill="#CBD5E1"/>
         {''.join(grid_polys)}
         {''.join(axes)}
@@ -856,42 +886,41 @@ def render_radar_svg(scores: dict):
     """
 
 
-def parse_salary_metrics(text: str):
-    if text is None or (isinstance(text, float) and pd.isna(text)):
+def parse_salary_metrics(text):
+    if is_missing_like(text):
         return {}
 
     raw = str(text).strip()
     if not raw:
         return {}
 
-    label_map = {"하위": "하위 25%", "평균": "중앙값/평균", "상위": "상위 25%"}
+    label_map = {
+        "하위": "하위 25%",
+        "평균": "중앙값/평균",
+        "상위": "상위 25%",
+    }
     cleaned = raw.replace(",", "")
 
+    patterns = [
+        r"(하위|평균|상위)\s*(?:\(?\d+%?\)?)?\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
+        r"(하위|평균|상위)[^\d]{0,20}([0-9]+(?:\.[0-9]+)?)\s*만원",
+    ]
+
+    metrics = {}
     try:
-        patterns = [
-            r"(하위|평균|상위)\s*(?:\(?\d+%\)?)?\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
-            r"(하위|평균|상위)[^\d]{0,20}([0-9]+(?:\.[0-9]+)?)\s*만원",
-        ]
-        matches = []
         for pattern in patterns:
-            found = re.findall(pattern, cleaned)
-            if found:
-                matches = found
+            matches = re.findall(pattern, cleaned)
+            for key, value in matches:
+                metrics[label_map.get(key, key)] = f"{value}만원"
+            if metrics:
                 break
     except re.error:
         return {}
 
-    if not matches:
-        return {}
-
-    metrics = {}
-    for key, value in matches:
-        label = label_map.get(key, key)
-        metrics[label] = f"{value}만원"
     return metrics
 
 
-def classify_outlook(text: str):
+def classify_outlook(text):
     text = str(text)
     if any(word in text for word in ["증가", "성장", "확대", "밝", "좋", "유망"]):
         return "상승", "매우 밝거나 확장 가능성이 있는 편입니다.", "status-up", "↗"
@@ -903,16 +932,27 @@ def classify_outlook(text: str):
 def infer_stress_signal(detail: dict):
     text = f"{detail.get('job_possibility','')} {detail.get('summary','')} {detail.get('aptitude','')}"
     score = 45
+
     if "정신적 스트레스는 심하지 않은" in text or "스트레스는 심하지 않은" in text:
         score -= 18
     if "정신적 스트레스" in text and any(k in text for k in ["높", "많", "심한", "큰"]):
         score += 20
+
     for k, w in {
-        "고객": 8, "감리": 8, "안전": 6, "책임": 8, "분석": 5,
-        "점검": 5, "정확": 5, "상담": 10, "영업": 8, "위험": 8
+        "고객": 8,
+        "감리": 8,
+        "안전": 6,
+        "책임": 8,
+        "분석": 5,
+        "점검": 5,
+        "정확": 5,
+        "상담": 10,
+        "영업": 8,
+        "위험": 8,
     }.items():
         if k in text:
             score += w
+
     return max(15, min(score, 90))
 
 
@@ -924,16 +964,16 @@ def make_one_line_definition(detail: dict):
 
 
 def get_role_steps(detail: dict):
-    steps = []
     summary_lines = split_lines(detail.get("summary", ""))
     emp_lines = split_lines(detail.get("empway", ""))
     training_lines = split_lines(detail.get("training", ""))
 
     merged = [clean_sentence(x) for x in (summary_lines + emp_lines + training_lines) if clean_sentence(x)]
 
-    default_titles = ["업무 맥락 파악", "핵심 역할 수행", "현장 대응 및 실행", "숙련도 강화"]
+    default_titles = ["업무 맥락 파악", "핵심 역할 수행", "현장 대응 및 실행", "숙련도 확장"]
     icons = ["🔍", "🧩", "🛠️", "📈"]
 
+    steps = []
     for idx in range(min(4, len(merged))):
         steps.append({"title": default_titles[idx], "text": merged[idx], "icon": icons[idx]})
 
@@ -1000,7 +1040,9 @@ def render_navigator(job_options, selected_job, focus_items, search_query, detai
         )
 
     focus_text = " · ".join(selected_focus) if selected_focus else "전체 정보"
-    chips = "".join([f'<span class="filter-chip">{html.escape(item)}</span>' for item in selected_focus]) or '<span class="filter-chip">전체 보기</span>'
+    chips = "".join(
+        [f'<span class="filter-chip">{html.escape(item)}</span>' for item in selected_focus]
+    ) or '<span class="filter-chip">전체 보기</span>'
 
     st.markdown(
         f'''
@@ -1021,6 +1063,7 @@ def render_brief_dashboard(detail: dict):
     one_line = make_one_line_definition(detail)
     keywords = extract_keywords(detail)
     keyword_html = "".join([f'<span class="keyword-chip">{html.escape(k)}</span>' for k in keywords])
+
     provided_scope = []
     for label, key in [
         ("직무 소개", "summary"),
@@ -1031,8 +1074,10 @@ def render_brief_dashboard(detail: dict):
     ]:
         if split_lines(detail.get(key, "")):
             provided_scope.append(label)
+
     if get_major_list(detail):
         provided_scope.append("관련 학과")
+
     scope_text = " · ".join(unique_keep_order(provided_scope)) if provided_scope else "직무 소개 중심 정보"
 
     st.markdown(
@@ -1141,7 +1186,7 @@ def render_capability_section(detail: dict):
                 </div>
                 <div class="ai-comment">
                     이 직업은 <strong>{html.escape(top_name)}</strong> 역량의 비중이 특히 크게 읽힙니다.
-                    설명문 기준으로 보면 핵심 역량 강도는 <strong>{top_value}점</strong> 수준입니다.
+                    현재 표시 값은 개인 적합도가 아니라 <strong>직무 핵심 역량 프로필</strong>입니다.
                 </div>
             </div>
         </div>
@@ -1232,7 +1277,12 @@ def render_extension_section(detail: dict):
         return "<ul class='clean-list'>" + "".join([f"<li>{html.escape(x)}</li>" for x in items]) + "</ul>"
 
     prepare_parts = []
-    for title, key in [("진입 경로", "empway"), ("준비 방법", "prepareway"), ("훈련 및 교육", "training"), ("자격/면허", "certification")]:
+    for title, key in [
+        ("진입 경로", "empway"),
+        ("준비 방법", "prepareway"),
+        ("훈련 및 교육", "training"),
+        ("자격/면허", "certification"),
+    ]:
         lines = split_lines(detail.get(key, ""))
         if lines:
             prepare_parts.extend([f"{title}: {x}" for x in lines])
@@ -1280,7 +1330,7 @@ def main():
 
     if not DATA_FILE.exists():
         st.error(
-            f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}\\n\\n"
+            f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}\n\n"
             "app.py와 같은 폴더에 career_jobs.xlsx가 있는지 확인해 주세요."
         )
         st.stop()
@@ -1307,6 +1357,9 @@ def main():
         st.stop()
 
     job_options = results["job"].dropna().astype(str).tolist()
+    if not job_options:
+        st.error("검색 결과는 있으나 선택 가능한 직업명이 없습니다.")
+        st.stop()
 
     if "selected_job" not in st.session_state or st.session_state.selected_job not in job_options:
         st.session_state.selected_job = job_options[0]
