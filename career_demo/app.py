@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import html
+import time
 import re
 import textwrap
 from collections import Counter
@@ -170,82 +171,6 @@ def safe_float(value):
         return float(value)
     except Exception:
         return None
-
-
-def split_sentences(text) -> list[str]:
-    cleaned = normalize_whitespace(text)
-    if not cleaned:
-        return []
-
-    cleaned = re.sub(r"([.!?])", r"\1\n", cleaned)
-    cleaned = re.sub(r"다\.(?=\S)", "다.\n", cleaned)
-    cleaned = re.sub(r"요\.(?=\S)", "요.\n", cleaned)
-
-    parts = re.split(r"\n+", cleaned)
-    sentences: list[str] = []
-    for part in parts:
-        part = clean_sentence(part)
-        if not part:
-            continue
-        if len(part) < 8:
-            continue
-        sentences.append(part)
-    return unique_keep_order(sentences)
-
-
-def format_compact_bullets(text, max_items: int = 3, max_len: int = 90, keywords: list[str] | None = None) -> list[str]:
-    sentences = split_sentences(text)
-    if not sentences:
-        lines = split_lines(text)
-        return [shorten_text(line, max_len) for line in lines[:max_items] if line]
-
-    keywords = keywords or []
-    scored: list[tuple[float, str]] = []
-    for idx, sentence in enumerate(sentences):
-        score = 0.0
-        if idx == 0:
-            score += 2.4
-        if 18 <= len(sentence) <= max_len + 30:
-            score += 2.0
-        elif len(sentence) < 18:
-            score -= 1.0
-        else:
-            score += 0.8
-        for keyword in keywords:
-            if keyword and keyword in sentence:
-                score += 2.2
-        if any(token in sentence for token in ["필요", "준비", "취득", "전공", "채용", "실무", "훈련", "전망", "증가", "감소", "유리", "합격"]):
-            score += 1.4
-        if any(token in sentence for token in ["자료:", "출처:"]):
-            score -= 1.5
-        scored.append((score, sentence))
-
-    scored.sort(key=lambda x: (-x[0], sentences.index(x[1])))
-
-    selected: list[str] = []
-    for _, sentence in scored:
-        compact = shorten_text(sentence, max_len)
-        if compact not in selected:
-            selected.append(compact)
-        if len(selected) >= max_items:
-            break
-
-    if not selected:
-        return [shorten_text(sentence, max_len) for sentence in sentences[:max_items]]
-    return selected
-
-
-def summarize_text_block(text, summary_items: int = 3, summary_len: int = 100, keywords: list[str] | None = None) -> dict:
-    raw_lines = split_lines(text)
-    raw_sentences = split_sentences(text)
-    bullets = format_compact_bullets(text, max_items=summary_items, max_len=summary_len, keywords=keywords)
-    detail_items = raw_sentences if raw_sentences else raw_lines
-    detail_items = unique_keep_order(detail_items)
-    return {
-        "bullets": bullets,
-        "details": detail_items,
-        "is_long": len(" ".join(detail_items)) > summary_len * 2 or len(detail_items) > summary_items,
-    }
 
 
 # -----------------------------
@@ -549,6 +474,7 @@ def build_salary_gauge(amount: float | None):
 # -----------------------------
 # UI styling
 # -----------------------------
+
 def inject_css() -> None:
     render_html(
         """
@@ -557,12 +483,15 @@ def inject_css() -> None:
             --bg:#f5f7fb;
             --panel:#ffffff;
             --line:#e6ebf2;
+            --line-strong:#d8e2f0;
             --text:#0f172a;
             --muted:#667085;
             --blue:#2563eb;
             --blue-soft:#eff6ff;
-            --shadow:0 8px 28px rgba(15,23,42,.06);
-            --radius:18px;
+            --blue-soft-2:#f6faff;
+            --shadow:0 10px 30px rgba(15,23,42,.06);
+            --shadow-strong:0 18px 40px rgba(37,99,235,.10);
+            --radius:20px;
             --container:1280px;
         }
 
@@ -575,35 +504,49 @@ def inject_css() -> None:
 
         .block-container{
             max-width:var(--container);
-            padding-top:1.15rem;
-            padding-bottom:2.2rem;
+            padding-top:1.05rem;
+            padding-bottom:2.4rem;
         }
 
         .hero{
-            background:linear-gradient(135deg, #0f172a 0%, #173b74 55%, #2563eb 100%);
-            border-radius:24px;
-            padding:30px;
-            margin-bottom:20px;
-            box-shadow:var(--shadow);
+            background:linear-gradient(135deg, #0f172a 0%, #173b74 56%, #2563eb 100%);
+            border-radius:26px;
+            padding:32px 32px 28px 32px;
+            margin-bottom:22px;
+            box-shadow:var(--shadow-strong);
+            position:relative;
+            overflow:hidden;
+        }
+        .hero::after{
+            content:"";
+            position:absolute;
+            right:-70px;
+            top:-80px;
+            width:240px;
+            height:240px;
+            border-radius:50%;
+            background:radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 68%);
+            pointer-events:none;
         }
         .hero-kicker{
             font-size:12px;
             color:#dbeafe;
             font-weight:800;
-            letter-spacing:.12em;
+            letter-spacing:.14em;
             text-transform:uppercase;
             margin-bottom:10px;
         }
         .hero-title{
             font-size:32px;
-            line-height:1.25;
+            line-height:1.22;
             color:#ffffff;
             font-weight:800;
-            margin-bottom:10px;
+            margin-bottom:12px;
+            letter-spacing:-0.02em;
         }
         .hero-sub{
             font-size:15px;
-            line-height:1.7;
+            line-height:1.75;
             color:#dbeafe;
             max-width:860px;
         }
@@ -611,7 +554,7 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:10px;
-            margin-top:16px;
+            margin-top:18px;
         }
         .glass-chip{
             display:inline-flex;
@@ -623,17 +566,18 @@ def inject_css() -> None:
             color:#ffffff;
             font-size:13px;
             font-weight:700;
+            backdrop-filter:blur(8px);
         }
 
         .panel{
             background:var(--panel);
             border:1px solid var(--line);
-            border-radius:20px;
+            border-radius:22px;
             box-shadow:var(--shadow);
-            padding:22px;
-            margin-bottom:20px;
+            padding:24px;
+            margin-bottom:22px;
         }
-        .panel-head{ margin-bottom:16px; }
+        .panel-head{ margin-bottom:14px; }
         .section-kicker{
             font-size:12px;
             font-weight:800;
@@ -647,11 +591,12 @@ def inject_css() -> None:
             line-height:1.4;
             font-weight:800;
             color:#102a43;
-            margin:0 0 4px 0;
+            margin:0 0 6px 0;
+            letter-spacing:-0.02em;
         }
         .section-sub{
             font-size:14px;
-            line-height:1.65;
+            line-height:1.68;
             color:#64748b;
         }
 
@@ -659,12 +604,12 @@ def inject_css() -> None:
             display:grid;
             grid-template-columns:repeat(4, minmax(0, 1fr));
             gap:14px;
-            margin-top:18px;
+            margin-top:16px;
         }
         .stat-card{
-            background:#ffffff;
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #dbe7fb;
-            border-radius:16px;
+            border-radius:18px;
             padding:18px 16px;
         }
         .stat-label{
@@ -675,30 +620,64 @@ def inject_css() -> None:
         }
         .stat-value{
             font-size:24px;
-            line-height:1.25;
+            line-height:1.2;
             color:#0f172a;
             font-weight:800;
-            margin-bottom:4px;
+            margin-bottom:5px;
         }
         .stat-sub{
             font-size:13px;
             color:#64748b;
-            line-height:1.5;
+            line-height:1.55;
         }
 
-        .search-banner{
+        .ai-search-shell{
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
-            border-radius:20px;
-            padding:18px 18px 8px 18px;
+            border-radius:22px;
+            padding:20px 20px 16px 20px;
             box-shadow:var(--shadow);
             margin-bottom:18px;
         }
+        .ai-search-head{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:16px;
+            margin-bottom:12px;
+            flex-wrap:wrap;
+        }
+        .ai-badge{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:8px 12px;
+            border-radius:999px;
+            background:#eff6ff;
+            border:1px solid #dbeafe;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:800;
+        }
+        .ai-dot{
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            background:#2563eb;
+            box-shadow:0 0 0 0 rgba(37,99,235,.4);
+            animation:pulseGlow 1.8s infinite;
+        }
+        @keyframes pulseGlow{
+            0%{ box-shadow:0 0 0 0 rgba(37,99,235,.42); }
+            70%{ box-shadow:0 0 0 8px rgba(37,99,235,0); }
+            100%{ box-shadow:0 0 0 0 rgba(37,99,235,0); }
+        }
+        .suggestion-row,
         .filter-meta{
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-top:8px;
+            margin-top:10px;
         }
         .meta-chip{
             display:inline-flex;
@@ -711,44 +690,102 @@ def inject_css() -> None:
             font-size:12px;
             font-weight:700;
         }
+        .search-guide{
+            font-size:13px;
+            color:#64748b;
+            line-height:1.6;
+        }
+        .brief-grid{
+            display:grid;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap:14px;
+            margin-top:14px;
+        }
+        .brief-card{
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            border-radius:18px;
+            padding:16px;
+            min-height:132px;
+        }
+        .brief-label{
+            font-size:12px;
+            color:#667085;
+            font-weight:800;
+            margin-bottom:10px;
+        }
+        .brief-value{
+            font-size:20px;
+            line-height:1.3;
+            color:#0f172a;
+            font-weight:800;
+            margin-bottom:6px;
+        }
+        .brief-text{
+            font-size:13px;
+            line-height:1.65;
+            color:#475467;
+        }
 
         .result-grid{
             display:grid;
             grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:16px;
+            gap:18px;
         }
         .result-card{
-            background:#ffffff;
+            position:relative;
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
-            border-radius:18px;
+            border-radius:20px;
             box-shadow:var(--shadow);
-            padding:18px;
-            min-height:245px;
+            padding:20px 20px 18px 20px;
+            min-height:286px;
+            display:flex;
+            flex-direction:column;
+            transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+            overflow:hidden;
+        }
+        .result-card::before{
+            content:"";
+            position:absolute;
+            inset:0 auto 0 0;
+            width:5px;
+            background:linear-gradient(180deg, #2563eb 0%, #93c5fd 100%);
+            opacity:.92;
+        }
+        .result-card:hover{
+            transform:translateY(-4px);
+            box-shadow:0 18px 36px rgba(15,23,42,.10);
+            border-color:#cfe0ff;
         }
         .job-title{
             font-size:20px;
-            line-height:1.4;
+            line-height:1.42;
             font-weight:800;
             color:#102a43;
-            margin-bottom:8px;
+            margin-bottom:10px;
+            letter-spacing:-0.02em;
+            padding-left:4px;
         }
         .job-summary{
             font-size:14px;
-            line-height:1.7;
+            line-height:1.76;
             color:#475467;
-            min-height:70px;
-            margin-bottom:14px;
+            min-height:78px;
+            margin-bottom:16px;
+            padding-left:4px;
         }
         .tag-row{
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-bottom:14px;
+            margin-bottom:16px;
+            padding-left:4px;
         }
         .tag-chip{
             display:inline-flex;
             align-items:center;
-            padding:6px 10px;
+            padding:7px 11px;
             border-radius:999px;
             background:#f8fbff;
             border:1px solid #dce8fb;
@@ -760,13 +797,14 @@ def inject_css() -> None:
             display:grid;
             grid-template-columns:repeat(2, minmax(0, 1fr));
             gap:10px;
-            margin-top:6px;
+            margin-top:auto;
+            padding-left:4px;
         }
         .mini-metric{
             background:#f8fafc;
             border:1px solid #e8eef7;
-            border-radius:14px;
-            padding:10px 12px;
+            border-radius:15px;
+            padding:12px 12px 11px 12px;
         }
         .mini-label{
             font-size:11px;
@@ -776,19 +814,21 @@ def inject_css() -> None:
         }
         .mini-value{
             font-size:15px;
+            line-height:1.45;
             color:#0f172a;
             font-weight:800;
+            letter-spacing:-0.01em;
         }
 
         .profile-box{
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:18px;
-            padding:18px;
+            padding:20px;
         }
         .profile-summary{
             font-size:15px;
-            line-height:1.8;
+            line-height:1.82;
             color:#334155;
         }
         .bullet-list{
@@ -800,8 +840,9 @@ def inject_css() -> None:
             padding:10px 0;
             border-bottom:1px solid #edf2f7;
             font-size:14px;
-            line-height:1.75;
+            line-height:1.76;
             color:#334155;
+            word-break:keep-all;
         }
         .bullet-list li:last-child{ border-bottom:none; }
 
@@ -822,18 +863,31 @@ def inject_css() -> None:
             font-weight:700;
         }
         .soft-card{
-            background:#fbfdff;
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
-            border-radius:16px;
-            padding:16px;
+            border-radius:18px;
+            padding:18px;
             height:100%;
+            box-shadow:0 4px 16px rgba(15,23,42,.03);
         }
         .timeline-card{
-            background:#fbfdff;
+            position:relative;
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
-            border-radius:16px;
-            padding:18px 16px;
-            min-height:220px;
+            border-radius:18px;
+            padding:20px 18px 18px 18px;
+            min-height:250px;
+            height:100%;
+        }
+        .timeline-card::before{
+            content:"";
+            position:absolute;
+            left:18px;
+            right:18px;
+            top:0;
+            height:3px;
+            border-radius:999px;
+            background:linear-gradient(90deg, #2563eb 0%, #bfdbfe 100%);
         }
         .timeline-no{
             width:34px;
@@ -847,18 +901,19 @@ def inject_css() -> None:
             justify-content:center;
             font-size:13px;
             font-weight:800;
-            margin-bottom:12px;
+            margin-bottom:14px;
         }
         .timeline-title{
             font-size:16px;
             line-height:1.5;
             font-weight:800;
             color:#102a43;
-            margin-bottom:8px;
+            margin-bottom:10px;
+            letter-spacing:-0.01em;
         }
         .timeline-text{
             font-size:14px;
-            line-height:1.75;
+            line-height:1.76;
             color:#475467;
             white-space:normal;
             word-break:keep-all;
@@ -873,9 +928,9 @@ def inject_css() -> None:
         .insight-list li{
             position:relative;
             padding-left:14px;
-            margin-bottom:8px;
+            margin-bottom:9px;
             font-size:14px;
-            line-height:1.75;
+            line-height:1.76;
             color:#475467;
             word-break:keep-all;
         }
@@ -895,8 +950,8 @@ def inject_css() -> None:
         .insight-box{
             background:#f8fbff;
             border:1px solid #dce8fb;
-            border-radius:16px;
-            padding:16px;
+            border-radius:18px;
+            padding:18px;
         }
         .insight-grid-2{
             display:grid;
@@ -919,8 +974,8 @@ def inject_css() -> None:
         [data-testid="stMultiSelect"] div[data-baseweb="select"] > div{
             background:#ffffff !important;
             border:1px solid #d0d9e5 !important;
-            border-radius:14px !important;
-            min-height:48px !important;
+            border-radius:15px !important;
+            min-height:50px !important;
             box-shadow:none !important;
             color:#111827 !important;
         }
@@ -934,16 +989,22 @@ def inject_css() -> None:
         .stButton > button{
             border-radius:14px !important;
             border:1px solid #d0d9e5 !important;
-            min-height:42px !important;
+            min-height:44px !important;
             font-weight:700 !important;
+        }
+        .stButton > button[kind="primary"]{
+            background:linear-gradient(135deg, #173b74 0%, #2563eb 100%) !important;
+            color:#ffffff !important;
+            border:none !important;
         }
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
 
         @media (max-width: 1100px){
-            .stats-row, .result-grid{ grid-template-columns:1fr 1fr; }
+            .stats-row, .result-grid, .brief-grid{ grid-template-columns:1fr 1fr; }
         }
         @media (max-width: 768px){
-            .stats-row, .result-grid, .insight-grid-2{ grid-template-columns:1fr; }
+            .stats-row, .result-grid, .insight-grid-2, .brief-grid{ grid-template-columns:1fr; }
+            .hero{ padding:26px 22px 22px 22px; }
         }
         </style>
         """
@@ -1016,20 +1077,91 @@ def render_top_stats(df: pd.DataFrame) -> None:
     )
 
 
+
 def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
     chips = [
-        f"검색어: {query}" if query.strip() else "검색어 없음",
-        f"필터 적용 결과 {filtered_count:,}건",
+        f"탐색어: {query}" if query.strip() else "탐색어 없음",
+        f"현재 결과 {filtered_count:,}건",
         f"전체 데이터 {total_count:,}건",
     ]
     chips_html = "".join([f'<span class="meta-chip">{html.escape(chip)}</span>' for chip in chips])
     render_html(
         f"""
-        <div class="search-banner">
-            <div class="section-kicker">Search & Filter</div>
-            <div class="section-title">키워드와 조건으로 직업을 좁혀보세요</div>
-            <div class="section-sub">직업명, 소개, 유사 직무, 적성, 전공 정보를 종합해 검색합니다.</div>
+        <div class="ai-search-shell">
+            <div class="ai-search-head">
+                <div>
+                    <div class="section-kicker">AI Search</div>
+                    <div class="section-title">검색 조건과 필터를 바탕으로 직업을 탐색했습니다</div>
+                    <div class="section-sub">직업명, 소개, 적성, 유사 직무, 관련 전공 정보를 함께 반영합니다.</div>
+                </div>
+                <div class="ai-badge"><span class="ai-dot"></span>AI 탐색 세션</div>
+            </div>
             <div class="filter-meta">{chips_html}</div>
+        </div>
+        """
+    )
+
+
+def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.DataFrame) -> None:
+    if not query.strip():
+        render_html(
+            """
+            <div class="ai-search-shell">
+                <div class="ai-search-head">
+                    <div>
+                        <div class="section-kicker">AI Search Guide</div>
+                        <div class="section-title">어떤 직업을 찾고 있는지 자연스럽게 입력해 보세요</div>
+                        <div class="section-sub">직업명뿐 아니라 “컴퓨터와 관련된 일”, “사람을 돕는 직업”, “디자인 감각이 필요한 일”처럼 문장형 탐색도 가능합니다.</div>
+                    </div>
+                    <div class="ai-badge"><span class="ai-dot"></span>탐색 대기 중</div>
+                </div>
+                <div class="search-guide">검색어를 입력한 뒤 <strong>AI 탐색 시작</strong>을 누르면 결과를 정리해서 보여줍니다.</div>
+            </div>
+            """
+        )
+        return
+
+    tokens = extract_search_terms(query)[:6]
+    token_html = "".join([f'<span class="meta-chip">{html.escape(token)}</span>' for token in tokens])
+
+    tag_pool = []
+    for _, row in filtered.head(8).iterrows():
+        tag_pool.extend(row.get("similar_job_list", [])[:2])
+        tag_pool.extend(row.get("major_list", [])[:1])
+    related_tags = [item for item, _ in Counter(tag_pool).most_common(5)]
+    related_html = "".join([f'<span class="meta-chip">{html.escape(tag)}</span>' for tag in related_tags])
+
+    if filtered.empty:
+        result_text = "조건에 맞는 결과를 찾지 못했습니다."
+        result_sub = "검색어를 더 넓게 입력하거나 필터를 줄여 보세요."
+    else:
+        top_job = str(filtered.iloc[0].get("job", ""))
+        result_text = f"{len(filtered):,}개 직업을 선별했습니다"
+        result_sub = f"현재 탐색어와 가장 가깝게 읽히는 직업은 {top_job}입니다." if top_job else "검색 결과를 정렬했습니다."
+
+    render_html(
+        f"""
+        <div class="panel">
+            <div class="panel-head">
+                <div class="section-kicker">AI Exploration Brief</div>
+                <div class="section-title">AI 탐색 브리핑</div>
+                <div class="section-sub">입력한 탐색어를 기반으로 연관 키워드를 해석하고, 현재 결과를 요약했습니다.</div>
+            </div>
+            <div class="brief-grid">
+                <div class="brief-card">
+                    <div class="brief-label">해석된 탐색 키워드</div>
+                    <div class="brief-text">{token_html if token_html else '<span class="empty-text">추출된 키워드가 없습니다.</span>'}</div>
+                </div>
+                <div class="brief-card">
+                    <div class="brief-label">탐색 결과</div>
+                    <div class="brief-value">{html.escape(result_text)}</div>
+                    <div class="brief-text">{html.escape(result_sub)}</div>
+                </div>
+                <div class="brief-card">
+                    <div class="brief-label">연관 주제</div>
+                    <div class="brief-text">{related_html if related_html else '상세 결과가 쌓이면 연관 직무·전공 흐름을 함께 보여줍니다.'}</div>
+                </div>
+            </div>
         </div>
         """
     )
@@ -1045,11 +1177,15 @@ def render_result_card(row: pd.Series) -> None:
     if row.get("salary_amount") is not None and not pd.isna(row.get("salary_amount")):
         salary_label = f"{int(row['salary_amount']):,}만원"
 
+    summary = shorten_text(row.get("summary", ""), 92)
+    if not summary:
+        summary = "직업 요약 정보가 준비되지 않았습니다."
+
     render_html(
         f"""
         <div class="result-card">
             <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
-            <div class="job-summary">{html.escape(shorten_text(row.get('summary', ''), 88))}</div>
+            <div class="job-summary">{html.escape(summary)}</div>
             <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
             <div class="metric-row">
                 <div class="mini-metric">
@@ -1124,34 +1260,25 @@ def render_profile_section(detail: pd.Series) -> None:
         )
 
 
-def get_roadmap_steps(detail: pd.Series) -> list[dict[str, object]]:
-    roadmap_specs = [
-        ("1", "직무 이해", detail.get("summary", ""), ["역할", "수행", "담당", "지원", "분석"]),
-        ("2", "진입 준비", detail.get("prepareway", ""), ["필요", "학력", "자격", "전공", "준비", "취득"]),
-        ("3", "훈련·실무", detail.get("training", ""), ["훈련", "실습", "현장", "실무", "적응"]),
-        ("4", "확장 경로", detail.get("empway", ""), ["채용", "진출", "합격", "경력", "확장"]),
-    ]
+def get_roadmap_steps(detail: pd.Series) -> list[dict[str, str]]:
+    summary_lines = split_lines(detail.get("summary", ""))
+    prepare_lines = split_lines(detail.get("prepareway", ""))
+    training_lines = split_lines(detail.get("training", ""))
+    empway_lines = split_lines(detail.get("empway", ""))
 
-    fallback_map = {
-        "직무 이해": "직무 개요와 핵심 역할을 먼저 이해합니다.",
-        "진입 준비": "진입을 위한 학력, 교과 이수, 자격 요건을 확인합니다.",
-        "훈련·실무": "현장 훈련 또는 실무 적응 과정을 거칩니다.",
-        "확장 경로": "채용·배치·경력 확장 경로를 점검합니다.",
+    fallback_text = {
+        "직무 이해": summary_lines[0] if summary_lines else "직무 개요와 핵심 역할을 먼저 이해합니다.",
+        "진입 준비": prepare_lines[0] if prepare_lines else "진입을 위한 학력, 교과 이수, 자격 요건을 확인합니다.",
+        "훈련·실무": training_lines[0] if training_lines else "현장 훈련 또는 실무 적응 과정을 거칩니다.",
+        "확장 경로": empway_lines[0] if empway_lines else "채용·배치·경력 확장 경로를 점검합니다.",
     }
 
-    steps: list[dict[str, object]] = []
-    for no, title, source_text, keywords in roadmap_specs:
-        summary = summarize_text_block(source_text, summary_items=3, summary_len=82, keywords=keywords)
-        bullets = summary["bullets"] or [fallback_map[title]]
-        details = summary["details"] or [fallback_map[title]]
-        steps.append({
-            "no": no,
-            "title": title,
-            "bullets": bullets,
-            "details": details,
-            "raw": clean_sentence(source_text) if source_text else fallback_map[title],
-        })
-    return steps
+    return [
+        {"no": "1", "title": "직무 이해", "text": fallback_text["직무 이해"]},
+        {"no": "2", "title": "진입 준비", "text": fallback_text["진입 준비"]},
+        {"no": "3", "title": "훈련·실무", "text": fallback_text["훈련·실무"]},
+        {"no": "4", "title": "확장 경로", "text": fallback_text["확장 경로"]},
+    ]
 
 
 def render_roadmap_section(detail: pd.Series) -> None:
@@ -1173,25 +1300,12 @@ def render_roadmap_section(detail: pd.Series) -> None:
     cols = st.columns(4, gap="medium")
     for col, step in zip(cols, steps):
         with col:
-            bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in step["bullets"]])
             render_html(
                 f"""
                 <div class="timeline-card">
                     <div class="timeline-no">{html.escape(step['no'])}</div>
                     <div class="timeline-title">{html.escape(step['title'])}</div>
-                    <ul class="timeline-list">{bullet_html}</ul>
-                </div>
-                """
-            )
-
-    with st.expander("로드맵 세부 설명 보기"):
-        for step in steps:
-            detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in step["details"]])
-            render_html(
-                f"""
-                <div class="soft-card" style="margin-bottom:14px;">
-                    <div class="section-title" style="font-size:17px; margin-bottom:10px;">{html.escape(step['no'])}. {html.escape(step['title'])}</div>
-                    <ul class="bullet-list">{detail_html}</ul>
+                    <div class="timeline-text">{html.escape(clean_sentence(step['text']))}</div>
                 </div>
                 """
             )
@@ -1369,10 +1483,8 @@ def render_capability_section(detail: pd.Series) -> None:
 
 
 def render_market_section(detail: pd.Series) -> None:
-    employment_text_raw = detail.get("employment", "")
-    possibility_text_raw = detail.get("job_possibility", "")
-    employment_summary = summarize_text_block(employment_text_raw, summary_items=3, summary_len=105, keywords=["증가", "감소", "전망", "수요", "취업", "고용"])
-    possibility_summary = summarize_text_block(possibility_text_raw, summary_items=3, summary_len=105, keywords=["발전", "확장", "진출", "전문화", "성장", "경력"])
+    employment_text = split_lines(detail.get("employment", ""))
+    possibility_text = split_lines(detail.get("job_possibility", ""))
     salary_amount = extract_salary_amount(detail.get("salery", ""))
     salary_bucket = detail.get("salary_bucket", "정보 없음")
     employment_status = detail.get("employment_status", "보통")
@@ -1384,7 +1496,7 @@ def render_market_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Market Insight</div>
                     <div class="section-title">시장 지표</div>
-                    <div class="section-sub">긴 설명문은 핵심 포인트와 세부 설명으로 나누어 읽기 쉽게 재구성했습니다.</div>
+                    <div class="section-sub">임금과 전망 정보를 한눈에 읽을 수 있도록 요약했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1417,44 +1529,28 @@ def render_market_section(detail: pd.Series) -> None:
         gauge = build_salary_gauge(salary_amount)
         if gauge is not None:
             st.plotly_chart(gauge, use_container_width=True, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
-
     with col2:
         tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
         with tab1:
-            bullets = employment_summary["bullets"]
-            if bullets:
-                bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in bullets])
+            if employment_text:
                 render_html(
                     f"""
-                    <div class="insight-box">
-                        <div class="section-title" style="font-size:18px; margin-bottom:10px;">한눈에 보기</div>
-                        <ul class="insight-list">{bullet_html}</ul>
+                    <div class="soft-card">
+                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in employment_text])}</ul>
                     </div>
                     """
                 )
-                if employment_summary["details"]:
-                    with st.expander("고용전망 세부 설명 보기"):
-                        detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in employment_summary["details"]])
-                        render_html(f"<div class='soft-card'><ul class='bullet-list'>{detail_html}</ul></div>")
             else:
                 render_html("<div class='soft-card'><div class='empty-text'>고용전망 설명이 없습니다.</div></div>")
-
         with tab2:
-            bullets = possibility_summary["bullets"]
-            if bullets:
-                bullet_html = "".join([f"<li>{html.escape(item)}</li>" for item in bullets])
+            if possibility_text:
                 render_html(
                     f"""
-                    <div class="insight-box">
-                        <div class="section-title" style="font-size:18px; margin-bottom:10px;">한눈에 보기</div>
-                        <ul class="insight-list">{bullet_html}</ul>
+                    <div class="soft-card">
+                        <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in possibility_text])}</ul>
                     </div>
                     """
                 )
-                if possibility_summary["details"]:
-                    with st.expander("발전가능성 세부 설명 보기"):
-                        detail_html = "".join([f"<li>{html.escape(item)}</li>" for item in possibility_summary["details"]])
-                        render_html(f"<div class='soft-card'><ul class='bullet-list'>{detail_html}</ul></div>")
             else:
                 render_html("<div class='soft-card'><div class='empty-text'>발전가능성 설명이 없습니다.</div></div>")
 
@@ -1525,19 +1621,73 @@ def render_detail_page(detail: pd.Series) -> None:
 def ensure_session_defaults() -> None:
     st.session_state.setdefault("page", "main")
     st.session_state.setdefault("selected_job", None)
+    st.session_state.setdefault("search_input", "")
+    st.session_state.setdefault("committed_query", "")
+    st.session_state.setdefault("trigger_ai_search", False)
+
 
 
 def render_main_page(df: pd.DataFrame) -> None:
     render_hero(df)
     render_top_stats(df)
 
+    suggestion_queries = [
+        "컴퓨터와 관련된 일",
+        "사람을 돕는 직업",
+        "디자인 감각이 필요한 직업",
+        "안정적인 사무 직무",
+        "환경 문제를 다루는 일",
+        "학생을 가르치는 직업",
+    ]
+
     major_options = sorted({major for majors in df["major_list"] for major in majors})
 
-    search_query = st.text_input(
-        "직업명이나 키워드를 입력하세요",
-        placeholder="예: 컴퓨터와 관련된 일, 상담, 디자인, 교사, 환경",
-        key="search_query",
+    render_html(
+        """
+        <div class="ai-search-shell">
+            <div class="ai-search-head">
+                <div>
+                    <div class="section-kicker">AI Search Console</div>
+                    <div class="section-title">키워드보다 한 단계 더 자연스럽게 탐색해 보세요</div>
+                    <div class="section-sub">직업명, 관심사, 일의 성격, 원하는 분위기를 문장처럼 입력하면 관련 직업을 재정렬합니다.</div>
+                </div>
+                <div class="ai-badge"><span class="ai-dot"></span>탐색 준비 완료</div>
+            </div>
+        </div>
+        """
     )
+
+    suggestion_cols = st.columns(3, gap="small")
+    for idx, suggestion in enumerate(suggestion_queries):
+        with suggestion_cols[idx % 3]:
+            if st.button(suggestion, key=f"suggestion_{idx}", use_container_width=True):
+                st.session_state.search_input = suggestion
+                st.session_state.committed_query = suggestion
+                st.session_state.trigger_ai_search = True
+                rerun_app()
+
+    with st.form("ai_search_form", clear_on_submit=False):
+        st.text_input(
+            "AI 탐색어 입력",
+            placeholder="예: 데이터 분석을 하면서 사람과도 소통하는 직업",
+            key="search_input",
+        )
+        col_submit, col_reset = st.columns([0.82, 0.18], gap="small")
+        with col_submit:
+            submitted = st.form_submit_button("AI 탐색 시작", use_container_width=True, type="primary")
+        with col_reset:
+            reset_clicked = st.form_submit_button("초기화", use_container_width=True)
+
+    if submitted:
+        st.session_state.committed_query = st.session_state.get("search_input", "").strip()
+        st.session_state.trigger_ai_search = True
+        rerun_app()
+
+    if reset_clicked:
+        st.session_state.search_input = ""
+        st.session_state.committed_query = ""
+        st.session_state.trigger_ai_search = False
+        rerun_app()
 
     col1, col2, col3 = st.columns([1.6, 0.9, 0.9], gap="medium")
     with col1:
@@ -1547,13 +1697,21 @@ def render_main_page(df: pd.DataFrame) -> None:
     with col3:
         employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
 
+    if st.session_state.get("trigger_ai_search"):
+        with st.spinner("AI가 탐색어와 직업 데이터를 연결하고 있습니다..."):
+            time.sleep(0.45)
+        st.session_state.trigger_ai_search = False
+
+    search_query = st.session_state.get("committed_query", "")
+
     searched = search_jobs(df, search_query)
     filtered = filter_results(searched, selected_majors, salary_filters, employment_filters)
 
+    render_ai_search_brief(search_query, searched, filtered)
     render_search_panel(total_count=len(df), filtered_count=len(filtered), query=search_query)
 
     if filtered.empty:
-        st.warning("조건에 맞는 직업이 없습니다. 검색어나 필터를 조정해 주세요.")
+        st.warning("조건에 맞는 직업이 없습니다. 탐색어를 조금 넓게 입력하거나 필터를 줄여 주세요.")
         return
 
     per_page = 12
