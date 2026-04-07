@@ -173,6 +173,28 @@ def safe_float(value):
         return None
 
 
+def combine_pcnt_value(integer_part, decimal_part):
+    whole = safe_float(integer_part)
+    decimal = safe_float(decimal_part)
+
+    if whole is None and decimal is None:
+        return None
+
+    if whole is None:
+        whole = 0.0
+    if decimal is None:
+        decimal = 0.0
+
+    if decimal >= 100:
+        return whole
+
+    if decimal >= 10:
+        digits = len(str(int(decimal)))
+        return whole + (decimal / (10 ** digits))
+
+    return whole + (decimal / 10)
+
+
 # -----------------------------
 # Data loading and preparation
 # -----------------------------
@@ -401,45 +423,51 @@ def filter_results(
 # Visualization helpers
 # -----------------------------
 def build_gender_chart(detail: pd.Series):
-    gender_cols = [
-        ("남성", safe_float(detail.get("PCNT1_남자"))),
-        ("여성", safe_float(detail.get("PCNT1_여자"))),
+    gender_rows = [
+        ("남성", combine_pcnt_value(detail.get("PCNT1_남자"), detail.get("PCNT2_남자"))),
+        ("여성", combine_pcnt_value(detail.get("PCNT1_여자"), detail.get("PCNT2_여자"))),
     ]
-    chart_df = pd.DataFrame(gender_cols, columns=["구분", "값"])
+    chart_df = pd.DataFrame(gender_rows, columns=["구분", "값"])
     chart_df = chart_df.dropna()
     if chart_df.empty or chart_df["값"].sum() == 0:
         return None
 
-    fig = px.pie(chart_df, values="값", names="구분", hole=0.45)
+    fig = px.pie(chart_df, values="값", names="구분", hole=0.48)
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
         legend_title_text="",
         height=320,
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
+    fig.update_traces(
+        textposition="inside",
+        texttemplate="%{label}<br>%{value:.1f}%",
+        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
+    )
     return fig
 
 
 def build_age_chart(detail: pd.Series):
     age_rows = []
     for label in ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]:
-        pcnt1 = safe_float(detail.get(f"PCNT1_{label}"))
-        pcnt2 = safe_float(detail.get(f"PCNT2_{label}"))
-        if pcnt1 is not None:
-            age_rows.append({"연령대": label, "지표": "PCNT1", "값": pcnt1})
-        if pcnt2 is not None:
-            age_rows.append({"연령대": label, "지표": "PCNT2", "값": pcnt2})
+        value = combine_pcnt_value(detail.get(f"PCNT1_{label}"), detail.get(f"PCNT2_{label}"))
+        if value is not None:
+            age_rows.append({"연령대": label, "값": value})
 
     chart_df = pd.DataFrame(age_rows)
     if chart_df.empty:
         return None
 
-    fig = px.bar(chart_df, x="연령대", y="값", color="지표", barmode="group")
+    fig = px.bar(chart_df, x="연령대", y="값", text="값")
+    fig.update_traces(
+        texttemplate="%{text:.1f}%",
+        textposition="outside",
+        hovertemplate="%{x}: %{y:.1f}%<extra></extra>",
+    )
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
-        legend_title_text="",
+        showlegend=False,
         xaxis_title="",
-        yaxis_title="지표값",
+        yaxis_title="관심 비율(%)",
         height=320,
     )
     return fig
@@ -744,10 +772,6 @@ def inject_css() -> None:
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
             overflow:hidden;
-            opacity:0;
-            transform:translateY(14px);
-            animation:cardReveal .55s ease forwards;
-            animation-delay:var(--delay, 0s);
         }
         .result-card::before{
             content:"";
@@ -761,10 +785,6 @@ def inject_css() -> None:
             transform:translateY(-4px);
             box-shadow:0 18px 36px rgba(15,23,42,.10);
             border-color:#cfe0ff;
-        }
-        @keyframes cardReveal{
-            from{ opacity:0; transform:translateY(14px); }
-            to{ opacity:1; transform:translateY(0); }
         }
         .job-title{
             font-size:20px;
@@ -976,189 +996,6 @@ def inject_css() -> None:
             line-height:1.7;
             color:#98a2b3;
         }
-        .idle-shell{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid var(--line);
-            border-radius:24px;
-            box-shadow:var(--shadow);
-            padding:32px 28px;
-            margin-top:4px;
-        }
-        .idle-grid{
-            display:grid;
-            grid-template-columns:1.15fr .85fr;
-            gap:18px;
-            align-items:stretch;
-        }
-        .idle-card{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:18px;
-            padding:18px;
-        }
-        .idle-title{
-            font-size:24px;
-            line-height:1.42;
-            color:#102a43;
-            font-weight:800;
-            margin-bottom:10px;
-            letter-spacing:-0.02em;
-        }
-        .idle-desc{
-            font-size:15px;
-            line-height:1.8;
-            color:#475467;
-        }
-        .idle-step{
-            display:flex;
-            gap:12px;
-            align-items:flex-start;
-            margin-bottom:14px;
-        }
-        .idle-step:last-child{ margin-bottom:0; }
-        .idle-step-no{
-            width:28px;
-            height:28px;
-            border-radius:50%;
-            background:#eff6ff;
-            border:1px solid #dbeafe;
-            color:#2563eb;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:12px;
-            font-weight:800;
-            flex-shrink:0;
-            margin-top:2px;
-        }
-        .idle-step-text{
-            font-size:14px;
-            line-height:1.72;
-            color:#475467;
-        }
-        .loading-shell{
-            background:linear-gradient(135deg, #0f172a 0%, #173b74 54%, #2563eb 100%);
-            border-radius:24px;
-            padding:28px 28px 24px 28px;
-            margin:14px 0 22px 0;
-            box-shadow:var(--shadow-strong);
-            position:relative;
-            overflow:hidden;
-        }
-        .loading-shell::after{
-            content:"";
-            position:absolute;
-            inset:0;
-            background:linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 36%, rgba(255,255,255,0) 64%);
-            transform:translateX(-100%);
-            animation:loadingSweep 2.4s linear infinite;
-            pointer-events:none;
-        }
-        @keyframes loadingSweep{
-            to{ transform:translateX(100%); }
-        }
-        .loading-kicker{
-            font-size:12px;
-            color:#dbeafe;
-            font-weight:800;
-            letter-spacing:.12em;
-            text-transform:uppercase;
-            margin-bottom:8px;
-        }
-        .loading-title{
-            font-size:26px;
-            line-height:1.34;
-            color:#ffffff;
-            font-weight:800;
-            margin-bottom:10px;
-            letter-spacing:-0.02em;
-        }
-        .loading-desc{
-            font-size:14px;
-            line-height:1.78;
-            color:#dbeafe;
-            max-width:860px;
-            margin-bottom:16px;
-        }
-        .loading-stage{
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-            padding:9px 14px;
-            border-radius:999px;
-            background:rgba(255,255,255,.12);
-            border:1px solid rgba(255,255,255,.18);
-            color:#ffffff;
-            font-size:13px;
-            font-weight:700;
-            margin-bottom:18px;
-            backdrop-filter:blur(8px);
-        }
-        .loading-stage-dot{
-            width:8px;
-            height:8px;
-            border-radius:50%;
-            background:#bfdbfe;
-            box-shadow:0 0 0 0 rgba(191,219,254,.48);
-            animation:pulseGlowLight 1.8s infinite;
-        }
-        @keyframes pulseGlowLight{
-            0%{ box-shadow:0 0 0 0 rgba(191,219,254,.45); }
-            70%{ box-shadow:0 0 0 8px rgba(191,219,254,0); }
-            100%{ box-shadow:0 0 0 0 rgba(191,219,254,0); }
-        }
-        .loading-steps{
-            display:grid;
-            grid-template-columns:repeat(4, minmax(0, 1fr));
-            gap:12px;
-            margin-top:8px;
-        }
-        .loading-step-card{
-            background:rgba(255,255,255,.10);
-            border:1px solid rgba(255,255,255,.16);
-            border-radius:18px;
-            padding:16px 14px;
-            min-height:112px;
-            backdrop-filter:blur(8px);
-        }
-        .loading-step-label{
-            font-size:12px;
-            color:#dbeafe;
-            font-weight:800;
-            margin-bottom:8px;
-        }
-        .loading-step-text{
-            font-size:13px;
-            line-height:1.72;
-            color:#ffffff;
-        }
-        .skeleton-row{
-            display:grid;
-            grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:16px;
-            margin-top:18px;
-        }
-        .skeleton-card{
-            background:#ffffff;
-            border:1px solid #e5edf8;
-            border-radius:20px;
-            padding:20px;
-            box-shadow:0 8px 24px rgba(15,23,42,.05);
-        }
-        .skeleton-line{
-            height:12px;
-            border-radius:999px;
-            margin-bottom:10px;
-            background:linear-gradient(90deg, #edf2f7 0%, #f8fbff 50%, #edf2f7 100%);
-            background-size:200% 100%;
-            animation:skeletonMove 1.35s linear infinite;
-        }
-        .skeleton-line:last-child{ margin-bottom:0; }
-        .w-90{ width:90%; } .w-78{ width:78%; } .w-68{ width:68%; } .w-55{ width:55%; } .w-42{ width:42%; }
-        @keyframes skeletonMove{
-            0%{ background-position:200% 0; }
-            100%{ background-position:-200% 0; }
-        }
 
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div,
@@ -1193,12 +1030,8 @@ def inject_css() -> None:
         @media (max-width: 1100px){
             .stats-row, .result-grid, .brief-grid{ grid-template-columns:1fr 1fr; }
         }
-        @media (max-width: 1100px){
-            .loading-steps{ grid-template-columns:1fr 1fr; }
-            .idle-grid{ grid-template-columns:1fr; }
-        }
         @media (max-width: 768px){
-            .stats-row, .result-grid, .insight-grid-2, .brief-grid, .loading-steps, .skeleton-row{ grid-template-columns:1fr; }
+            .stats-row, .result-grid, .insight-grid-2, .brief-grid{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
         }
         </style>
@@ -1210,193 +1043,24 @@ def inject_css() -> None:
 # Page rendering helpers
 # -----------------------------
 def render_hero(df: pd.DataFrame) -> None:
-    major_count = sum(1 for col in df.columns if col.startswith("major_"))
     render_html(
         f"""
         <div class="hero">
             <div class="hero-kicker">Job-Explorer AI</div>
-            <div class="hero-title">미래의 직업을 검색하세요</div>
+            <div class="hero-title">미래의 직업을 조금 더 자연스럽게 탐색해 보세요</div>
             <div class="hero-sub">
-                키워드 기반 검색, 직무 요약, 준비 경로, 전공·자격 정보, 통계 차트를 한 화면에서 탐색할 수 있도록 구성한 AI 기반 직업 데이터 큐레이션 플랫폼입니다.
+                직업명만 찾는 검색을 넘어, 관심사와 일의 성격을 문장처럼 입력하면 관련 직업을 해석형으로 정리해 보여주는 AI 기반 직업 탐색 페이지입니다.
             </div>
             <div class="glass-row">
                 <span class="glass-chip">직업 데이터 {len(df):,}건</span>
-                <span class="glass-chip">연관 전공 정보 제공</span>
-                <span class="glass-chip">NCS·전망·통계 정보 통합</span>
+                <span class="glass-chip">전공·자격·전망 정보 통합</span>
+                <span class="glass-chip">성별·연령 통계 시각화 제공</span>
             </div>
         </div>
         """
     )
 
 
-def render_top_stats(df: pd.DataFrame) -> None:
-    salary_with_value = int(df["salary_amount"].notna().sum())
-    good_outlook = int((df["employment_status"] == "좋음").sum())
-    major_unique = len(sorted({major for majors in df["major_list"] for major in majors}))
-    cert_count = int(df["certification_list"].map(len).sum())
-
-    render_html(
-        f"""
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">Data Snapshot</div>
-                    <div class="section-title">직업 데이터 현황</div>
-                    <div class="section-sub">현재 탐색 가능한 직업 데이터의 전체 규모와 정보 범위를 요약했습니다.</div>
-                </div>
-            </div>
-            <div class="stats-row">
-                <div class="stat-card">
-                    <div class="stat-label">전체 직업 수</div>
-                    <div class="stat-value">{len(df):,}</div>
-                    <div class="stat-sub">현재 탐색 가능한 전체 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">임금 정보 보유</div>
-                    <div class="stat-value">{salary_with_value:,}</div>
-                    <div class="stat-sub">임금 정보가 제공되는 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">전망 좋음 직업</div>
-                    <div class="stat-value">{good_outlook:,}</div>
-                    <div class="stat-sub">전망이 긍정적으로 읽히는 직업 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">연결 전공 / 자격 정보</div>
-                    <div class="stat-value">{major_unique:,} / {cert_count:,}</div>
-                    <div class="stat-sub">전공 정보와 자격 정보의 누적 연결 수</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-
-
-
-
-def render_idle_search_state() -> None:
-    render_html(
-        """
-        <div class="idle-shell">
-            <div class="idle-grid">
-                <div class="idle-card">
-                    <div class="section-kicker">AI Search Guide</div>
-                    <div class="idle-title">탐색어를 입력하면 AI가 직업 정보를 정리해 보여드립니다</div>
-                    <div class="idle-desc">초기 화면에서는 전체 직업 목록을 바로 펼치지 않습니다. 찾고 싶은 직업명, 관심사, 일의 분위기, 필요한 역량을 자연스럽게 입력한 뒤 <strong>AI 탐색 시작</strong>을 눌러 주세요.</div>
-                </div>
-                <div class="idle-card">
-                    <div class="section-kicker">How It Works</div>
-                    <div class="idle-step"><div class="idle-step-no">1</div><div class="idle-step-text">입력한 문장을 바탕으로 탐색 의도와 핵심 키워드를 구조적으로 해석합니다.</div></div>
-                    <div class="idle-step"><div class="idle-step-no">2</div><div class="idle-step-text">직무 설명, 유사 직업, 관련 전공, 자격, 시장 지표를 교차 검토합니다.</div></div>
-                    <div class="idle-step"><div class="idle-step-no">3</div><div class="idle-step-text">우선순위를 재정렬한 뒤 탐색 브리핑과 결과 카드를 순차적으로 제시합니다.</div></div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-
-def render_ai_loading_sequence(query: str) -> None:
-    stages = [
-        (
-            "탐색 의도를 정교하게 해석하고 있습니다",
-            "입력한 문장에서 관심 분야, 업무 성격, 적합 직무 신호를 분해하고 있습니다.",
-            [
-                ("의도 해석", "문장 속 핵심 키워드와 암묵적 요구를 정리합니다."),
-                ("직무 매칭", "직업명·소개·유사 직무 흐름을 교차 탐색합니다."),
-                ("맥락 결합", "전공, 자격, 시장 지표를 함께 결합합니다."),
-                ("브리핑 구성", "최종 결과를 읽기 쉬운 탐색 구조로 정리합니다."),
-            ],
-        ),
-        (
-            "직무 데이터의 연관 관계를 탐색하고 있습니다",
-            f"‘{html.escape(query)}’와 가까운 설명, 유사 직업, 전공 정보를 다층적으로 비교하고 있습니다.",
-            [
-                ("유사성 분석", "표면 키워드보다 의미상 가까운 직무를 우선 검토합니다."),
-                ("전공 매핑", "흩어져 있는 전공 정보를 통합해 연결 패턴을 찾습니다."),
-                ("시장 신호", "임금 수준과 고용 전망 텍스트를 함께 점검합니다."),
-                ("정렬 최적화", "탐색 흐름에 맞게 결과의 우선순위를 조정합니다."),
-            ],
-        ),
-        (
-            "결과를 큐레이션하고 있습니다",
-            "단순 일치 결과가 아니라, 바로 읽기 좋은 탐색 브리핑과 카드 구성을 정돈하고 있습니다.",
-            [
-                ("핵심 요약", "가장 먼저 볼 정보를 상단 브리핑에 압축합니다."),
-                ("가독성 조정", "긴 설명은 요약하고 핵심 메트릭은 전면에 배치합니다."),
-                ("카드 배열", "결과 카드를 위에서 아래로 순차적으로 제시할 준비를 합니다."),
-                ("세부 연결", "상세 페이지에서 이어 볼 정보 흐름을 정리합니다."),
-            ],
-        ),
-    ]
-
-    panel = st.empty()
-    progress_slot = st.empty()
-    skeleton_slot = st.empty()
-    progress = st.progress(0)
-
-    steps_total = len(stages)
-    for idx, (title, desc, cards) in enumerate(stages, start=1):
-        cards_html = "".join(
-            [
-                f'<div class="loading-step-card"><div class="loading-step-label">{html.escape(label)}</div><div class="loading-step-text">{html.escape(text_line)}</div></div>'
-                for label, text_line in cards
-            ]
-        )
-        panel.markdown(
-            textwrap.dedent(
-                f"""
-                <div class="loading-shell">
-                    <div class="loading-kicker">AI Curation Engine</div>
-                    <div class="loading-title">{html.escape(title)}</div>
-                    <div class="loading-desc">{desc}</div>
-                    <div class="loading-stage"><span class="loading-stage-dot"></span>{idx} / {steps_total} 단계 진행 중</div>
-                    <div class="loading-steps">{cards_html}</div>
-                </div>
-                """
-            ).strip(),
-            unsafe_allow_html=True,
-        )
-        progress_value = int(idx / steps_total * 100)
-        progress.progress(progress_value)
-        progress_slot.caption(f"AI가 탐색 결과를 정교하게 정리하고 있습니다 · {progress_value}%")
-        skeleton_slot.markdown(
-            textwrap.dedent(
-                """
-                <div class="skeleton-row">
-                    <div class="skeleton-card">
-                        <div class="skeleton-line w-55"></div>
-                        <div class="skeleton-line w-90"></div>
-                        <div class="skeleton-line w-78"></div>
-                        <div class="skeleton-line w-68"></div>
-                        <div class="skeleton-line w-42"></div>
-                    </div>
-                    <div class="skeleton-card">
-                        <div class="skeleton-line w-55"></div>
-                        <div class="skeleton-line w-90"></div>
-                        <div class="skeleton-line w-78"></div>
-                        <div class="skeleton-line w-68"></div>
-                        <div class="skeleton-line w-42"></div>
-                    </div>
-                    <div class="skeleton-card">
-                        <div class="skeleton-line w-55"></div>
-                        <div class="skeleton-line w-90"></div>
-                        <div class="skeleton-line w-78"></div>
-                        <div class="skeleton-line w-68"></div>
-                        <div class="skeleton-line w-42"></div>
-                    </div>
-                </div>
-                """
-            ).strip(),
-            unsafe_allow_html=True,
-        )
-        time.sleep(0.95 if idx == 1 else 1.05)
-
-    panel.empty()
-    progress.empty()
-    progress_slot.empty()
-    skeleton_slot.empty()
 
 def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
     chips = [
@@ -1487,7 +1151,7 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
     )
 
 
-def render_result_card(row: pd.Series, delay: float = 0.0) -> None:
+def render_result_card(row: pd.Series) -> None:
     tags = row.get("similar_job_list", [])[:3]
     if not tags:
         tags = row.get("major_list", [])[:3]
@@ -1503,7 +1167,7 @@ def render_result_card(row: pd.Series, delay: float = 0.0) -> None:
 
     render_html(
         f"""
-        <div class="result-card" style="--delay:{delay:.2f}s;">
+        <div class="result-card">
             <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
             <div class="job-summary">{html.escape(summary)}</div>
             <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
@@ -1881,9 +1545,9 @@ def render_chart_section(detail: pd.Series) -> None:
         <div class="panel">
             <div class="panel-head">
                 <div>
-                    <div class="section-kicker">PCNT Analytics</div>
+                    <div class="section-kicker">Interest Analytics</div>
                     <div class="section-title">데이터 인사이트</div>
-                    <div class="section-sub">관심도 분포를 성별과 연령대 기준으로 시각화했습니다.</div>
+                    <div class="section-sub">성별과 연령대 기준 관심 비율을 읽기 쉽게 정리했습니다.</div>
                 </div>
             </div>
         </div>
@@ -1948,6 +1612,8 @@ def ensure_session_defaults() -> None:
 
 
 def render_main_page(df: pd.DataFrame) -> None:
+    render_hero(df)
+
     suggestion_queries = [
         "컴퓨터와 관련된 일",
         "사람을 돕는 직업",
@@ -2014,16 +1680,12 @@ def render_main_page(df: pd.DataFrame) -> None:
     with col3:
         employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
 
-    search_query = st.session_state.get("committed_query", "")
-
-    if st.session_state.get("trigger_ai_search") and search_query.strip():
-        render_ai_loading_sequence(search_query)
+    if st.session_state.get("trigger_ai_search"):
+        with st.spinner("AI가 탐색어와 직업 데이터를 연결하고 있습니다..."):
+            time.sleep(0.45)
         st.session_state.trigger_ai_search = False
 
-    if not search_query.strip():
-        render_ai_search_brief(search_query, pd.DataFrame(), pd.DataFrame())
-        render_idle_search_state()
-        return
+    search_query = st.session_state.get("committed_query", "")
 
     searched = search_jobs(df, search_query)
     filtered = filter_results(searched, selected_majors, salary_filters, employment_filters)
@@ -2045,7 +1707,7 @@ def render_main_page(df: pd.DataFrame) -> None:
     cols = st.columns(3, gap="large")
     for idx, (_, row) in enumerate(page_df.iterrows()):
         with cols[idx % 3]:
-            render_result_card(row, delay=idx * 0.08)
+            render_result_card(row)
             if st.button(f"상세 보기 · {row['job']}", key=f"open_{start+idx}", use_container_width=True):
                 st.session_state.selected_job = row["job"]
                 st.session_state.page = "detail"
