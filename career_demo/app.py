@@ -999,11 +999,154 @@ def inject_css() -> None:
         }
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
 
+        .ai-loading-shell{
+            background:linear-gradient(135deg, #0f172a 0%, #173b74 58%, #2563eb 100%);
+            border-radius:22px;
+            padding:22px 22px 18px 22px;
+            box-shadow:var(--shadow-strong);
+            color:#fff;
+            position:relative;
+            overflow:hidden;
+            margin:10px 0 18px 0;
+        }
+        .ai-loading-shell::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.16) 38%, rgba(255,255,255,0) 68%);
+            transform:translateX(-100%);
+            animation:aiScan 1.8s linear infinite;
+            pointer-events:none;
+        }
+        @keyframes aiScan{
+            to{ transform:translateX(100%); }
+        }
+        .ai-loading-top{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:16px;
+            margin-bottom:14px;
+            flex-wrap:wrap;
+        }
+        .ai-loading-kicker{
+            font-size:12px;
+            font-weight:800;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+            color:#dbeafe;
+            margin-bottom:6px;
+        }
+        .ai-loading-title{
+            font-size:24px;
+            line-height:1.35;
+            font-weight:800;
+            color:#ffffff;
+            margin-bottom:6px;
+            letter-spacing:-0.02em;
+        }
+        .ai-loading-sub{
+            font-size:14px;
+            line-height:1.72;
+            color:#dbeafe;
+        }
+        .ai-loading-badge{
+            display:inline-flex;
+            align-items:center;
+            gap:9px;
+            padding:9px 13px;
+            border-radius:999px;
+            background:rgba(255,255,255,.12);
+            border:1px solid rgba(255,255,255,.18);
+            color:#ffffff;
+            font-size:12px;
+            font-weight:800;
+            backdrop-filter:blur(8px);
+        }
+        .ai-loading-dot{
+            width:9px;
+            height:9px;
+            border-radius:50%;
+            background:#93c5fd;
+            box-shadow:0 0 0 0 rgba(147,197,253,.45);
+            animation:pulseGlow 1.6s infinite;
+        }
+        .ai-stage-row{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin:14px 0 16px 0;
+        }
+        .ai-stage-chip{
+            display:inline-flex;
+            align-items:center;
+            padding:9px 12px;
+            border-radius:999px;
+            background:rgba(255,255,255,.10);
+            border:1px solid rgba(255,255,255,.16);
+            color:#eaf2ff;
+            font-size:12px;
+            font-weight:700;
+        }
+        .ai-stage-chip.active{
+            background:rgba(255,255,255,.18);
+            border-color:rgba(255,255,255,.30);
+            color:#ffffff;
+        }
+        .ai-loading-progress{
+            width:100%;
+            height:10px;
+            border-radius:999px;
+            background:rgba(255,255,255,.16);
+            overflow:hidden;
+            margin-bottom:14px;
+        }
+        .ai-loading-progress > span{
+            display:block;
+            height:100%;
+            border-radius:999px;
+            background:linear-gradient(90deg, #bfdbfe 0%, #ffffff 100%);
+            transition:width .2s ease;
+        }
+        .ai-loading-meta{
+            display:grid;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap:12px;
+        }
+        .ai-loading-card{
+            background:rgba(255,255,255,.10);
+            border:1px solid rgba(255,255,255,.14);
+            border-radius:16px;
+            padding:14px;
+            min-height:96px;
+            backdrop-filter:blur(6px);
+        }
+        .ai-loading-label{
+            font-size:11px;
+            color:#dbeafe;
+            font-weight:800;
+            margin-bottom:10px;
+            letter-spacing:.04em;
+        }
+        .ai-skeleton-line{
+            height:10px;
+            border-radius:999px;
+            background:linear-gradient(90deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.12) 100%);
+            background-size:200% 100%;
+            animation:skeletonMove 1.4s linear infinite;
+            margin-bottom:10px;
+        }
+        .ai-skeleton-line:last-child{ margin-bottom:0; }
+        @keyframes skeletonMove{
+            0%{ background-position:200% 0; }
+            100%{ background-position:-200% 0; }
+        }
+
         @media (max-width: 1100px){
-            .stats-row, .result-grid, .brief-grid{ grid-template-columns:1fr 1fr; }
+            .stats-row, .result-grid, .brief-grid, .ai-loading-meta{ grid-template-columns:1fr 1fr; }
         }
         @media (max-width: 768px){
-            .stats-row, .result-grid, .insight-grid-2, .brief-grid{ grid-template-columns:1fr; }
+            .stats-row, .result-grid, .insight-grid-2, .brief-grid, .ai-loading-meta{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
         }
         </style>
@@ -1076,6 +1219,71 @@ def render_top_stats(df: pd.DataFrame) -> None:
         """
     )
 
+
+
+def render_ai_loading_sequence(query: str) -> None:
+    stages = [
+        "탐색어 의미 해석 중",
+        "연관 직업 데이터 스캔 중",
+        "전공·전망 정보 매칭 중",
+        "AI 탐색 브리핑 정리 중",
+    ]
+
+    shell = st.empty()
+    progress = st.empty()
+
+    for idx, stage in enumerate(stages, start=1):
+        stage_html = "".join([
+            f'<span class="ai-stage-chip {'active' if i < idx else ''}">{html.escape(label)}</span>'
+            for i, label in enumerate(stages)
+        ])
+        width = int(idx / len(stages) * 100)
+
+        shell.markdown(
+            textwrap.dedent(f"""
+            <div class="ai-loading-shell">
+                <div class="ai-loading-top">
+                    <div>
+                        <div class="ai-loading-kicker">AI Exploration</div>
+                        <div class="ai-loading-title">AI가 탐색 흐름을 구성하고 있습니다</div>
+                        <div class="ai-loading-sub">
+                            입력한 탐색어 <strong>{html.escape(query or '직업 탐색')}</strong> 를 기준으로 의미를 해석하고,
+                            연관 직무·전공·전망 데이터를 연결해 보기 좋은 결과로 정리하고 있습니다.
+                        </div>
+                    </div>
+                    <div class="ai-loading-badge"><span class="ai-loading-dot"></span>{html.escape(stage)}</div>
+                </div>
+                <div class="ai-stage-row">{stage_html}</div>
+                <div class="ai-loading-progress"><span style="width:{width}%"></span></div>
+                <div class="ai-loading-meta">
+                    <div class="ai-loading-card">
+                        <div class="ai-loading-label">탐색어 분석</div>
+                        <div class="ai-skeleton-line" style="width:76%"></div>
+                        <div class="ai-skeleton-line" style="width:54%"></div>
+                        <div class="ai-skeleton-line" style="width:62%"></div>
+                    </div>
+                    <div class="ai-loading-card">
+                        <div class="ai-loading-label">연관 데이터 매칭</div>
+                        <div class="ai-skeleton-line" style="width:84%"></div>
+                        <div class="ai-skeleton-line" style="width:68%"></div>
+                        <div class="ai-skeleton-line" style="width:58%"></div>
+                    </div>
+                    <div class="ai-loading-card">
+                        <div class="ai-loading-label">결과 브리핑 구성</div>
+                        <div class="ai-skeleton-line" style="width:70%"></div>
+                        <div class="ai-skeleton-line" style="width:88%"></div>
+                        <div class="ai-skeleton-line" style="width:52%"></div>
+                    </div>
+                </div>
+            </div>
+            """),
+            unsafe_allow_html=True,
+        )
+        progress.progress(width / 100)
+        time.sleep(0.22 if idx < len(stages) else 0.18)
+
+    progress.empty()
+    shell.empty()
 
 
 def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
@@ -1698,8 +1906,7 @@ def render_main_page(df: pd.DataFrame) -> None:
         employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
 
     if st.session_state.get("trigger_ai_search"):
-        with st.spinner("AI가 탐색어와 직업 데이터를 연결하고 있습니다..."):
-            time.sleep(0.45)
+        render_ai_loading_sequence(st.session_state.get("committed_query", ""))
         st.session_state.trigger_ai_search = False
 
     search_query = st.session_state.get("committed_query", "")
