@@ -20,5 +20,14 @@
     "job_possibility",
     "capacity_1",
     "capacity_all"
-  ]
+  ],
+  "keyword_source_columns": [
+    "capacity_1",
+    "capacity_all",
+    "aptitude",
+    "summary"
+  ],
+  "has_kiwi": true,
+  "max_display_keywords": 10,
+  "max_topic_tags": 12
 }

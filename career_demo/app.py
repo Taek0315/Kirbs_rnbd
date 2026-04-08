@@ -16,6 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "career_jobs.xlsx"
 EMBEDDING_DIR = BASE_DIR / "embedding_output"
@@ -41,12 +42,15 @@ SEARCH_COLUMNS = [
     "certification",
     "employment",
     "job_possibility",
+    "capacity_1",
+    "capacity_all",
 ]
 
 KOREAN_STOPWORDS = {
     "관련", "직업", "직무", "일", "일을", "하는", "대한", "및", "에서", "으로", "위한", "위해",
     "같은", "있는", "되는", "분야", "업무", "사람", "경우", "통한", "기반", "탐색", "분석",
     "미래", "검색", "관련된", "중심", "한다", "수행", "업무를", "업무에", "직업명", "정보",
+    "문장", "처럼", "원하는", "분위기", "직업을", "직업의", "하고", "하면서", "같은",
 }
 
 SYNONYM_MAP = {
@@ -282,8 +286,8 @@ def normalize_search_token(token: str) -> str:
         "으로부터", "로부터", "에게서", "에서의", "에서는", "에서", "으로는", "으로", "에게", "와의", "과의",
         "이라면", "라면", "이라고", "라고", "처럼", "까지", "부터", "보다", "마저", "조차", "만의", "만",
         "이나", "나", "들", "적인", "적인데", "적인지", "하는", "하다", "하며", "하고", "하여", "되는",
-        "되는", "되는", "같은", "관련된", "관련", "직무", "직업", "분야", "성격", "분위기", "업무", "정보",
-        "에서", "으로", "와", "과", "은", "는", "이", "가", "을", "를", "의", "도"
+        "같은", "관련된", "관련", "직무", "직업", "분야", "성격", "분위기", "업무", "정보",
+        "와", "과", "은", "는", "이", "가", "을", "를", "의", "도"
     ]
     changed = True
     while changed and len(token) > 1:
@@ -296,6 +300,20 @@ def normalize_search_token(token: str) -> str:
     return token.strip()
 
 
+def mild_query_terms(query: str) -> list[str]:
+    raw_tokens = re.findall(r"[A-Za-z가-힣0-9]{2,}", normalize_whitespace(query))
+    result = []
+    seen = set()
+    for token in raw_tokens:
+        token_clean = clean_sentence(token).lower()
+        if token_clean in KOREAN_STOPWORDS:
+            continue
+        if token_clean not in seen:
+            seen.add(token_clean)
+            result.append(token_clean)
+    return result
+
+
 def build_embedding_key(jobdic_seq, job_name: str) -> str:
     if not is_missing_like(jobdic_seq):
         try:
@@ -303,6 +321,34 @@ def build_embedding_key(jobdic_seq, job_name: str) -> str:
         except Exception:
             return f"id::{clean_sentence(str(jobdic_seq))}"
     return f"job::{clean_sentence(str(job_name)).lower()}"
+
+
+def parse_embedded_list(value) -> list[str]:
+    if is_missing_like(value):
+        return []
+
+    if isinstance(value, list):
+        return unique_keep_order([str(x) for x in value if not is_missing_like(x)])
+
+    if isinstance(value, tuple):
+        return unique_keep_order([str(x) for x in value if not is_missing_like(x)])
+
+    text = normalize_whitespace(str(value))
+    if not text:
+        return []
+
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return unique_keep_order([str(x) for x in parsed if not is_missing_like(x)])
+        except Exception:
+            pass
+
+    if "|" in text:
+        return unique_keep_order([clean_sentence(x) for x in text.split("|") if clean_sentence(x)])
+
+    return unique_keep_order(split_lines(text))
 
 
 @st.cache_data(show_spinner=False)
@@ -323,6 +369,26 @@ def load_embedding_assets(
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
+    for col in ["display_keywords", "display_keywords_text", "display_keywords_json"]:
+        if col not in meta.columns:
+            meta[col] = ""
+    for col in ["topic_tags", "topic_tags_text", "topic_tags_json"]:
+        if col not in meta.columns:
+            meta[col] = ""
+
+    meta["display_keywords_list"] = meta.apply(
+        lambda row: parse_embedded_list(
+            row.get("display_keywords_json") or row.get("display_keywords_text") or row.get("display_keywords")
+        ),
+        axis=1,
+    )
+    meta["topic_tags_list"] = meta.apply(
+        lambda row: parse_embedded_list(
+            row.get("topic_tags_json") or row.get("topic_tags_text") or row.get("topic_tags")
+        ),
+        axis=1,
+    )
+
     keys = [
         build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
         for _, row in meta.iterrows()
@@ -335,6 +401,7 @@ def load_embedding_assets(
         "key_to_index": key_to_index,
         "model_name": config.get("model_name", "intfloat/multilingual-e5-base"),
         "normalize_embeddings": bool(config.get("normalize_embeddings", True)),
+        "config": config,
     }
 
 
@@ -425,6 +492,32 @@ def load_data(path: Path) -> pd.DataFrame:
     df["certification_list"] = df.apply(get_certifications, axis=1)
     df["contact_list_all"] = df.apply(get_contacts, axis=1)
     df["search_blob"] = df.apply(build_search_blob, axis=1)
+
+    assets = load_embedding_assets()
+    if assets:
+        meta = assets["meta"].copy()
+        meta["embedding_key"] = meta.apply(
+            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
+            axis=1,
+        )
+        meta_cols = ["embedding_key", "display_keywords_list", "topic_tags_list", "display_keywords_text", "topic_tags_text"]
+        df["embedding_key"] = df.apply(
+            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
+            axis=1,
+        )
+        df = df.merge(meta[meta_cols], on="embedding_key", how="left")
+        df.drop(columns=["embedding_key"], inplace=True)
+
+    if "display_keywords_list" not in df.columns:
+        df["display_keywords_list"] = [[] for _ in range(len(df))]
+    else:
+        df["display_keywords_list"] = df["display_keywords_list"].map(parse_embedded_list)
+
+    if "topic_tags_list" not in df.columns:
+        df["topic_tags_list"] = [[] for _ in range(len(df))]
+    else:
+        df["topic_tags_list"] = df["topic_tags_list"].map(parse_embedded_list)
+
     return df
 
 
@@ -503,6 +596,8 @@ def build_search_blob(row: pd.Series) -> str:
         if col in row.index:
             chunks.append(str(row.get(col, "")))
     chunks.extend(row.get("major_list", []))
+    chunks.extend(row.get("display_keywords_list", []))
+    chunks.extend(row.get("topic_tags_list", []))
     return " ".join(chunks).lower()
 
 
@@ -546,24 +641,44 @@ def extract_search_terms(query: str) -> list[str]:
     return unique_tokens
 
 
+def derive_brief_keywords(query: str, filtered: pd.DataFrame, limit: int = 8) -> list[str]:
+    weighted = Counter()
+
+    if not filtered.empty:
+        top_n = min(8, len(filtered))
+        for rank, (_, row) in enumerate(filtered.head(top_n).iterrows(), start=1):
+            weight = max(1.0, 6.5 - rank)
+            for keyword in row.get("display_keywords_list", [])[:8]:
+                if len(keyword) <= 22:
+                    weighted[keyword] += weight
+
+    keywords = [item for item, _ in weighted.most_common(limit)]
+    if keywords:
+        return keywords[:limit]
+
+    query_tokens = mild_query_terms(query)
+    return query_tokens[:limit]
+
+
 def extract_related_topics(filtered: pd.DataFrame, limit: int = 8) -> list[str]:
-    topics: list[str] = []
-    for _, row in filtered.head(10).iterrows():
+    topics = Counter()
+    if filtered.empty:
+        return []
+
+    top_n = min(10, len(filtered))
+    for rank, (_, row) in enumerate(filtered.head(top_n).iterrows(), start=1):
+        weight = max(1.0, 7.0 - rank)
         raw_items = []
+        raw_items.extend(row.get("topic_tags_list", [])[:6])
         raw_items.extend(row.get("similar_job_list", [])[:3])
         raw_items.extend(row.get("major_list", [])[:2])
 
         for item in raw_items:
-            split_items = split_job_names(item)
-            if not split_items:
-                split_items = split_lines(item)
+            cleaned = clean_sentence(item)
+            if cleaned and len(cleaned) <= 40:
+                topics[cleaned] += weight
 
-            for split_item in split_items:
-                cleaned = clean_sentence(split_item)
-                if cleaned and len(cleaned) <= 40:
-                    topics.append(cleaned)
-
-    return [item for item, _ in Counter(topics).most_common(limit)]
+    return [item for item, _ in topics.most_common(limit)]
 
 
 def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float:
@@ -594,7 +709,7 @@ def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float
         elif token in summary_text:
             score += 3.2
         elif token in full_text:
-            score += 1.6
+            score += 1.8
 
     major_joined = " ".join(row.get("major_list", [])).lower()
     for token in tokens:
@@ -931,13 +1046,14 @@ def inject_css() -> None:
         .meta-chip{
             display:inline-flex;
             align-items:center;
-            padding:7px 12px;
+            padding:8px 12px;
             border-radius:999px;
             background:#eff6ff;
             border:1px solid #dbeafe;
             color:#1d4ed8;
             font-size:12px;
             font-weight:700;
+            line-height:1.5;
         }
         .search-guide{
             font-size:13px;
@@ -1127,7 +1243,7 @@ def inject_css() -> None:
             border-radius:20px;
             box-shadow:var(--shadow);
             padding:20px 20px 18px 20px;
-            min-height:286px;
+            min-height:302px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
@@ -1452,7 +1568,7 @@ def render_hero(df: pd.DataFrame) -> None:
             </div>
             <div class="glass-row">
                 <span class="glass-chip">직업 데이터 {len(df):,}건</span>
-                <span class="glass-chip">연관 전공 정보 제공</span>
+                <span class="glass-chip">AI 키워드 사전 생성 적용</span>
                 <span class="glass-chip">NCS·전망·통계 정보 통합</span>
             </div>
         </div>
@@ -1474,7 +1590,7 @@ def render_search_panel(total_count: int, filtered_count: int, query: str) -> No
                 <div>
                     <div class="section-kicker">AI Search</div>
                     <div class="section-title">검색 조건과 필터를 바탕으로 직업을 탐색했습니다</div>
-                    <div class="section-sub">직업명, 소개, 적성, 유사 직무, 관련 전공 정보를 함께 반영합니다.</div>
+                    <div class="section-sub">직업명, 소개, 적성, 유사 직무, 관련 전공, 사전 생성된 AI 키워드를 함께 반영합니다.</div>
                 </div>
                 <div class="ai-badge"><span class="ai-dot"></span>AI 탐색 세션</div>
             </div>
@@ -1503,7 +1619,7 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
         )
         return
 
-    display_keywords = extract_display_keywords(query)[:6]
+    display_keywords = derive_brief_keywords(query, filtered, limit=8)
     token_html = "".join([f'<span class="meta-chip">{html.escape(token)}</span>' for token in display_keywords])
 
     related_tags = extract_related_topics(filtered, limit=8)
@@ -1523,7 +1639,7 @@ def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.Data
             <div class="panel-head">
                 <div class="section-kicker">AI Exploration Brief</div>
                 <div class="section-title">AI 탐색 브리핑</div>
-                <div class="section-sub">입력한 탐색어를 기반으로 연관 키워드를 해석하고, 현재 결과를 요약했습니다.</div>
+                <div class="section-sub">입력한 탐색어와 상위 결과의 의미를 함께 반영해 핵심 키워드와 연관 주제를 요약했습니다.</div>
             </div>
             <div class="brief-grid">
                 <div class="brief-card">
@@ -1561,7 +1677,7 @@ def render_pre_search_state() -> None:
 def render_ai_search_animation(query: str) -> None:
     stages = [
         ("탐색 의도를 해석하고 있습니다", "입력한 문장을 직업명, 관심사, 업무 성격, 연관 키워드로 분해하고 있습니다."),
-        ("직업 데이터와 의미를 연결하고 있습니다", "직무 소개, 적성, 유사 직무, 전공 정보를 함께 스캔하여 관련성이 높은 후보를 좁히고 있습니다."),
+        ("임베딩과 직업 데이터를 연결하고 있습니다", "직무 소개, 적성, 유사 직무, 전공 정보와 사전 생성된 의미 벡터를 함께 읽어 관련성이 높은 후보를 좁히고 있습니다."),
         ("결과를 큐레이션하고 있습니다", "가독성이 좋은 순서로 후보를 정렬하고, 바로 읽을 수 있는 탐색 브리핑을 준비하고 있습니다."),
     ]
 
@@ -1625,13 +1741,17 @@ def render_ai_search_animation(query: str) -> None:
             ),
             unsafe_allow_html=True,
         )
-        time.sleep(0.55 if idx < len(stages) else 0.45)
+        time.sleep(0.6 if idx < len(stages) else 0.5)
 
     placeholder.empty()
 
 
 def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
-    tags = row.get("similar_job_list", [])[:3]
+    tags = row.get("topic_tags_list", [])[:3]
+    if not tags:
+        tags = row.get("similar_job_list", [])[:3]
+    if not tags:
+        tags = row.get("display_keywords_list", [])[:3]
     if not tags:
         tags = row.get("major_list", [])[:3]
     tags_html = "".join([f'<span class="tag-chip">{html.escape(tag)}</span>' for tag in tags])
@@ -1891,7 +2011,9 @@ def extract_keywords_from_text(text: str, limit: int = 14) -> list[str]:
 
 
 def render_capability_section(detail: pd.Series) -> None:
-    aptitude_keywords = extract_keywords_from_text(str(detail.get("aptitude", "")), limit=12)
+    aptitude_keywords = detail.get("display_keywords_list", [])[:10]
+    if not aptitude_keywords:
+        aptitude_keywords = extract_keywords_from_text(str(detail.get("aptitude", "")), limit=12)
     if not aptitude_keywords:
         aptitude_keywords = extract_keywords_from_text(str(detail.get("summary", "")), limit=12)
 
@@ -1906,7 +2028,7 @@ def render_capability_section(detail: pd.Series) -> None:
                 <div>
                     <div class="section-kicker">Competency & Qualification</div>
                     <div class="section-title">역량 및 자격</div>
-                    <div class="section-sub">직무에 어울리는 적성과 준비에 도움이 되는 자격 정보를 함께 정리했습니다.</div>
+                    <div class="section-sub">사전 생성된 AI 키워드와 직무 원문을 함께 사용해 핵심 적성과 준비 정보를 정리했습니다.</div>
                 </div>
             </div>
         </div>
