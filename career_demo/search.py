@@ -1,22 +1,25 @@
-
 from __future__ import annotations
 
 from pathlib import Path
 import html
-import time
-import re
 import json
-import textwrap
-from collections import Counter
+import math
+import re
+import time
 from difflib import SequenceMatcher
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
+import matplotlib.pyplot as plt
+from matplotlib import patches
+from matplotlib.colors import LinearSegmentedColormap
 
 
+# =========================================================
+# 기본 설정
+# =========================================================
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "career_jobs.xlsx"
 EMBEDDING_DIR = BASE_DIR / "embedding_output"
@@ -24,2364 +27,1561 @@ EMBED_META_FILE = EMBEDDING_DIR / "career_jobs_embedding_meta.xlsx"
 EMBED_ARRAY_FILE = EMBEDDING_DIR / "career_jobs_embeddings.npy"
 EMBED_CONFIG_FILE = EMBEDDING_DIR / "embedding_config.json"
 SEMANTIC_THRESHOLD = 0.34
+TOP_N = 12
 
 st.set_page_config(
     page_title="AI 직업 탐색 리포트",
     page_icon="🔎",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-SEARCH_COLUMNS = [
-    "job",
-    "summary",
-    "similarJob",
-    "aptitude",
-    "empway",
-    "prepareway",
-    "training",
-    "certification",
-    "employment",
-    "job_possibility",
-    "capacity_1",
-    "capacity_all",
-]
 
-KOREAN_STOPWORDS = {
-    "관련", "직업", "직무", "일", "일을", "하는", "대한", "및", "에서", "으로", "위한", "위해",
-    "같은", "있는", "되는", "분야", "업무", "사람", "경우", "통한", "기반", "탐색", "분석",
-    "미래", "검색", "관련된", "중심", "한다", "수행", "업무를", "업무에", "직업명", "정보",
-    "문장", "처럼", "원하는", "분위기", "직업을", "직업의", "하고", "하면서", "같은",
-}
+# =========================================================
+# 테마 / 스타일
+# =========================================================
+def inject_css() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --bg: #f3f6fb;
+            --panel: #ffffff;
+            --panel-2: #f8fbff;
+            --line: #dde6f2;
+            --text: #142033;
+            --muted: #5f6f86;
+            --blue: #2d6cdf;
+            --blue-2: #4f8df5;
+            --blue-soft: #eef5ff;
+            --navy: #183153;
+            --mint: #19b39b;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --shadow: 0 14px 40px rgba(16, 38, 70, 0.10);
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --container: 1360px;
+        }
 
-SYNONYM_MAP = {
-    "컴퓨터": ["it", "정보", "소프트웨어", "프로그래밍", "시스템", "개발", "데이터", "네트워크", "전산", "ai", "인공지능"],
-    "it": ["컴퓨터", "정보", "소프트웨어", "시스템", "개발", "데이터", "네트워크", "전산", "ai", "인공지능"],
-    "인공지능": ["ai", "데이터", "소프트웨어", "시스템", "개발", "컴퓨터"],
-    "상담": ["심리", "치료", "코칭", "의사소통", "상담사"],
-    "디자인": ["그래픽", "시각", "콘텐츠", "광고", "영상", "편집"],
-    "행정": ["사무", "총무", "기획", "관리", "행정사무"],
-    "환경": ["기후", "생태", "에너지", "자원", "환경공학"],
-    "의료": ["보건", "병원", "간호", "임상", "건강"],
-    "교육": ["교사", "교수", "강사", "훈련", "학습"],
-    "연구": ["실험", "분석", "조사", "개발", "연구원"],
-    "기계": ["설비", "장비", "제조", "기술", "공학"],
-    "법": ["법률", "판사", "변호", "행정", "규정"],
-    "예술": ["음악", "미술", "공연", "디자인", "창작"],
-}
+        html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {
+            color: var(--text) !important;
+            background: var(--bg) !important;
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(79,141,245,0.08), transparent 28%),
+                radial-gradient(circle at top right, rgba(25,179,155,0.06), transparent 20%),
+                linear-gradient(180deg, #f7faff 0%, #f3f6fb 100%) !important;
+        }
+
+        [data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        #MainMenu,
+        footer {
+            visibility: hidden;
+            height: 0;
+        }
+
+        .block-container {
+            max-width: var(--container);
+            padding-top: 1.8rem;
+            padding-bottom: 3rem;
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #122744 0%, #173a66 42%, #24579c 100%);
+            border-radius: 30px;
+            padding: 34px 34px 28px 34px;
+            box-shadow: 0 18px 40px rgba(18,39,68,0.18);
+            color: #ffffff !important;
+        }
+
+        .hero:before {
+            content: "";
+            position: absolute;
+            inset: auto -60px -70px auto;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 60%, transparent 72%);
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+            gap: 18px;
+            align-items: stretch;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-title {
+            font-size: 2.05rem;
+            font-weight: 900;
+            line-height: 1.18;
+            letter-spacing: -0.03em;
+            margin: 0 0 10px 0;
+            color: #ffffff !important;
+        }
+
+        .hero-sub {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: rgba(255,255,255,0.86) !important;
+            margin: 0 0 18px 0;
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .hero-tag {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: #ffffff;
+            font-size: 0.86rem;
+            font-weight: 700;
+        }
+
+        .hero-card {
+            border-radius: 24px;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.14);
+            padding: 22px;
+            backdrop-filter: blur(10px);
+            min-height: 100%;
+        }
+
+        .hero-card-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #d8e8ff;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .hero-card-title {
+            font-size: 1.08rem;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            color: #ffffff;
+        }
+
+        .hero-card-body {
+            margin: 0;
+            font-size: 0.93rem;
+            line-height: 1.72;
+            color: rgba(255,255,255,0.86);
+        }
+
+        .toolbar-wrap {
+            background: rgba(255,255,255,0.76);
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: var(--shadow);
+            border-radius: 22px;
+            padding: 16px;
+            backdrop-filter: blur(14px);
+            position: sticky;
+            top: 14px;
+            z-index: 20;
+        }
+
+        .toolbar-title {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--navy);
+        }
+
+        .hint-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .hint-chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            font-size: .84rem;
+            font-weight: 700;
+            border: 1px solid #d7e7ff;
+        }
+
+        .section-title {
+            font-size: 1.22rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin: 6px 0 12px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .panel {
+            background: var(--panel);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(223,232,244,0.9);
+            padding: 20px 20px 18px 20px;
+        }
+
+        .panel-soft {
+            background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        }
+
+        .mini-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid #e4edf8;
+            border-radius: 18px;
+            padding: 16px 16px 14px 16px;
+            height: 100%;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .meta-label {
+            font-size: 0.77rem;
+            font-weight: 800;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 8px;
+        }
+
+        .meta-value {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.45;
+        }
+
+        .result-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .result-card {
+            background: #ffffff;
+            border: 1px solid #e4edf8;
+            border-radius: 20px;
+            padding: 14px 14px 12px 14px;
+            box-shadow: 0 10px 22px rgba(17, 38, 70, 0.06);
+        }
+
+        .result-rank {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1f5fd0 0%, #4f8df5 100%);
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 900;
+            margin-right: 8px;
+            flex: 0 0 auto;
+        }
+
+        .result-title {
+            font-size: 1rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin: 0;
+            line-height: 1.35;
+        }
+
+        .result-desc {
+            font-size: 0.91rem;
+            color: #4b5b73;
+            line-height: 1.7;
+            margin: 8px 0 10px 0;
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .score-track {
+            position: relative;
+            flex: 1 1 auto;
+            height: 8px;
+            border-radius: 999px;
+            background: #eaf1fb;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            background: linear-gradient(90deg, #2d6cdf 0%, #4f8df5 100%);
+            border-radius: 999px;
+        }
+
+        .score-value {
+            font-size: 0.83rem;
+            font-weight: 900;
+            color: var(--blue);
+            white-space: nowrap;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid #dfebfb;
+            background: #f7fbff;
+            color: #31577f;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .lead-title {
+            font-size: 1.68rem;
+            font-weight: 900;
+            color: var(--navy);
+            line-height: 1.25;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.03em;
+        }
+
+        .lead-summary {
+            font-size: 1rem;
+            color: #465774;
+            line-height: 1.82;
+            margin: 0;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+            border: 1px solid #e2ecf8;
+            border-radius: 18px;
+            padding: 14px 14px 12px;
+        }
+
+        .kpi-label {
+            font-size: 0.77rem;
+            font-weight: 800;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 1rem;
+            line-height: 1.55;
+            font-weight: 900;
+            color: var(--text);
+        }
+
+        .content-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .content-item {
+            border-radius: 16px;
+            border: 1px solid #e5edf8;
+            background: #fbfdff;
+            padding: 13px 14px;
+            line-height: 1.72;
+            color: #344864;
+            font-size: 0.95rem;
+        }
+
+        .empty-box {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px dashed #cfe0f6;
+            border-radius: 26px;
+            padding: 40px 24px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .empty-emoji {
+            font-size: 2.3rem;
+            margin-bottom: 10px;
+        }
+
+        .empty-title {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin: 0 0 8px 0;
+        }
+
+        .empty-sub {
+            font-size: 0.98rem;
+            color: #53657f;
+            line-height: 1.8;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .loading-wrap {
+            display: grid;
+            place-items: center;
+            padding: 28px 10px 10px 10px;
+        }
+
+        .loading-card {
+            width: min(720px, 100%);
+            border-radius: 24px;
+            padding: 26px 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+            border: 1px solid #dfebfb;
+            box-shadow: var(--shadow);
+        }
+
+        .loading-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--navy);
+            margin-bottom: 10px;
+        }
+
+        .loading-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2d6cdf, #19b39b);
+            box-shadow: 0 0 0 8px rgba(45,108,223,0.10);
+            animation: pulse 1.25s infinite;
+        }
+
+        .loading-bar {
+            position: relative;
+            height: 10px;
+            background: #eaf1fb;
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 12px 0 14px 0;
+        }
+
+        .loading-fill {
+            position: absolute;
+            inset: 0;
+            width: 42%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2d6cdf 0%, #19b39b 100%);
+            animation: loadingMove 1.35s ease-in-out infinite;
+        }
+
+        .foot-note {
+            font-size: .86rem;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.92); opacity: .78; }
+            50% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(0.92); opacity: .78; }
+        }
+
+        @keyframes loadingMove {
+            0% { transform: translateX(-115%); }
+            50% { transform: translateX(130%); }
+            100% { transform: translateX(260%); }
+        }
+
+        div[data-testid="stTextInput"] input {
+            border-radius: 14px !important;
+            border: 1px solid #dce8f6 !important;
+            background: #ffffff !important;
+            min-height: 46px;
+            color: #15243a !important;
+            box-shadow: none !important;
+        }
+
+        div[data-testid="stTextInput"] input:focus {
+            border-color: #77a7ff !important;
+            box-shadow: 0 0 0 4px rgba(45,108,223,0.10) !important;
+        }
+
+        div[data-testid="stButton"] > button {
+            min-height: 46px;
+            border-radius: 14px !important;
+            border: 0 !important;
+            background: linear-gradient(135deg, #1f5fd0 0%, #4f8df5 100%) !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            padding: 0 18px !important;
+            box-shadow: 0 12px 22px rgba(45,108,223,0.22) !important;
+        }
+
+        div[data-testid="stButton"] > button:hover {
+            filter: brightness(1.03);
+            transform: translateY(-1px);
+        }
+
+        div[data-testid="stSelectbox"] > div,
+        div[data-testid="stMultiSelect"] > div,
+        div[data-testid="stPopover"] > div {
+            border-radius: 14px !important;
+        }
+
+        @media (max-width: 1100px) {
+            .hero-grid,
+            .meta-grid,
+            .kpi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-grid,
+            .meta-grid,
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding: 26px 22px 22px 22px;
+            }
+            .lead-title {
+                font-size: 1.38rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-# -----------------------------
-# Basic helpers
-# -----------------------------
-def render_html(markup: str) -> None:
-    st.markdown(textwrap.dedent(markup).strip(), unsafe_allow_html=True)
-
-
-def rerun_app() -> None:
-    if hasattr(st, "rerun"):
-        st.rerun()
-    else:
-        st.experimental_rerun()
-
-
-def is_missing_like(value) -> bool:
-    if value is None:
-        return True
-    if isinstance(value, str):
-        stripped = value.strip()
-        return stripped == "" or stripped.lower() == "nan"
-    try:
-        return bool(pd.isna(value))
-    except Exception:
-        return False
-
-
-def normalize_whitespace(text: str) -> str:
+# =========================================================
+# 유틸
+# =========================================================
+def normalize_text(text: Any) -> str:
+    if text is None:
+        return ""
+    if isinstance(text, float) and np.isnan(text):
+        return ""
     text = str(text)
-    text = text.replace("_x000D_", " ")
-    text = text.replace("\\r", "\n").replace("\\n", "\n")
-    text = text.replace("\r", "\n")
-    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = html.unescape(text)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
+    text = re.sub(r"</p>|</li>", "\n", text, flags=re.I)
     text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\u00a0", " ", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n+", "\n", text)
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"[\t\r]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ ]{2,}", " ", text)
     return text.strip()
 
 
-def clean_sentence(text: str) -> str:
-    if is_missing_like(text):
-        return ""
-    text = normalize_whitespace(str(text))
-    text = re.sub(r"^[\-•·▪■]\s*", "", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip(" ,;-")
+def normalize_key(text: Any) -> str:
+    text = normalize_text(text).lower()
+    text = re.sub(r"[^0-9a-zA-Z가-힣]+", "", text)
+    return text
 
 
-def split_lines(text) -> list[str]:
-    if is_missing_like(text):
-        return []
+def clean_name(text: Any) -> str:
+    text = normalize_text(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
-    if isinstance(text, (list, tuple, set)):
-        lines: list[str] = []
-        for item in text:
-            lines.extend(split_lines(item))
-        return lines
 
-    text = normalize_whitespace(str(text))
+def split_lines(value: Any, max_items: int = 999) -> List[str]:
+    text = normalize_text(value)
     if not text:
         return []
 
-    text = re.sub(r"\n\s*[-•·▪■]\s*", "\n", text)
-    text = re.sub(r"^\s*[-•·▪■]\s*", "", text)
-
-    raw_parts: list[str] = []
-    for part in re.split(r"\n|;", text):
-        part = clean_sentence(part)
-        if not part:
-            continue
-        if "," in part and len(part) < 90:
-            raw_parts.extend([clean_sentence(p) for p in part.split(",") if clean_sentence(p)])
-        else:
-            raw_parts.append(part)
-
-    deduped: list[str] = []
+    raw_parts = re.split(r"\n+|[•·▪●◦]|\s*[-–—]\s+|\s{2,}|(?<=[.!?])\s+(?=[A-Z가-힣])|;", text)
+    parts: List[str] = []
     seen = set()
     for part in raw_parts:
-        key = part.lower()
-        if key not in seen:
-            seen.add(key)
-            deduped.append(part)
-    return deduped
-
-
-def split_job_names(text) -> list[str]:
-    if is_missing_like(text):
-        return []
-
-    text = normalize_whitespace(str(text))
-    if not text:
-        return []
-
-    text = re.sub(r"\s*(?:\n|;|/|\||,|，)\s*", "\n", text)
-    parts: list[str] = []
-    for part in text.split("\n"):
-        part = re.sub(r"^\d+[.)]\s*", "", clean_sentence(part))
-        if part:
-            parts.append(part)
-    return unique_keep_order(parts)
-
-
-def split_sentences(text) -> list[str]:
-    if is_missing_like(text):
-        return []
-
-    text = normalize_whitespace(str(text))
-    if not text:
-        return []
-
-    text = re.sub(r"([.!?])\s+", r"\1\n", text)
-    text = re.sub(r"(다\.)\s*", r"\1\n", text)
-    text = re.sub(r"(요\.)\s*", r"\1\n", text)
-    text = re.sub(r"(함\.)\s*", r"\1\n", text)
-    text = re.sub(r"(됨\.)\s*", r"\1\n", text)
-
-    sentences: list[str] = []
-    for part in re.split(r"\n+", text):
-        part = clean_sentence(part)
-        if part:
-            sentences.append(part)
-    return unique_keep_order(sentences)
-
-
-def summarize_long_text(text, max_points: int = 4, max_chars: int = 118) -> list[str]:
-    sentences = split_sentences(text)
-    if not sentences:
-        sentences = split_lines(text)
-
-    if not sentences:
-        return []
-
-    keywords = ["전망", "증가", "감소", "수요", "시장", "고용", "확대", "축소", "유망", "전환", "성장"]
-    scored: list[tuple[float, int, str]] = []
-    for idx, sentence in enumerate(sentences):
-        score = 0.0
-        if idx == 0:
-            score += 6.0
-        score += sum(keyword in sentence for keyword in keywords) * 1.8
-        if 24 <= len(sentence) <= 120:
-            score += 1.5
-        elif len(sentence) <= 160:
-            score += 0.7
-        score -= idx * 0.12
-        scored.append((score, idx, shorten_text(sentence, max_chars)))
-
-    top = sorted(scored, key=lambda x: (-x[0], x[1]))[:max_points]
-    top = sorted(top, key=lambda x: x[1])
-    return unique_keep_order([sentence for _, _, sentence in top])
-
-
-def format_sentences_as_paragraphs(text) -> str:
-    sentences = split_sentences(text)
-    if not sentences:
-        sentences = split_lines(text)
-    if not sentences:
-        return ""
-    return "".join(f"<p>{html.escape(sentence)}</p>" for sentence in sentences)
-
-
-def unique_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    result = []
-    for item in items:
-        value = clean_sentence(item)
-        if not value:
+        item = re.sub(r"^\d+[.)]\s*", "", part).strip(" -\t")
+        item = re.sub(r"\s+", " ", item).strip()
+        if len(item) < 2:
             continue
-        key = value.lower()
-        if key not in seen:
-            seen.add(key)
-            result.append(value)
-    return result
+        key = normalize_key(item)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        parts.append(item)
+        if len(parts) >= max_items:
+            break
+    return parts
 
 
-def shorten_text(text: str, limit: int = 60) -> str:
-    text = clean_sentence(text)
+def short_text(value: Any, limit: int = 160) -> str:
+    text = normalize_text(value)
     if len(text) <= limit:
         return text
     return text[: limit - 1].rstrip() + "…"
 
 
-def safe_float(value):
-    try:
-        if is_missing_like(value):
+def parse_numeric(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        if pd.isna(value):
             return None
         return float(value)
-    except Exception:
-        return None
 
-
-def combine_pcnt_value(integer_part, decimal_part):
-    whole = safe_float(integer_part)
-    decimal = safe_float(decimal_part)
-
-    if whole is None and decimal is None:
-        return None
-    if whole is None:
-        whole = 0.0
-    if decimal is None:
-        decimal = 0.0
-
-    if decimal >= 100:
-        return whole
-    if decimal >= 10:
-        digits = len(str(int(decimal)))
-        return whole + (decimal / (10 ** digits))
-    return whole + (decimal / 10)
-
-
-def normalize_search_token(token: str) -> str:
-    token = clean_sentence(token).lower()
-    token = re.sub(r"[^a-z0-9가-힣]", "", token)
-    suffixes = [
-        "으로부터", "로부터", "에게서", "에서의", "에서는", "에서", "으로는", "으로", "에게", "와의", "과의",
-        "이라면", "라면", "이라고", "라고", "처럼", "까지", "부터", "보다", "마저", "조차", "만의", "만",
-        "이나", "나", "들", "적인", "적인데", "적인지", "하는", "하다", "하며", "하고", "하여", "되는",
-        "같은", "관련된", "관련", "직무", "직업", "분야", "성격", "분위기", "업무", "정보",
-        "와", "과", "은", "는", "이", "가", "을", "를", "의", "도"
-    ]
-    changed = True
-    while changed and len(token) > 1:
-        changed = False
-        for suffix in sorted(set(suffixes), key=len, reverse=True):
-            if len(token) > len(suffix) + 1 and token.endswith(suffix):
-                token = token[:-len(suffix)]
-                changed = True
-                break
-    return token.strip()
-
-
-def mild_query_terms(query: str) -> list[str]:
-    raw_tokens = re.findall(r"[A-Za-z가-힣0-9]{2,}", normalize_whitespace(query))
-    result = []
-    seen = set()
-    for token in raw_tokens:
-        token_clean = clean_sentence(token).lower()
-        if token_clean in KOREAN_STOPWORDS:
-            continue
-        if token_clean not in seen:
-            seen.add(token_clean)
-            result.append(token_clean)
-    return result
-
-
-def build_embedding_key(jobdic_seq, job_name: str) -> str:
-    if not is_missing_like(jobdic_seq):
-        try:
-            return f"id::{int(float(jobdic_seq))}"
-        except Exception:
-            return f"id::{clean_sentence(str(jobdic_seq))}"
-    return f"job::{clean_sentence(str(job_name)).lower()}"
-
-
-def parse_embedded_list(value) -> list[str]:
-    if is_missing_like(value):
-        return []
-
-    if isinstance(value, list):
-        return unique_keep_order([str(x) for x in value if not is_missing_like(x)])
-
-    if isinstance(value, tuple):
-        return unique_keep_order([str(x) for x in value if not is_missing_like(x)])
-
-    text = normalize_whitespace(str(value))
+    text = normalize_text(value).replace(",", "")
     if not text:
-        return []
-
-    if text.startswith("[") and text.endswith("]"):
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                return unique_keep_order([str(x) for x in parsed if not is_missing_like(x)])
-        except Exception:
-            pass
-
-    if "|" in text:
-        return unique_keep_order([clean_sentence(x) for x in text.split("|") if clean_sentence(x)])
-
-    return unique_keep_order(split_lines(text))
-
-
-@st.cache_data(show_spinner=False)
-def load_embedding_assets(
-    meta_path: Path = EMBED_META_FILE,
-    array_path: Path = EMBED_ARRAY_FILE,
-    config_path: Path = EMBED_CONFIG_FILE,
-):
-    if not (meta_path.exists() and array_path.exists() and config_path.exists()):
+        return None
+    nums = re.findall(r"-?\d+(?:\.\d+)?", text)
+    if not nums:
         return None
 
-    meta = pd.read_excel(meta_path)
-    embeddings = np.load(array_path)
+    val = float(nums[0])
+    if "천" in text and "만원" in text:
+        val *= 1000
+    elif "억" in text and "원" in text:
+        val *= 10000
+    return val
 
-    if len(meta) != len(embeddings):
+
+def format_money_krw_manwon(value: Optional[float]) -> str:
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return "정보 없음"
+    if value >= 10000:
+        eok = int(value // 10000)
+        rest = int(round(value % 10000))
+        return f"약 {eok}억 {rest:,}만원" if rest else f"약 {eok}억원"
+    return f"약 {int(round(value)):,}만원"
+
+
+def ratio_to_percent(value: Any) -> Optional[float]:
+    num = parse_numeric(value)
+    if num is None:
         return None
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
-    for col in ["display_keywords", "display_keywords_text", "display_keywords_json"]:
-        if col not in meta.columns:
-            meta[col] = ""
-    for col in ["topic_tags", "topic_tags_text", "topic_tags_json"]:
-        if col not in meta.columns:
-            meta[col] = ""
-
-    meta["display_keywords_list"] = meta.apply(
-        lambda row: parse_embedded_list(
-            row.get("display_keywords_json") or row.get("display_keywords_text") or row.get("display_keywords")
-        ),
-        axis=1,
-    )
-    meta["topic_tags_list"] = meta.apply(
-        lambda row: parse_embedded_list(
-            row.get("topic_tags_json") or row.get("topic_tags_text") or row.get("topic_tags")
-        ),
-        axis=1,
-    )
-
-    keys = [
-        build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
-        for _, row in meta.iterrows()
-    ]
-    key_to_index = {key: idx for idx, key in enumerate(keys)}
-
-    return {
-        "meta": meta,
-        "embeddings": embeddings.astype(np.float32),
-        "key_to_index": key_to_index,
-        "model_name": config.get("model_name", "intfloat/multilingual-e5-base"),
-        "normalize_embeddings": bool(config.get("normalize_embeddings", True)),
-        "config": config,
-    }
+    if 0 <= num <= 1:
+        num *= 100
+    return max(0.0, min(100.0, num))
 
 
-@st.cache_resource(show_spinner=False)
-def load_embedding_model(model_name: str):
-    from sentence_transformers import SentenceTransformer
-    return SentenceTransformer(model_name)
+def safe_get(row: pd.Series, col: Optional[str], default: Any = "") -> Any:
+    if not col or col not in row.index:
+        return default
+    value = row[col]
+    if pd.isna(value):
+        return default
+    return value
 
 
-def compute_semantic_scores(df: pd.DataFrame, query: str) -> np.ndarray:
-    if df.empty or not query.strip():
-        return np.zeros(len(df), dtype=np.float32)
+def pick_column(columns: List[str], aliases: List[str], contains: Optional[List[str]] = None) -> Optional[str]:
+    normalized = {col: normalize_key(col) for col in columns}
+    alias_keys = [normalize_key(a) for a in aliases]
+    contains_keys = [normalize_key(a) for a in (contains or [])]
 
-    assets = load_embedding_assets()
-    if not assets:
-        return np.zeros(len(df), dtype=np.float32)
-
-    try:
-        model = load_embedding_model(assets["model_name"])
-        query_vec = model.encode(
-            [f"query: {normalize_whitespace(query)}"],
-            convert_to_numpy=True,
-            normalize_embeddings=assets["normalize_embeddings"],
-            show_progress_bar=False,
-        )[0].astype(np.float32)
-    except Exception:
-        return np.zeros(len(df), dtype=np.float32)
-
-    positions = []
-    embedding_indices = []
-    for pos, (_, row) in enumerate(df.iterrows()):
-        key = build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
-        idx = assets["key_to_index"].get(key)
-        if idx is not None:
-            positions.append(pos)
-            embedding_indices.append(idx)
-
-    scores = np.zeros(len(df), dtype=np.float32)
-    if positions:
-        matrix = assets["embeddings"][embedding_indices]
-        scores[np.array(positions, dtype=int)] = matrix @ query_vec
-    return scores
-
-
-# -----------------------------
-# Data loading and preparation
-# -----------------------------
-@st.cache_data(show_spinner=False)
-def load_data(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {path}")
-
-    if path.suffix.lower() in {".xlsx", ".xlsm", ".xls"}:
-        df = pd.read_excel(path)
-    else:
-        df = pd.read_csv(path)
-
-    df = df.copy()
-    df.columns = [str(col).strip() for col in df.columns]
-
-    for col in df.columns:
-        if df[col].dtype == object:
-            df[col] = df[col].map(lambda x: normalize_whitespace(x) if not is_missing_like(x) else "")
-
-    if "job" not in df.columns:
-        raise ValueError("career_jobs.xlsx에 'job' 컬럼이 없습니다.")
-
-    if "summary" not in df.columns:
-        df["summary"] = ""
-
-    df["job"] = df["job"].astype(str).str.strip()
-    df = df[df["job"] != ""].reset_index(drop=True)
-
-    salary_values = df.get("salery", pd.Series([""] * len(df))).map(extract_salary_amount)
-    valid_salary = salary_values.dropna()
-    if valid_salary.empty:
-        low_cut = None
-        high_cut = None
-    else:
-        low_cut = float(valid_salary.quantile(0.33))
-        high_cut = float(valid_salary.quantile(0.66))
-
-    df["salary_amount"] = salary_values
-    df["salary_bucket"] = df["salary_amount"].map(lambda x: classify_salary_bucket(x, low_cut, high_cut))
-    df["employment_status"] = df.apply(classify_employment_status, axis=1)
-    df["major_list"] = df.apply(get_major_list, axis=1)
-    df["similar_job_list"] = df.apply(get_similar_jobs, axis=1)
-    df["certification_list"] = df.apply(get_certifications, axis=1)
-    df["contact_list_all"] = df.apply(get_contacts, axis=1)
-    df["search_blob"] = df.apply(build_search_blob, axis=1)
-
-    assets = load_embedding_assets()
-    if assets:
-        meta = assets["meta"].copy()
-        meta["embedding_key"] = meta.apply(
-            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
-            axis=1,
-        )
-        meta_cols = ["embedding_key", "display_keywords_list", "topic_tags_list", "display_keywords_text", "topic_tags_text"]
-        df["embedding_key"] = df.apply(
-            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
-            axis=1,
-        )
-        df = df.merge(meta[meta_cols], on="embedding_key", how="left")
-        df.drop(columns=["embedding_key"], inplace=True)
-
-    if "display_keywords_list" not in df.columns:
-        df["display_keywords_list"] = [[] for _ in range(len(df))]
-    else:
-        df["display_keywords_list"] = df["display_keywords_list"].map(parse_embedded_list)
-
-    if "topic_tags_list" not in df.columns:
-        df["topic_tags_list"] = [[] for _ in range(len(df))]
-    else:
-        df["topic_tags_list"] = df["topic_tags_list"].map(parse_embedded_list)
-
-    return df
-
-
-# -----------------------------
-# Row-level extractors
-# -----------------------------
-def extract_salary_amount(text) -> float | None:
-    if is_missing_like(text):
-        return None
-
-    cleaned = str(text).replace(",", "")
-    patterns = [
-        r"평균연봉\(중위값\)은\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
-        r"중위값\)?은\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
-        r"평균연봉은\s*([0-9]+(?:\.[0-9]+)?)\s*만원",
-        r"([0-9]+(?:\.[0-9]+)?)\s*만원",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, cleaned)
-        if match:
-            try:
-                return float(match.group(1))
-            except Exception:
-                continue
+    for alias in alias_keys:
+        for col, key in normalized.items():
+            if key == alias:
+                return col
+    for alias in alias_keys:
+        for col, key in normalized.items():
+            if alias and alias in key:
+                return col
+    if contains_keys:
+        for col, key in normalized.items():
+            if all(token in key for token in contains_keys if token):
+                return col
     return None
 
 
-def classify_salary_bucket(amount: float | None, low_cut: float | None, high_cut: float | None) -> str:
-    if amount is None:
-        return "정보 없음"
-    if low_cut is None or high_cut is None:
-        return "정보 있음"
-    if amount < low_cut:
-        return "하"
-    if amount < high_cut:
-        return "중"
-    return "상"
-
-
-def classify_employment_status(row: pd.Series) -> str:
-    text = f"{row.get('employment', '')} {row.get('job_possibility', '')}".lower()
-    if any(word in text for word in ["증가", "성장", "확대", "유망", "밝", "좋"]):
-        return "좋음"
-    if any(word in text for word in ["감소", "축소", "줄어", "낮아질", "어려울", "감소할"]):
-        return "주의"
-    return "보통"
-
-
-def get_prefixed_values(row: pd.Series, prefix: str) -> list[str]:
-    items: list[str] = []
-    for col in row.index:
-        if str(col).startswith(prefix):
-            items.extend(split_lines(row[col]))
-    return unique_keep_order(items)
-
-
-def get_major_list(row: pd.Series) -> list[str]:
-    return get_prefixed_values(row, "major_")
-
-
-def get_similar_jobs(row: pd.Series) -> list[str]:
-    return split_job_names(row.get("similarJob", ""))
-
-
-def get_certifications(row: pd.Series) -> list[str]:
-    return unique_keep_order(split_lines(row.get("certification", "")))
-
-
-def get_contacts(row: pd.Series) -> list[str]:
-    return unique_keep_order(get_prefixed_values(row, "contact_"))
-
-
-def build_search_blob(row: pd.Series) -> str:
-    chunks = []
-    for col in SEARCH_COLUMNS:
-        if col in row.index:
-            chunks.append(str(row.get(col, "")))
-    chunks.extend(row.get("major_list", []))
-    chunks.extend(row.get("display_keywords_list", []))
-    chunks.extend(row.get("topic_tags_list", []))
-    return " ".join(chunks).lower()
-
-
-# -----------------------------
-# Search / filter logic
-# -----------------------------
-def extract_display_keywords(query: str) -> list[str]:
-    if not query:
-        return []
-
-    raw_tokens = re.findall(r"[A-Za-z가-힣0-9]{2,}", query.lower())
-    keywords: list[str] = []
-    seen = set()
-    for token in raw_tokens:
-        token = normalize_search_token(token)
-        if not token or token in KOREAN_STOPWORDS:
-            continue
-        if token not in seen:
-            seen.add(token)
-            keywords.append(token)
-    return keywords
-
-
-def extract_search_terms(query: str) -> list[str]:
-    base_tokens = extract_display_keywords(query)
-    tokens: list[str] = []
-    for token in base_tokens:
-        tokens.append(token)
-        if token in SYNONYM_MAP:
-            tokens.extend([item.lower() for item in SYNONYM_MAP[token]])
-
-    unique_tokens: list[str] = []
-    seen = set()
-    for token in tokens:
-        token = normalize_search_token(token)
-        if not token or token in KOREAN_STOPWORDS:
-            continue
-        if token not in seen:
-            seen.add(token)
-            unique_tokens.append(token)
-    return unique_tokens
-
-
-def derive_brief_keywords(query: str, filtered: pd.DataFrame, limit: int = 8) -> list[str]:
-    weighted = Counter()
-
-    if not filtered.empty:
-        top_n = min(8, len(filtered))
-        for rank, (_, row) in enumerate(filtered.head(top_n).iterrows(), start=1):
-            weight = max(1.0, 6.5 - rank)
-            for keyword in row.get("display_keywords_list", [])[:8]:
-                if len(keyword) <= 22:
-                    weighted[keyword] += weight
-
-    keywords = [item for item, _ in weighted.most_common(limit)]
-    if keywords:
-        return keywords[:limit]
-
-    query_tokens = mild_query_terms(query)
-    return query_tokens[:limit]
-
-
-def extract_related_topics(filtered: pd.DataFrame, limit: int = 8) -> list[str]:
-    topics = Counter()
-    if filtered.empty:
-        return []
-
-    top_n = min(10, len(filtered))
-    for rank, (_, row) in enumerate(filtered.head(top_n).iterrows(), start=1):
-        weight = max(1.0, 7.0 - rank)
-        raw_items = []
-        raw_items.extend(row.get("topic_tags_list", [])[:6])
-        raw_items.extend(row.get("similar_job_list", [])[:3])
-        raw_items.extend(row.get("major_list", [])[:2])
-
-        for item in raw_items:
-            cleaned = clean_sentence(item)
-            if cleaned and len(cleaned) <= 40:
-                topics[cleaned] += weight
-
-    return [item for item, _ in topics.most_common(limit)]
-
-
-def compute_search_score(row: pd.Series, query: str, tokens: list[str]) -> float:
-    if not query.strip():
-        return 0.0
-
-    job_text = str(row.get("job", "")).lower()
-    summary_text = str(row.get("summary", "")).lower()
-    full_text = str(row.get("search_blob", "")).lower()
-
-    score = 0.0
-    query_lower = query.lower().strip()
-
-    if query_lower in job_text:
-        score += 12.0
-    if query_lower in summary_text:
-        score += 8.0
-    if query_lower in full_text:
-        score += 5.0
-
-    ratio = SequenceMatcher(None, query_lower, job_text).ratio()
-    if ratio >= 0.45:
-        score += ratio * 7
-
-    for token in tokens:
-        if token in job_text:
-            score += 6.0
-        elif token in summary_text:
-            score += 3.2
-        elif token in full_text:
-            score += 1.8
-
-    major_joined = " ".join(row.get("major_list", [])).lower()
-    for token in tokens:
-        if token in major_joined:
-            score += 1.8
-
-    return score
-
-
-def search_jobs(df: pd.DataFrame, query: str) -> pd.DataFrame:
-    if not query.strip():
-        return df.iloc[0:0].copy()
-
-    tokens = extract_search_terms(query)
-    results = df.copy()
-    results["search_score"] = results.apply(lambda row: compute_search_score(row, query, tokens), axis=1)
-
-    semantic_scores = compute_semantic_scores(results, query)
-    results["semantic_score"] = semantic_scores
-    results["semantic_boost"] = results["semantic_score"].map(
-        lambda x: max(0.0, float(x) - SEMANTIC_THRESHOLD) * 35.0
-    )
-    results["combined_search_score"] = results["search_score"] + results["semantic_boost"]
-
-    results = results[
-        (results["search_score"] > 0) |
-        (results["semantic_score"] >= SEMANTIC_THRESHOLD)
-    ]
-
-    return results.sort_values(
-        ["combined_search_score", "search_score", "semantic_score", "job"],
-        ascending=[False, False, False, True],
-    ).reset_index(drop=True)
-
-
-def filter_results(
-    df: pd.DataFrame,
-    selected_majors: list[str],
-    salary_filters: list[str],
-    employment_filters: list[str],
-) -> pd.DataFrame:
-    filtered = df.copy()
-
-    if selected_majors:
-        selected_set = {item.lower() for item in selected_majors}
-        filtered = filtered[
-            filtered["major_list"].map(
-                lambda majors: bool({m.lower() for m in majors} & selected_set)
-            )
-        ]
-
-    if salary_filters:
-        filtered = filtered[filtered["salary_bucket"].isin(salary_filters)]
-
-    if employment_filters:
-        filtered = filtered[filtered["employment_status"].isin(employment_filters)]
-
-    return filtered.reset_index(drop=True)
-
-
-# -----------------------------
-# Visualization helpers
-# -----------------------------
-def build_gender_chart(detail: pd.Series):
-    gender_rows = [
-        ("남성", combine_pcnt_value(detail.get("PCNT1_남자"), detail.get("PCNT2_남자"))),
-        ("여성", combine_pcnt_value(detail.get("PCNT1_여자"), detail.get("PCNT2_여자"))),
-    ]
-    chart_df = pd.DataFrame(gender_rows, columns=["구분", "값"])
-    chart_df = chart_df.dropna()
-    if chart_df.empty or chart_df["값"].sum() == 0:
-        return None
-
-    fig = px.pie(chart_df, values="값", names="구분", hole=0.45)
-    fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
-        legend_title_text="",
-        height=320,
-    )
-    fig.update_traces(
-        textposition="inside",
-        texttemplate="%{label}<br>%{value:.1f}%",
-        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
-    )
-    return fig
-
-
-def build_age_chart(detail: pd.Series):
-    age_rows = []
-    for label in ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]:
-        value = combine_pcnt_value(detail.get(f"PCNT1_{label}"), detail.get(f"PCNT2_{label}"))
-        if value is not None:
-            age_rows.append({"연령대": label, "값": value})
-
-    chart_df = pd.DataFrame(age_rows)
-    if chart_df.empty:
-        return None
-
-    fig = px.bar(chart_df, x="연령대", y="값", text="값")
-    fig.update_traces(
-        texttemplate="%{text:.1f}%",
-        textposition="outside",
-        hovertemplate="%{x}: %{y:.1f}%<extra></extra>",
-    )
-    fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
-        showlegend=False,
-        xaxis_title="",
-        yaxis_title="관심 비율(%)",
-        height=320,
-    )
-    return fig
-
-
-def build_salary_gauge(amount: float | None):
-    if amount is None:
-        return None
-
-    max_value = max(5000, amount * 1.35)
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=amount,
-            number={"suffix": "만원"},
-            gauge={
-                "axis": {"range": [0, max_value]},
-                "bar": {"thickness": 0.45},
-                "steps": [
-                    {"range": [0, max_value * 0.33], "color": "#dbeafe"},
-                    {"range": [max_value * 0.33, max_value * 0.66], "color": "#bfdbfe"},
-                    {"range": [max_value * 0.66, max_value], "color": "#93c5fd"},
-                ],
-            },
-            title={"text": "평균 임금 수준"},
-        )
-    )
-    fig.update_layout(height=260, margin=dict(l=20, r=20, t=50, b=10))
-    return fig
-
-
-# -----------------------------
-# UI styling
-# -----------------------------
-def inject_css() -> None:
-    render_html(
-        """
-        <style>
-        :root{
-            --bg:#f5f7fb;
-            --panel:#ffffff;
-            --line:#e6ebf2;
-            --line-strong:#d8e2f0;
-            --text:#0f172a;
-            --muted:#667085;
-            --blue:#2563eb;
-            --blue-soft:#eff6ff;
-            --blue-soft-2:#f6faff;
-            --shadow:0 10px 30px rgba(15,23,42,.06);
-            --shadow-strong:0 18px 40px rgba(37,99,235,.10);
-            --radius:20px;
-            --container:1280px;
-        }
-
-        html, body, [class*="css"] { color: var(--text); }
-
-        header[data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        .stAppToolbar,
-        [data-testid="stStatusWidget"],
-        [data-testid="stHeaderActionElements"],
-        .stDeployButton,
-        div[data-testid="stDecoration"]{
-            display:none !important;
-            visibility:hidden !important;
-            height:0 !important;
-        }
-        #MainMenu,
-        footer{
-            visibility:hidden !important;
-            display:none !important;
-        }
-
-        .stApp {
-            background:
-                radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 20%),
-                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
-        }
-
-        .block-container{
-            max-width:var(--container);
-            padding-top:1.05rem;
-            padding-bottom:2.4rem;
-        }
-
-        .hero{
-            background:linear-gradient(135deg, #0f172a 0%, #173b74 56%, #2563eb 100%);
-            border-radius:26px;
-            padding:32px 32px 28px 32px;
-            margin-bottom:22px;
-            box-shadow:var(--shadow-strong);
-            position:relative;
-            overflow:hidden;
-        }
-        .hero::after{
-            content:"";
-            position:absolute;
-            right:-70px;
-            top:-80px;
-            width:240px;
-            height:240px;
-            border-radius:50%;
-            background:radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 68%);
-            pointer-events:none;
-        }
-        .hero-kicker{
-            font-size:12px;
-            color:#dbeafe;
-            font-weight:800;
-            letter-spacing:.14em;
-            text-transform:uppercase;
-            margin-bottom:10px;
-        }
-        .hero-title{
-            font-size:32px;
-            line-height:1.22;
-            color:#ffffff;
-            font-weight:800;
-            margin-bottom:12px;
-            letter-spacing:-0.02em;
-        }
-        .hero-sub{
-            font-size:15px;
-            line-height:1.75;
-            color:#dbeafe;
-            max-width:860px;
-        }
-        .glass-row{
-            display:flex;
-            flex-wrap:wrap;
-            gap:10px;
-            margin-top:18px;
-        }
-        .glass-chip{
-            display:inline-flex;
-            align-items:center;
-            background:rgba(255,255,255,.10);
-            border:1px solid rgba(255,255,255,.18);
-            border-radius:999px;
-            padding:9px 14px;
-            color:#ffffff;
-            font-size:13px;
-            font-weight:700;
-            backdrop-filter:blur(8px);
-        }
-
-        .panel{
-            background:var(--panel);
-            border:1px solid var(--line);
-            border-radius:22px;
-            box-shadow:var(--shadow);
-            padding:24px;
-            margin-bottom:22px;
-        }
-        .panel-head{ margin-bottom:14px; }
-        .section-kicker{
-            font-size:12px;
-            font-weight:800;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-            color:#2563eb;
-            margin-bottom:6px;
-        }
-        .section-title{
-            font-size:22px;
-            line-height:1.4;
-            font-weight:800;
-            color:#102a43;
-            margin:0 0 6px 0;
-            letter-spacing:-0.02em;
-        }
-        .section-sub{
-            font-size:14px;
-            line-height:1.68;
-            color:#64748b;
-        }
-
-        .ai-search-shell{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid var(--line);
-            border-radius:22px;
-            padding:20px 20px 16px 20px;
-            box-shadow:var(--shadow);
-            margin-bottom:18px;
-        }
-        .ai-search-head{
-            display:flex;
-            align-items:flex-start;
-            justify-content:space-between;
-            gap:16px;
-            margin-bottom:12px;
-            flex-wrap:wrap;
-        }
-        .ai-badge{
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-            padding:8px 12px;
-            border-radius:999px;
-            background:#eff6ff;
-            border:1px solid #dbeafe;
-            color:#1d4ed8;
-            font-size:12px;
-            font-weight:800;
-        }
-        .ai-dot{
-            width:8px;
-            height:8px;
-            border-radius:50%;
-            background:#2563eb;
-            box-shadow:0 0 0 0 rgba(37,99,235,.4);
-            animation:pulseGlow 1.8s infinite;
-        }
-        @keyframes pulseGlow{
-            0%{ box-shadow:0 0 0 0 rgba(37,99,235,.42); }
-            70%{ box-shadow:0 0 0 8px rgba(37,99,235,0); }
-            100%{ box-shadow:0 0 0 0 rgba(37,99,235,0); }
-        }
-        .filter-meta{
-            display:flex;
-            flex-wrap:wrap;
-            gap:8px;
-            margin-top:10px;
-        }
-        .meta-chip{
-            display:inline-flex;
-            align-items:center;
-            padding:8px 12px;
-            border-radius:999px;
-            background:#eff6ff;
-            border:1px solid #dbeafe;
-            color:#1d4ed8;
-            font-size:12px;
-            font-weight:700;
-            line-height:1.5;
-        }
-        .search-guide{
-            font-size:13px;
-            color:#64748b;
-            line-height:1.6;
-        }
-        .brief-grid{
-            display:grid;
-            grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:14px;
-            margin-top:14px;
-        }
-        .brief-card{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:18px;
-            padding:16px;
-            min-height:132px;
-        }
-        .brief-label{
-            font-size:12px;
-            color:#667085;
-            font-weight:800;
-            margin-bottom:10px;
-        }
-        .brief-value{
-            font-size:20px;
-            line-height:1.3;
-            color:#0f172a;
-            font-weight:800;
-            margin-bottom:6px;
-        }
-        .brief-text{
-            font-size:13px;
-            line-height:1.65;
-            color:#475467;
-        }
-
-        .search-idle{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px dashed #cfe0ff;
-            border-radius:22px;
-            padding:28px 24px;
-            margin-top:16px;
-            margin-bottom:12px;
-        }
-        .search-idle-title{
-            font-size:20px;
-            line-height:1.4;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:8px;
-        }
-        .search-idle-text{
-            font-size:14px;
-            line-height:1.72;
-            color:#64748b;
-        }
-
-        .ai-loading-shell{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid var(--line);
-            border-radius:22px;
-            padding:22px;
-            box-shadow:var(--shadow);
-            margin-top:18px;
-            margin-bottom:20px;
-        }
-        .ai-loading-top{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-            flex-wrap:wrap;
-            margin-bottom:12px;
-        }
-        .ai-loading-title{
-            font-size:22px;
-            line-height:1.4;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:6px;
-            letter-spacing:-0.02em;
-        }
-        .ai-loading-sub{
-            font-size:14px;
-            line-height:1.7;
-            color:#64748b;
-        }
-        .ai-stage-box{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:18px;
-            padding:16px;
-            margin-top:14px;
-            margin-bottom:14px;
-        }
-        .ai-stage-label{
-            font-size:12px;
-            color:#2563eb;
-            font-weight:800;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-            margin-bottom:8px;
-        }
-        .ai-stage-title{
-            font-size:18px;
-            line-height:1.45;
-            font-weight:800;
-            color:#0f172a;
-            margin-bottom:6px;
-        }
-        .ai-stage-desc{
-            font-size:13px;
-            line-height:1.68;
-            color:#475467;
-        }
-        .ai-progress{
-            width:100%;
-            height:10px;
-            background:#e8eef7;
-            border-radius:999px;
-            overflow:hidden;
-            margin-top:14px;
-        }
-        .ai-progress-bar{
-            height:100%;
-            border-radius:999px;
-            background:linear-gradient(90deg, #173b74 0%, #2563eb 100%);
-            transition:width .28s ease;
-        }
-        .skeleton-grid{
-            display:grid;
-            grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:16px;
-            margin-top:16px;
-        }
-        .skeleton-card{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid #e6ebf2;
-            border-radius:18px;
-            padding:18px;
-            min-height:186px;
-        }
-        .skeleton-line{
-            width:100%;
-            height:12px;
-            border-radius:999px;
-            background:linear-gradient(90deg, #eef3fb 25%, #dde7f7 37%, #eef3fb 63%);
-            background-size:400% 100%;
-            animation:skeletonFlow 1.3s ease-in-out infinite;
-            margin-bottom:12px;
-        }
-        .skeleton-line.short{ width:42%; }
-        .skeleton-line.mid{ width:72%; }
-        .skeleton-pill-row{
-            display:flex;
-            gap:8px;
-            flex-wrap:wrap;
-            margin-top:16px;
-        }
-        .skeleton-pill{
-            width:82px;
-            height:28px;
-            border-radius:999px;
-            background:linear-gradient(90deg, #eef3fb 25%, #dde7f7 37%, #eef3fb 63%);
-            background-size:400% 100%;
-            animation:skeletonFlow 1.3s ease-in-out infinite;
-        }
-        @keyframes skeletonFlow{
-            0%{ background-position:100% 50%; }
-            100%{ background-position:0 50%; }
-        }
-
-        .result-card-wrap{
-            animation:fadeUpCard .55s ease both;
-        }
-        @keyframes fadeUpCard{
-            0%{ opacity:0; transform:translateY(18px); }
-            100%{ opacity:1; transform:translateY(0); }
-        }
-
-        .result-card{
-            position:relative;
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid var(--line);
-            border-radius:20px;
-            box-shadow:var(--shadow);
-            padding:20px 20px 18px 20px;
-            min-height:302px;
-            display:flex;
-            flex-direction:column;
-            transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-            overflow:hidden;
-        }
-        .result-card::before{
-            content:"";
-            position:absolute;
-            inset:0 auto 0 0;
-            width:5px;
-            background:linear-gradient(180deg, #2563eb 0%, #93c5fd 100%);
-            opacity:.92;
-        }
-        .result-card:hover{
-            transform:translateY(-4px);
-            box-shadow:0 18px 36px rgba(15,23,42,.10);
-            border-color:#cfe0ff;
-        }
-        .job-title{
-            font-size:20px;
-            line-height:1.42;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:10px;
-            letter-spacing:-0.02em;
-            padding-left:4px;
-        }
-        .job-summary{
-            font-size:14px;
-            line-height:1.76;
-            color:#475467;
-            min-height:78px;
-            margin-bottom:16px;
-            padding-left:4px;
-        }
-        .tag-row{
-            display:flex;
-            flex-wrap:wrap;
-            gap:8px;
-            margin-bottom:16px;
-            padding-left:4px;
-        }
-        .tag-chip{
-            display:inline-flex;
-            align-items:center;
-            padding:7px 11px;
-            border-radius:999px;
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            color:#2563eb;
-            font-size:12px;
-            font-weight:700;
-        }
-        .metric-row{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(0, 1fr));
-            gap:10px;
-            margin-top:auto;
-            padding-left:4px;
-        }
-        .mini-metric{
-            background:#f8fafc;
-            border:1px solid #e8eef7;
-            border-radius:15px;
-            padding:12px 12px 11px 12px;
-        }
-        .mini-label{
-            font-size:11px;
-            color:#667085;
-            font-weight:700;
-            margin-bottom:5px;
-        }
-        .mini-value{
-            font-size:15px;
-            line-height:1.45;
-            color:#0f172a;
-            font-weight:800;
-            letter-spacing:-0.01em;
-        }
-
-        .profile-box{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:18px;
-            padding:20px;
-        }
-        .profile-summary{
-            font-size:15px;
-            line-height:1.82;
-            color:#334155;
-        }
-        .bullet-list{
-            list-style:none;
-            padding-left:0;
-            margin:0;
-        }
-        .bullet-list li{
-            padding:10px 0;
-            border-bottom:1px solid #edf2f7;
-            font-size:14px;
-            line-height:1.76;
-            color:#334155;
-            word-break:keep-all;
-        }
-        .bullet-list li:last-child{ border-bottom:none; }
-
-        .pill-wrap{
-            display:flex;
-            flex-wrap:wrap;
-            gap:10px;
-        }
-        .pill{
-            display:inline-flex;
-            align-items:center;
-            padding:9px 13px;
-            border-radius:999px;
-            background:#eff6ff;
-            border:1px solid #dbeafe;
-            color:#1d4ed8;
-            font-size:13px;
-            font-weight:700;
-        }
-        .similar-job-grid{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(0, 1fr));
-            gap:10px;
-        }
-        .similar-job-item{
-            display:flex;
-            align-items:flex-start;
-            gap:8px;
-            min-height:54px;
-            padding:12px 13px;
-            border-radius:14px;
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            color:#1d4ed8;
-            font-size:13px;
-            line-height:1.58;
-            font-weight:700;
-            word-break:keep-all;
-        }
-        .similar-job-bullet{
-            width:8px;
-            height:8px;
-            border-radius:50%;
-            background:#2563eb;
-            margin-top:6px;
-            flex-shrink:0;
-        }
-        .outlook-card{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid #e8eef7;
-            border-radius:18px;
-            padding:18px;
-            box-shadow:0 4px 16px rgba(15,23,42,.03);
-        }
-        .outlook-summary{
-            background:#f8fbff;
-            border:1px solid #dce8fb;
-            border-radius:16px;
-            padding:16px;
-            margin-bottom:14px;
-        }
-        .outlook-summary-title{
-            font-size:13px;
-            color:#1d4ed8;
-            font-weight:800;
-            margin-bottom:10px;
-        }
-        .outlook-body{
-            font-size:14px;
-            line-height:1.82;
-            color:#475467;
-        }
-        .outlook-body p{
-            margin:0 0 10px 0;
-        }
-        .outlook-body p:last-child{
-            margin-bottom:0;
-        }
-        .soft-card{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid #e8eef7;
-            border-radius:18px;
-            padding:18px;
-            height:100%;
-            box-shadow:0 4px 16px rgba(15,23,42,.03);
-        }
-        .timeline-card{
-            position:relative;
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border:1px solid #e8eef7;
-            border-radius:18px;
-            padding:20px 18px 18px 18px;
-            min-height:250px;
-            height:100%;
-        }
-        .timeline-card::before{
-            content:"";
-            position:absolute;
-            left:18px;
-            right:18px;
-            top:0;
-            height:3px;
-            border-radius:999px;
-            background:linear-gradient(90deg, #2563eb 0%, #bfdbfe 100%);
-        }
-        .timeline-no{
-            width:34px;
-            height:34px;
-            border-radius:50%;
-            background:#eff6ff;
-            border:1px solid #dbeafe;
-            color:#2563eb;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:13px;
-            font-weight:800;
-            margin-bottom:14px;
-        }
-        .timeline-title{
-            font-size:16px;
-            line-height:1.5;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:10px;
-            letter-spacing:-0.01em;
-        }
-        .timeline-text{
-            font-size:14px;
-            line-height:1.76;
-            color:#475467;
-            white-space:normal;
-            word-break:keep-all;
-        }
-        .insight-list{
-            list-style:none;
-            padding-left:0;
-            margin:0;
-        }
-        .insight-list li{
-            position:relative;
-            padding-left:14px;
-            margin-bottom:9px;
-            font-size:14px;
-            line-height:1.76;
-            color:#475467;
-            word-break:keep-all;
-        }
-        .insight-list li:last-child{
-            margin-bottom:0;
-        }
-        .insight-list li::before{
-            content:"•";
-            position:absolute;
-            left:0;
-            top:0;
-            color:#2563eb;
-            font-weight:800;
-        }
-        .empty-text{
-            font-size:14px;
-            line-height:1.7;
-            color:#98a2b3;
-        }
-
-        div[data-baseweb="input"] > div,
-        div[data-baseweb="select"] > div,
-        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div{
-            background:#ffffff !important;
-            border:1px solid #d0d9e5 !important;
-            border-radius:15px !important;
-            min-height:50px !important;
-            box-shadow:none !important;
-            color:#111827 !important;
-        }
-        input{ color:#111827 !important; }
-        input::placeholder{ color:#94a3b8 !important; }
-        .stTextInput label, .stSelectbox label, .stMultiSelect label{
-            color:#334155 !important;
-            font-weight:700 !important;
-            font-size:14px !important;
-        }
-        .stButton > button{
-            border-radius:14px !important;
-            border:1px solid #d0d9e5 !important;
-            min-height:44px !important;
-            font-weight:700 !important;
-        }
-        .stButton > button[kind="primary"]{
-            background:linear-gradient(135deg, #173b74 0%, #2563eb 100%) !important;
-            color:#ffffff !important;
-            border:none !important;
-        }
-        .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
-
-        @media (max-width: 1100px){
-            .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
-        }
-        @media (max-width: 768px){
-            .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr; }
-            .hero{ padding:26px 22px 22px 22px; }
-        }
-        </style>
-        """
-    )
-
-
-# -----------------------------
-# Page rendering helpers
-# -----------------------------
-def render_hero(df: pd.DataFrame) -> None:
-    render_html(
-        f"""
-        <div class="hero">
-            <div class="hero-kicker">Job-Explorer AI</div>
-            <div class="hero-title">미래의 직업을 검색하세요</div>
-            <div class="hero-sub">
-                키워드 기반 검색, 직무 요약, 준비 경로, 전공·자격 정보, 통계 차트를 한 화면에서 탐색할 수 있도록 구성한 AI 기반 직업 데이터 큐레이션 플랫폼입니다.
-            </div>
-            <div class="glass-row">
-                <span class="glass-chip">직업 데이터 {len(df):,}건</span>
-                <span class="glass-chip">AI 키워드 사전 생성 적용</span>
-                <span class="glass-chip">NCS·전망·통계 정보 통합</span>
-            </div>
-        </div>
-        """
-    )
-
-
-def render_search_panel(total_count: int, filtered_count: int, query: str) -> None:
-    chips = [
-        f"탐색어: {query}" if query.strip() else "탐색어 없음",
-        f"현재 결과 {filtered_count:,}건",
-        f"전체 데이터 {total_count:,}건",
-    ]
-    chips_html = "".join([f'<span class="meta-chip">{html.escape(chip)}</span>' for chip in chips])
-    render_html(
-        f"""
-        <div class="ai-search-shell">
-            <div class="ai-search-head">
-                <div>
-                    <div class="section-kicker">AI Search</div>
-                    <div class="section-title">검색 조건과 필터를 바탕으로 직업을 탐색했습니다</div>
-                    <div class="section-sub">직업명, 소개, 적성, 유사 직무, 관련 전공, 사전 생성된 AI 키워드를 함께 반영합니다.</div>
-                </div>
-                <div class="ai-badge"><span class="ai-dot"></span>AI 탐색 세션</div>
-            </div>
-            <div class="filter-meta">{chips_html}</div>
-        </div>
-        """
-    )
-
-
-def render_ai_search_brief(query: str, searched: pd.DataFrame, filtered: pd.DataFrame) -> None:
-    if not query.strip():
-        render_html(
-            """
-            <div class="ai-search-shell">
-                <div class="ai-search-head">
-                    <div>
-                        <div class="section-kicker">AI Search Guide</div>
-                        <div class="section-title">어떤 직업을 찾고 있는지 자연스럽게 입력해 보세요</div>
-                        <div class="section-sub">직업명뿐 아니라 “컴퓨터와 관련된 일”, “사람을 돕는 직업”, “디자인 감각이 필요한 일”처럼 문장형 탐색도 가능합니다.</div>
-                    </div>
-                    <div class="ai-badge"><span class="ai-dot"></span>탐색 대기 중</div>
-                </div>
-                <div class="search-guide">검색어를 입력한 뒤 <strong>AI 탐색 시작</strong>을 누르면 결과를 정리해서 보여줍니다.</div>
-            </div>
-            """
-        )
-        return
-
-    display_keywords = derive_brief_keywords(query, filtered, limit=8)
-    token_html = "".join([f'<span class="meta-chip">{html.escape(token)}</span>' for token in display_keywords])
-
-    related_tags = extract_related_topics(filtered, limit=8)
-    related_html = "".join([f'<span class="meta-chip">{html.escape(tag)}</span>' for tag in related_tags])
-
-    if filtered.empty:
-        result_text = "조건에 맞는 결과를 찾지 못했습니다."
-        result_sub = "검색어를 더 넓게 입력하거나 필터를 줄여 보세요."
-    else:
-        top_job = str(filtered.iloc[0].get("job", ""))
-        result_text = f"{len(filtered):,}개 직업을 선별했습니다"
-        result_sub = f"현재 탐색어와 가장 가깝게 읽히는 직업은 {top_job}입니다." if top_job else "검색 결과를 정렬했습니다."
-
-    render_html(
-        f"""
-        <div class="panel">
-            <div class="panel-head">
-                <div class="section-kicker">AI Exploration Brief</div>
-                <div class="section-title">AI 탐색 브리핑</div>
-                <div class="section-sub">입력한 탐색어와 상위 결과의 의미를 함께 반영해 핵심 키워드와 연관 주제를 요약했습니다.</div>
-            </div>
-            <div class="brief-grid">
-                <div class="brief-card">
-                    <div class="brief-label">해석된 탐색 키워드</div>
-                    <div class="brief-text">{token_html if token_html else '<span class="empty-text">추출된 키워드가 없습니다.</span>'}</div>
-                </div>
-                <div class="brief-card">
-                    <div class="brief-label">탐색 결과</div>
-                    <div class="brief-value">{html.escape(result_text)}</div>
-                    <div class="brief-text">{html.escape(result_sub)}</div>
-                </div>
-                <div class="brief-card">
-                    <div class="brief-label">연관 주제</div>
-                    <div class="brief-text">{related_html if related_html else '상세 결과가 쌓이면 연관 직무·전공 흐름을 함께 보여줍니다.'}</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-
-def render_pre_search_state() -> None:
-    render_html(
-        """
-        <div class="search-idle">
-            <div class="search-idle-title">AI 탐색어를 입력하면 직업 후보를 정리해 보여드립니다</div>
-            <div class="search-idle-text">
-                아직 탐색이 시작되지 않아 결과 목록은 표시하지 않고 있습니다. 위 입력창에 관심 있는 직업, 일의 성격, 원하는 분위기를 문장처럼 입력해 보세요.
-            </div>
-        </div>
-        """
-    )
-
-
-def render_ai_search_animation(query: str) -> None:
-    stages = [
-        ("탐색 의도를 해석하고 있습니다", "입력한 문장을 직업명, 관심사, 업무 성격, 연관 키워드로 분해하고 있습니다."),
-        ("임베딩과 직업 데이터를 연결하고 있습니다", "직무 소개, 적성, 유사 직무, 전공 정보와 사전 생성된 의미 벡터를 함께 읽어 관련성이 높은 후보를 좁히고 있습니다."),
-        ("결과를 큐레이션하고 있습니다", "가독성이 좋은 순서로 후보를 정렬하고, 바로 읽을 수 있는 탐색 브리핑을 준비하고 있습니다."),
-    ]
-
-    placeholder = st.empty()
-
-    for idx, (title, desc) in enumerate(stages, start=1):
-        progress = int((idx / len(stages)) * 100)
-        placeholder.markdown(
-            textwrap.dedent(
-                f"""
-                <div class="ai-loading-shell">
-                    <div class="ai-loading-top">
-                        <div>
-                            <div class="section-kicker">AI Search Running</div>
-                            <div class="ai-loading-title">AI가 탐색을 진행하고 있습니다</div>
-                            <div class="ai-loading-sub">탐색어 <strong>{html.escape(query)}</strong> 를 바탕으로 관련 직업을 정교하게 선별하는 중입니다.</div>
-                        </div>
-                        <div class="ai-badge"><span class="ai-dot"></span>분석 중</div>
-                    </div>
-                    <div class="ai-stage-box">
-                        <div class="ai-stage-label">STEP {idx}</div>
-                        <div class="ai-stage-title">{html.escape(title)}</div>
-                        <div class="ai-stage-desc">{html.escape(desc)}</div>
-                        <div class="ai-progress">
-                            <div class="ai-progress-bar" style="width:{progress}%"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-grid">
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line"></div>
-                            <div class="skeleton-line mid"></div>
-                            <div class="skeleton-pill-row">
-                                <div class="skeleton-pill"></div>
-                                <div class="skeleton-pill"></div>
-                                <div class="skeleton-pill"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line"></div>
-                            <div class="skeleton-line mid"></div>
-                            <div class="skeleton-pill-row">
-                                <div class="skeleton-pill"></div>
-                                <div class="skeleton-pill"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line"></div>
-                            <div class="skeleton-line mid"></div>
-                            <div class="skeleton-pill-row">
-                                <div class="skeleton-pill"></div>
-                                <div class="skeleton-pill"></div>
-                                <div class="skeleton-pill"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """
-            ),
-            unsafe_allow_html=True,
-        )
-        time.sleep(0.6 if idx < len(stages) else 0.5)
-
-    placeholder.empty()
-
-
-def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
-    tags = row.get("topic_tags_list", [])[:3]
-    if not tags:
-        tags = row.get("similar_job_list", [])[:3]
-    if not tags:
-        tags = row.get("display_keywords_list", [])[:3]
-    if not tags:
-        tags = row.get("major_list", [])[:3]
-    tags_html = "".join([f'<span class="tag-chip">{html.escape(tag)}</span>' for tag in tags])
-
-    salary_label = "정보 없음"
-    if row.get("salary_amount") is not None and not pd.isna(row.get("salary_amount")):
-        salary_label = f"{int(row['salary_amount']):,}만원"
-
-    summary = shorten_text(row.get("summary", ""), 92)
-    if not summary:
-        summary = "직업 요약 정보가 준비되지 않았습니다."
-
-    render_html(
-        f"""
-        <div class="result-card-wrap" style="animation-delay:{delay_ms}ms;">
-            <div class="result-card">
-                <div class="job-title">{html.escape(str(row.get('job', '')))}</div>
-                <div class="job-summary">{html.escape(summary)}</div>
-                <div class="tag-row">{tags_html if tags_html else '<span class="tag-chip">연관 태그 없음</span>'}</div>
-                <div class="metric-row">
-                    <div class="mini-metric">
-                        <div class="mini-label">임금 수준</div>
-                        <div class="mini-value">{html.escape(salary_label)} · {html.escape(str(row.get('salary_bucket', '정보 없음')))}</div>
-                    </div>
-                    <div class="mini-metric">
-                        <div class="mini-label">고용 전망</div>
-                        <div class="mini-value">{html.escape(str(row.get('employment_status', '보통')))}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-
-def render_profile_section(detail: pd.Series) -> None:
-    summary_lines = split_lines(detail.get("summary", ""))
-    if not summary_lines:
-        summary_lines = [clean_sentence(detail.get("summary", ""))]
-    summary_html = "<ul class='bullet-list'>" + "".join([
-        f"<li>{html.escape(line)}</li>" for line in summary_lines if line
-    ]) + "</ul>"
-
-    render_html(
-        """
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">Job Profile</div>
-                    <div class="section-title">직무 프로필</div>
-                    <div class="section-sub">직업의 핵심 역할과 특징을 문장 단위로 정리했습니다.</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-    col1, col2 = st.columns([1.2, 0.8], gap="large")
-    with col1:
-        render_html(
-            f"""
-            <div class="profile-box">
-                <div class="section-title" style="font-size:26px; margin-bottom:12px;">{html.escape(str(detail.get('job', '')))}</div>
-                <div class="profile-summary">{summary_html}</div>
-            </div>
-            """
-        )
-    with col2:
-        similar_jobs = detail.get("similar_job_list", [])[:8]
-        if similar_jobs:
-            cards = "".join(
-                [
-                    f'<div class="similar-job-item"><span class="similar-job-bullet"></span><span>{html.escape(item)}</span></div>'
-                    for item in similar_jobs
-                ]
-            )
-            similar_body = f'<div class="similar-job-grid">{cards}</div>'
-        else:
-            similar_body = '<div class="empty-text">등록된 유사 직업 정보가 없습니다.</div>'
-        render_html(
-            f"""
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">유사 직업</div>
-                {similar_body}
-            </div>
-            """
-        )
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-        majors = detail.get("major_list", [])[:8]
-        major_html = "".join([f'<span class="pill">{html.escape(item)}</span>' for item in majors]) if majors else '<div class="empty-text">등록된 관련 전공 정보가 없습니다.</div>'
-        render_html(
-            f"""
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">관련 전공</div>
-                <div class="pill-wrap">{major_html}</div>
-            </div>
-            """
-        )
-
-
-def get_roadmap_steps(detail: pd.Series) -> list[dict[str, str]]:
-    summary_lines = split_lines(detail.get("summary", ""))
-    prepare_lines = split_lines(detail.get("prepareway", ""))
-    training_lines = split_lines(detail.get("training", ""))
-    empway_lines = split_lines(detail.get("empway", ""))
-
-    fallback_text = {
-        "직무 이해": summary_lines[0] if summary_lines else "직무 개요와 핵심 역할을 먼저 이해합니다.",
-        "진입 준비": prepare_lines[0] if prepare_lines else "진입을 위한 학력, 교과 이수, 자격 요건을 확인합니다.",
-        "훈련·실무": training_lines[0] if training_lines else "현장 훈련 또는 실무 적응 과정을 거칩니다.",
-        "확장 경로": empway_lines[0] if empway_lines else "채용·배치·경력 확장 경로를 점검합니다.",
+def collect_prefixed_columns(columns: List[str], prefixes: List[str]) -> List[str]:
+    out: List[str] = []
+    prefix_keys = [normalize_key(p) for p in prefixes]
+    for col in columns:
+        key = normalize_key(col)
+        if any(key.startswith(p) for p in prefix_keys):
+            out.append(col)
+    return out
+
+
+def build_embedding_key(jobdic_seq: Any, job: Any) -> str:
+    seq = normalize_text(jobdic_seq)
+    if seq:
+        return f"id::{seq}"
+    return f"job::{normalize_key(job)}"
+
+
+def cosine_similarity_matrix(vector: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    denom = np.linalg.norm(vector)
+    if denom == 0:
+        return np.zeros(matrix.shape[0], dtype=float)
+    matrix_norm = np.linalg.norm(matrix, axis=1)
+    matrix_norm = np.where(matrix_norm == 0, 1e-12, matrix_norm)
+    return np.dot(matrix, vector) / (matrix_norm * denom)
+
+
+# =========================================================
+# 데이터 로드
+# =========================================================
+@st.cache_data(show_spinner=False)
+def load_dataframe(data_path: Path) -> pd.DataFrame:
+    if not data_path.exists():
+        raise FileNotFoundError(f"데이터 파일을 찾을 수 없습니다: {data_path}")
+    df = pd.read_excel(data_path)
+    df.columns = [str(c).strip() for c in df.columns]
+    return df
+
+
+@st.cache_resource(show_spinner=False)
+def load_embedding_assets() -> Dict[str, Any]:
+    assets: Dict[str, Any] = {
+        "enabled": False,
+        "meta": None,
+        "matrix": None,
+        "config": {},
+        "error": None,
+        "encoder": None,
     }
 
-    return [
-        {"no": "1", "title": "직무 이해", "text": fallback_text["직무 이해"]},
-        {"no": "2", "title": "진입 준비", "text": fallback_text["진입 준비"]},
-        {"no": "3", "title": "훈련·실무", "text": fallback_text["훈련·실무"]},
-        {"no": "4", "title": "확장 경로", "text": fallback_text["확장 경로"]},
-    ]
-
-
-def render_roadmap_section(detail: pd.Series) -> None:
-    render_html(
-        """
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">How To Be</div>
-                    <div class="section-title">로드맵</div>
-                    <div class="section-sub">진입부터 실무 적응, 이후 확장까지의 흐름을 단계형으로 정리했습니다.</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-    steps = get_roadmap_steps(detail)
-    cols = st.columns(4, gap="medium")
-    for col, step in zip(cols, steps):
-        with col:
-            render_html(
-                f"""
-                <div class="timeline-card">
-                    <div class="timeline-no">{html.escape(step['no'])}</div>
-                    <div class="timeline-title">{html.escape(step['title'])}</div>
-                    <div class="timeline-text">{html.escape(clean_sentence(step['text']))}</div>
-                </div>
-                """
-            )
-
-
-def trim_phrase_edges(phrase: str) -> str:
-    phrase = normalize_whitespace(phrase)
-    phrase = re.sub(r"^[\-•·▪■]\s*", "", phrase)
-    phrase = re.sub(r"^(또|그리고|또한|즉|예를 들어)\s+", "", phrase)
-    phrase = re.sub(r"^(?:와|과|및)\s+", "", phrase)
-    phrase = re.sub(r"^(이 직업은|해당 직무는|해당 직업은|[가-힣A-Za-z0-9·]+는|[가-힣A-Za-z0-9·]+은|[가-힣A-Za-z0-9·]+이|[가-힣A-Za-z0-9·]+가)\s+", "", phrase)
-    phrase = re.sub(r"\s*(이|가|은|는|을|를)\s*(필요하다|필요하며|요구된다|요구되며|있어야 한다|있어야 하며|중요하다|유리하다|적합하다).*$", "", phrase)
-    phrase = re.sub(r"\s*(등의|등)\s*$", "", phrase)
-    phrase = re.sub(r"\s+", " ", phrase).strip(" ,.;:-")
-    return phrase
-
-
-def extract_keywords_from_text(text: str, limit: int = 14) -> list[str]:
-    raw = normalize_whitespace(text)
-    if not raw:
-        return []
-
-    stopwords = KOREAN_STOPWORDS | {
-        "있다", "필요", "요구", "된다", "수준", "능력", "업무", "사람", "위한", "수행", "직업",
-        "학생", "교육", "관련", "통해", "평가", "준비", "훈련", "현장", "취득", "과정", "정도",
-        "사람들에게", "사람에게", "적합하며", "유리하다", "필요하다", "필요하며", "요구된다", "요구되며",
-        "가진", "가지는", "가지고", "있어야", "있으며", "많으므로", "그러므로", "때문에", "전반적인",
-    }
-
-    phrase_endings = [
-        "의사소통 능력", "글쓰기 능력", "문제 해결 능력", "논리적 사고", "분석적 사고",
-        "응용능력", "자료처리능력", "의사소통능력", "언어전달능력", "문제해결능력", "사무능력",
-        "활용능력", "사고능력", "통제력", "리더십", "판단력", "분석력", "사고력", "책임감",
-        "사명의식", "창의력", "집중력", "인내심", "협동심", "대인관계", "자기통제력", "사회성",
-        "정직성", "신뢰성", "꼼꼼함", "윤리의식", "응용력", "열정", "애정", "혁신", "성취",
-        "끈기", "체력", "역량", "지식", "능력",
-    ]
-    phrase_endings = sorted(phrase_endings, key=len, reverse=True)
-    phrase_pattern = r"([가-힣A-Za-z·/ ]{1,28}?(?:" + "|".join(re.escape(x) for x in phrase_endings) + r"))"
-
-    candidates = []
-    fragments = []
-    for line in split_lines(raw):
-        parts = re.split(r",|;|/|·", line)
-        fragments.extend([normalize_whitespace(part) for part in parts if normalize_whitespace(part)])
-
-    for frag in fragments:
-        matches = [m.group(1) for m in re.finditer(phrase_pattern, frag)]
-        if matches:
-            candidates.extend(matches)
-        else:
-            frag = trim_phrase_edges(frag)
-            if 2 <= len(frag) <= 14 and " " not in frag:
-                candidates.append(frag)
-
-    scored = []
-    seen = set()
-    for phrase in candidates:
-        phrase = trim_phrase_edges(phrase)
-        if not phrase:
-            continue
-        if phrase.lower() in stopwords:
-            continue
-        if len(phrase) < 2 or len(phrase) > 22:
-            continue
-        if phrase.startswith(("과 ", "와 ", "및 ")):
-            continue
-
-        score = 0.0
-        if " " in phrase:
-            score += 5.0
-        if any(phrase.endswith(end) for end in phrase_endings):
-            score += 4.0
-        if 4 <= len(phrase) <= 14:
-            score += 3.0
-        elif len(phrase) <= 18:
-            score += 1.5
-        if any(marker in phrase for marker in ["로서", "때문", "이므로", "많으므로", "사람", "업무"]):
-            score -= 3.0
-        if phrase in {"교육", "학생", "직무", "사람", "업무"}:
-            score -= 5.0
-
-        key = phrase.lower()
-        if key in seen:
-            continue
-        scored.append((score, phrase))
-        seen.add(key)
-
-    scored.sort(key=lambda x: (-x[0], len(x[1])))
-
-    selected = []
-    for _, phrase in scored:
-        if any(phrase != kept and phrase in kept for kept in selected):
-            continue
-        selected.append(phrase)
-        if len(selected) >= limit:
-            break
-
-    if not selected:
-        tokens = re.findall(r"[A-Za-z가-힣]{2,20}", raw.lower())
-        fallback = []
-        for token in tokens:
-            if token in stopwords:
-                continue
-            if token not in fallback:
-                fallback.append(token)
-            if len(fallback) >= limit:
-                break
-        return fallback
-
-    return selected
-
-
-def render_capability_section(detail: pd.Series) -> None:
-    aptitude_keywords = detail.get("display_keywords_list", [])[:10]
-    if not aptitude_keywords:
-        aptitude_keywords = extract_keywords_from_text(str(detail.get("aptitude", "")), limit=12)
-    if not aptitude_keywords:
-        aptitude_keywords = extract_keywords_from_text(str(detail.get("summary", "")), limit=12)
-
-    keyword_html = "".join([f'<span class="pill">#{html.escape(word)}</span>' for word in aptitude_keywords])
-    certs = detail.get("certification_list", [])
-    cert_html = "<ul class='bullet-list'>" + "".join([f"<li>{html.escape(item)}</li>" for item in certs]) + "</ul>" if certs else "<div class='empty-text'>등록된 자격 정보가 없습니다.</div>"
-
-    render_html(
-        """
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">Competency & Qualification</div>
-                    <div class="section-title">역량 및 자격</div>
-                    <div class="section-sub">사전 생성된 AI 키워드와 직무 원문을 함께 사용해 핵심 적성과 준비 정보를 정리했습니다.</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-    col1, col2 = st.columns([1, 1], gap="large")
-    with col1:
-        render_html(
-            f"""
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">핵심 적성 키워드</div>
-                <div class="pill-wrap">{keyword_html if keyword_html else '<div class="empty-text">추출 가능한 키워드가 없습니다.</div>'}</div>
-            </div>
-            """
-        )
-        aptitude_lines = split_lines(detail.get("aptitude", ""))
-        if aptitude_lines:
-            render_html(
-                f"""
-                <div class="soft-card" style="margin-top:16px;">
-                    <div class="section-title" style="font-size:18px; margin-bottom:10px;">적성 상세</div>
-                    <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in aptitude_lines])}</ul>
-                </div>
-                """
-            )
-    with col2:
-        render_html(
-            f"""
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">관련 자격</div>
-                {cert_html}
-            </div>
-            """
-        )
-        contacts = detail.get("contact_list_all", [])
-        contact_html = "<ul class='bullet-list'>" + "".join([f"<li>{html.escape(item)}</li>" for item in contacts]) + "</ul>" if contacts else "<div class='empty-text'>추가 링크/연락처 정보가 없습니다.</div>"
-        render_html(
-            f"""
-            <div class="soft-card" style="margin-top:16px;">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">추가 정보</div>
-                {contact_html}
-            </div>
-            """
-        )
-
-
-def render_outlook_text_panel(title: str, raw_text, empty_message: str) -> None:
-    summary_points = summarize_long_text(raw_text, max_points=4, max_chars=118)
-    full_html = format_sentences_as_paragraphs(raw_text)
-
-    if not summary_points and not full_html:
-        render_html(f"<div class='outlook-card'><div class='empty-text'>{html.escape(empty_message)}</div></div>")
-        return
-
-    summary_html = "".join([f"<li>{html.escape(point)}</li>" for point in summary_points]) if summary_points else "<li>요약 가능한 핵심 문장이 충분하지 않습니다.</li>"
-
-    render_html(
-        f"""
-        <div class="outlook-card">
-            <div class="outlook-summary">
-                <div class="outlook-summary-title">한눈에 보기</div>
-                <ul class="insight-list">{summary_html}</ul>
-            </div>
-        </div>
-        """
-    )
-
-    with st.expander(f"{title} 세부 설명 보기", expanded=False):
-        if full_html:
-            render_html(f"<div class='outlook-body'>{full_html}</div>")
-        else:
-            st.info(empty_message)
-
-
-def render_market_section(detail: pd.Series) -> None:
-    salary_amount = extract_salary_amount(detail.get("salery", ""))
-    salary_bucket = detail.get("salary_bucket", "정보 없음")
-    employment_status = detail.get("employment_status", "보통")
-
-    render_html(
-        """
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">Market Insight</div>
-                    <div class="section-title">시장 지표</div>
-                    <div class="section-sub">임금과 전망 정보를 한눈에 읽을 수 있도록 요약했습니다.</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-    col1, col2 = st.columns([0.9, 1.1], gap="large")
-    with col1:
-        render_html(
-            f"""
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:12px;">핵심 지표 요약</div>
-                <div class="metric-row" style="grid-template-columns:1fr; gap:12px;">
-                    <div class="mini-metric">
-                        <div class="mini-label">임금 수준</div>
-                        <div class="mini-value">{html.escape(f'{int(salary_amount):,}만원' if salary_amount is not None else '정보 없음')}</div>
-                    </div>
-                    <div class="mini-metric">
-                        <div class="mini-label">임금 필터 구간</div>
-                        <div class="mini-value">{html.escape(str(salary_bucket))}</div>
-                    </div>
-                    <div class="mini-metric">
-                        <div class="mini-label">고용 전망</div>
-                        <div class="mini-value">{html.escape(str(employment_status))}</div>
-                    </div>
-                </div>
-            </div>
-            """
-        )
-        gauge = build_salary_gauge(salary_amount)
-        if gauge is not None:
-            st.plotly_chart(gauge, use_container_width=True, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
-    with col2:
-        tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
-        with tab1:
-            render_outlook_text_panel(
-                title="고용전망",
-                raw_text=detail.get("employment", ""),
-                empty_message="고용전망 설명이 없습니다.",
-            )
-        with tab2:
-            render_outlook_text_panel(
-                title="발전가능성",
-                raw_text=detail.get("job_possibility", ""),
-                empty_message="발전가능성 설명이 없습니다.",
-            )
-
-
-def render_chart_section(detail: pd.Series) -> None:
-    render_html(
-        """
-        <div class="panel">
-            <div class="panel-head">
-                <div>
-                    <div class="section-kicker">PCNT Analytics</div>
-                    <div class="section-title">데이터 인사이트</div>
-                    <div class="section-sub">관심도 분포를 성별과 연령대 기준으로 시각화했습니다.</div>
-                </div>
-            </div>
-        </div>
-        """
-    )
-
-    gender_fig = build_gender_chart(detail)
-    age_fig = build_age_chart(detail)
-
-    col1, col2 = st.columns(2, gap="large")
-    with col1:
-        render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>성별 관심도 비중</div></div>")
-        if gender_fig is not None:
-            st.plotly_chart(gender_fig, use_container_width=True, key=f"gender_chart_{detail.get('jobdicSeq', detail.name)}")
-        else:
-            st.info("성별 PCNT 데이터가 없습니다.")
-    with col2:
-        render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>연령대별 선호도</div></div>")
-        if age_fig is not None:
-            st.plotly_chart(age_fig, use_container_width=True, key=f"age_chart_{detail.get('jobdicSeq', detail.name)}")
-        else:
-            st.info("연령대 PCNT 데이터가 없습니다.")
-
-
-def render_detail_page(detail: pd.Series) -> None:
-    job_name = str(detail.get("job", ""))
-    render_html(
-        f"""
-        <div class="hero" style="margin-bottom:18px;">
-            <div class="hero-kicker">Detail Page</div>
-            <div class="hero-title">{html.escape(job_name)}</div>
-            <div class="hero-sub">직무 프로필, 로드맵, 역량 및 자격, 시장 지표, PCNT 차트를 한 화면에서 확인할 수 있습니다.</div>
-        </div>
-        """
-    )
-
-    top_col1, top_col2 = st.columns([0.18, 0.82])
-    with top_col1:
-        if st.button("← 목록으로", use_container_width=True):
-            st.session_state.page = "main"
-            rerun_app()
-    with top_col2:
-        st.caption("상세 분석 페이지")
-
-    render_profile_section(detail)
-    render_roadmap_section(detail)
-    render_capability_section(detail)
-    render_market_section(detail)
-    render_chart_section(detail)
-
-
-# -----------------------------
-# Main page
-# -----------------------------
-def ensure_session_defaults() -> None:
-    st.session_state.setdefault("page", "main")
-    st.session_state.setdefault("selected_job", None)
-    st.session_state.setdefault("search_input", "")
-    st.session_state.setdefault("committed_query", "")
-    st.session_state.setdefault("trigger_ai_search", False)
-    st.session_state.setdefault("page_number", 1)
-
-
-def render_main_page(df: pd.DataFrame) -> None:
-    render_hero(df)
-
-    suggestion_queries = [
-        "컴퓨터와 관련된 일",
-        "사람을 돕는 직업",
-        "디자인 감각이 필요한 직업",
-        "안정적인 사무 직무",
-        "환경 문제를 다루는 일",
-        "학생을 가르치는 직업",
-    ]
-
-    major_options = sorted({major for majors in df["major_list"] for major in majors})
-
-    render_html(
-        """
-        <div class="ai-search-shell">
-            <div class="ai-search-head">
-                <div>
-                    <div class="section-kicker">AI Search Console</div>
-                    <div class="section-title">키워드보다 한 단계 더 자연스럽게 탐색해 보세요</div>
-                    <div class="section-sub">직업명, 관심사, 일의 성격, 원하는 분위기를 문장처럼 입력하면 관련 직업을 재정렬합니다.</div>
-                </div>
-                <div class="ai-badge"><span class="ai-dot"></span>탐색 준비 완료</div>
-            </div>
-        </div>
-        """
-    )
-
-    suggestion_cols = st.columns(3, gap="small")
-    for idx, suggestion in enumerate(suggestion_queries):
-        with suggestion_cols[idx % 3]:
-            if st.button(suggestion, key=f"suggestion_{idx}", use_container_width=True):
-                st.session_state.search_input = suggestion
-                st.session_state.committed_query = suggestion
-                st.session_state.trigger_ai_search = True
-                st.session_state.page_number = 1
-                rerun_app()
-
-    with st.form("ai_search_form", clear_on_submit=False):
-        st.text_input(
-            "AI 탐색어 입력",
-            placeholder="예: 데이터 분석을 하면서 사람과도 소통하는 직업",
-            key="search_input",
-        )
-        col_submit, col_reset = st.columns([0.82, 0.18], gap="small")
-        with col_submit:
-            submitted = st.form_submit_button("AI 탐색 시작", use_container_width=True, type="primary")
-        with col_reset:
-            reset_clicked = st.form_submit_button("초기화", use_container_width=True)
-
-    if submitted:
-        st.session_state.committed_query = st.session_state.get("search_input", "").strip()
-        st.session_state.trigger_ai_search = True
-        st.session_state.page_number = 1
-        rerun_app()
-
-    if reset_clicked:
-        st.session_state.search_input = ""
-        st.session_state.committed_query = ""
-        st.session_state.trigger_ai_search = False
-        st.session_state.page_number = 1
-        rerun_app()
-
-    col1, col2, col3 = st.columns([1.6, 0.9, 0.9], gap="medium")
-    with col1:
-        selected_majors = st.multiselect("전공별 필터", options=major_options, key="major_filter")
-    with col2:
-        salary_filters = st.multiselect("임금 수준 필터", options=["상", "중", "하", "정보 없음"], key="salary_filter")
-    with col3:
-        employment_filters = st.multiselect("고용전망 필터", options=["좋음", "보통", "주의"], key="employment_filter")
-
-    search_query = st.session_state.get("committed_query", "").strip()
-
-    if st.session_state.get("trigger_ai_search") and search_query:
-        render_ai_search_animation(search_query)
-        st.session_state.trigger_ai_search = False
-
-    if not search_query:
-        render_ai_search_brief("", df.iloc[0:0], df.iloc[0:0])
-        render_pre_search_state()
-        return
-
-    searched = search_jobs(df, search_query)
-    filtered = filter_results(searched, selected_majors, salary_filters, employment_filters)
-
-    render_ai_search_brief(search_query, searched, filtered)
-    render_search_panel(total_count=len(df), filtered_count=len(filtered), query=search_query)
-
-    if filtered.empty:
-        st.warning("조건에 맞는 직업이 없습니다. 탐색어를 조금 넓게 입력하거나 필터를 줄여 주세요.")
-        return
-
-    per_page = 12
-    page_count = max(1, (len(filtered) - 1) // per_page + 1)
-    current_page = st.number_input(
-        "페이지",
-        min_value=1,
-        max_value=page_count,
-        value=min(st.session_state.get("page_number", 1), page_count),
-        step=1,
-        key="page_number_input",
-    )
-    st.session_state.page_number = int(current_page)
-    start = (current_page - 1) * per_page
-    end = start + per_page
-    page_df = filtered.iloc[start:end].reset_index(drop=True)
-
-    cols = st.columns(3, gap="large")
-    for idx, (_, row) in enumerate(page_df.iterrows()):
-        with cols[idx % 3]:
-            render_result_card(row, delay_ms=idx * 120)
-            if st.button(f"상세 보기 · {row['job']}", key=f"open_{start+idx}", use_container_width=True):
-                st.session_state.selected_job = row["job"]
-                st.session_state.page = "detail"
-                rerun_app()
-
-
-# -----------------------------
-# Entrypoint
-# -----------------------------
-def main() -> None:
-    inject_css()
-    ensure_session_defaults()
-
-    if not DATA_FILE.exists():
-        st.error(f"기본 데이터 파일을 찾지 못했습니다: {DATA_FILE.name}")
-        st.stop()
+    if not (EMBED_META_FILE.exists() and EMBED_ARRAY_FILE.exists()):
+        return assets
 
     try:
-        df = load_data(DATA_FILE)
-    except Exception as exc:
-        st.error(f"데이터 로드 중 오류가 발생했습니다: {exc}")
+        meta = pd.read_excel(EMBED_META_FILE)
+        matrix = np.load(EMBED_ARRAY_FILE)
+        config = {}
+        if EMBED_CONFIG_FILE.exists():
+            config = json.loads(EMBED_CONFIG_FILE.read_text(encoding="utf-8"))
+
+        assets["meta"] = meta
+        assets["matrix"] = matrix.astype(float)
+        assets["config"] = config
+        assets["enabled"] = True
+
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            model_name = config.get("model_name", "intfloat/multilingual-e5-base")
+            assets["encoder"] = SentenceTransformer(model_name)
+        except Exception as exc:  # noqa: BLE001
+            assets["error"] = f"임베딩 인코더 로드 실패: {exc}"
+        return assets
+    except Exception as exc:  # noqa: BLE001
+        assets["error"] = str(exc)
+        assets["enabled"] = False
+        return assets
+
+
+def build_column_map(df: pd.DataFrame) -> Dict[str, Any]:
+    cols = list(df.columns)
+    job_col = pick_column(cols, ["job", "직업", "직업명", "occupation", "name"])
+    summary_col = pick_column(cols, ["summary", "요약", "한줄정의", "설명", "description"])
+    similar_col = pick_column(cols, ["similarJob", "similar_job", "유사직업"])
+    aptitude_col = pick_column(cols, ["aptitude", "흥미", "적성", "흥미적성"])
+    prepare_col = pick_column(cols, ["prepareway", "준비방법", "준비방안", "진입방법"])
+    training_col = pick_column(cols, ["training", "훈련", "교육훈련", "교육"])
+    salary_col = pick_column(cols, ["salery", "salary", "임금", "임금수준", "연봉"])
+    employment_col = pick_column(cols, ["employment", "고용전망", "전망", "취업전망"])
+    growth_col = pick_column(cols, ["job_possibility", "발전가능성", "발전전망", "경력전망"])
+    route_col = pick_column(cols, ["empway", "고용", "취업경로", "진출분야"])
+    cert_col = pick_column(cols, ["certification", "자격", "자격증"])
+    capacity_col = pick_column(cols, ["capacity_all", "capacity", "역량", "필요역량"])
+    task_col = pick_column(cols, ["capacity_1", "직무", "업무", "주요업무", "수행업무"])
+    jobdic_seq_col = pick_column(cols, ["jobdicSeq", "jobdicseq", "직업사전일련번호"])
+
+    male_cols = [c for c in cols if "남" in c or normalize_key(c).startswith("pcnt1") and "male" in normalize_key(c)]
+    female_cols = [c for c in cols if "여" in c or normalize_key(c).startswith("pcnt1") and "female" in normalize_key(c)]
+    age_cols = [c for c in cols if re.search(r"(10|20|30|40|50|60)대", str(c)) or re.search(r"age|연령", str(c), re.I)]
+
+    return {
+        "job": job_col,
+        "summary": summary_col,
+        "similar": similar_col,
+        "aptitude": aptitude_col,
+        "prepare": prepare_col,
+        "training": training_col,
+        "salary": salary_col,
+        "employment": employment_col,
+        "growth": growth_col,
+        "route": route_col,
+        "cert": cert_col,
+        "capacity": capacity_col,
+        "task": task_col,
+        "jobdic_seq": jobdic_seq_col,
+        "major_cols": collect_prefixed_columns(cols, ["major_"])
+        or [c for c in cols if "전공" in str(c)],
+        "contact_cols": collect_prefixed_columns(cols, ["contact_"])
+        or [c for c in cols if "기관" in str(c) or "출처" in str(c)],
+        "keyword_cols": collect_prefixed_columns(cols, ["keyword", "tag", "topic"]),
+        "male_cols": male_cols,
+        "female_cols": female_cols,
+        "age_cols": age_cols,
+    }
+
+
+def prepare_dataframe(df: pd.DataFrame, cmap: Dict[str, Any], embed_assets: Dict[str, Any]) -> pd.DataFrame:
+    out = df.copy()
+
+    job_col = cmap["job"]
+    summary_col = cmap["summary"]
+    jobdic_seq_col = cmap["jobdic_seq"]
+
+    out["_job"] = out[job_col].map(clean_name) if job_col else ""
+    out["_summary"] = out[summary_col].map(normalize_text) if summary_col else ""
+    out["_search_blob"] = out.apply(lambda row: build_search_blob(row, cmap), axis=1)
+    out["_embedding_key"] = out.apply(
+        lambda row: build_embedding_key(safe_get(row, jobdic_seq_col), safe_get(row, job_col)),
+        axis=1,
+    )
+
+    meta = embed_assets.get("meta")
+    if meta is not None and not meta.empty:
+        meta = meta.copy()
+        if "embedding_key" not in meta.columns:
+            seq_col = pick_column(list(meta.columns), ["jobdicSeq", "jobdicseq", "id"])
+            job_meta_col = pick_column(list(meta.columns), ["job", "직업", "name"])
+            meta["embedding_key"] = meta.apply(
+                lambda row: build_embedding_key(
+                    safe_get(row, seq_col),
+                    safe_get(row, job_meta_col),
+                ),
+                axis=1,
+            )
+        keep_cols = [c for c in meta.columns if c not in out.columns or c == "embedding_key"]
+        out = out.merge(meta[keep_cols], how="left", left_on="_embedding_key", right_on="embedding_key")
+
+    return out
+
+
+def build_search_blob(row: pd.Series, cmap: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    for key in [
+        "job",
+        "summary",
+        "similar",
+        "aptitude",
+        "prepare",
+        "training",
+        "salary",
+        "employment",
+        "growth",
+        "route",
+        "cert",
+        "capacity",
+        "task",
+    ]:
+        parts.append(normalize_text(safe_get(row, cmap.get(key))))
+
+    for col in cmap.get("major_cols", []) + cmap.get("contact_cols", []) + cmap.get("keyword_cols", []):
+        parts.append(normalize_text(safe_get(row, col)))
+
+    return "\n".join([p for p in parts if p]).strip()
+
+
+# =========================================================
+# 검색 로직
+# =========================================================
+STOPWORDS = {
+    "직업",
+    "관련",
+    "하는",
+    "하는일",
+    "업무",
+    "분야",
+    "정보",
+    "탐색",
+    "추천",
+    "알려줘",
+    "찾아줘",
+    "싶어",
+    "되는",
+    "되는법",
+    "직무",
+    "대한",
+    "에서",
+    "그리고",
+}
+
+
+def tokenize_query(query: str) -> List[str]:
+    tokens = re.findall(r"[0-9A-Za-z가-힣]+", query.lower())
+    tokens = [t for t in tokens if len(t) >= 2 and t not in STOPWORDS]
+    return tokens
+
+
+def fuzzy_ratio(a: str, b: str) -> float:
+    if not a or not b:
+        return 0.0
+    return SequenceMatcher(None, a, b).ratio()
+
+
+@st.cache_data(show_spinner=False)
+def search_jobs_cached(
+    query: str,
+    df: pd.DataFrame,
+    cmap: Dict[str, Any],
+    semantic_scores: Optional[np.ndarray],
+    top_n: int = TOP_N,
+) -> pd.DataFrame:
+    q = normalize_text(query)
+    q_norm = q.lower()
+    q_key = normalize_key(q)
+    tokens = tokenize_query(q)
+
+    if not q_key:
+        return df.iloc[0:0].copy()
+
+    records: List[Dict[str, Any]] = []
+    for idx, row in df.iterrows():
+        job = clean_name(row.get("_job", ""))
+        summary = normalize_text(row.get("_summary", ""))
+        blob = normalize_text(row.get("_search_blob", ""))
+        blob_lower = blob.lower()
+        job_key = normalize_key(job)
+
+        exact = 1.0 if q_key == job_key else 0.0
+        contains = 1.0 if q_norm in job.lower() else 0.0
+        fuzzy_name = fuzzy_ratio(q_norm, job.lower())
+        fuzzy_blob = fuzzy_ratio(q_norm, blob_lower[:600]) if blob_lower else 0.0
+
+        token_hits = sum(1 for token in tokens if token in blob_lower)
+        token_ratio = token_hits / max(len(tokens), 1)
+
+        prefix_bonus = 0.0
+        if tokens and job:
+            joined = " ".join(tokens)
+            if job.lower().startswith(joined):
+                prefix_bonus = 0.15
+            elif any(job.lower().startswith(t) for t in tokens):
+                prefix_bonus = 0.08
+
+        semantic = float(semantic_scores[idx]) if semantic_scores is not None and idx < len(semantic_scores) else 0.0
+        semantic_adj = max(0.0, semantic - SEMANTIC_THRESHOLD)
+
+        score = (
+            exact * 2.8
+            + contains * 1.6
+            + fuzzy_name * 1.4
+            + fuzzy_blob * 0.35
+            + token_ratio * 2.2
+            + prefix_bonus
+            + semantic_adj * 2.0
+        )
+
+        if score < 0.28 and token_hits == 0 and fuzzy_name < 0.45 and semantic < SEMANTIC_THRESHOLD:
+            continue
+
+        matched_terms = [token for token in tokens if token in blob_lower]
+        records.append(
+            {
+                "_idx": idx,
+                "_score": score,
+                "_semantic": semantic,
+                "_token_hits": token_hits,
+                "_matched_terms": matched_terms,
+            }
+        )
+
+    if not records:
+        return df.iloc[0:0].copy()
+
+    score_df = pd.DataFrame(records).sort_values(["_score", "_semantic", "_token_hits"], ascending=False)
+    top = score_df.head(top_n)
+    merged = df.loc[top["_idx"].tolist()].copy()
+    merged = merged.merge(top, left_index=True, right_on="_idx", how="left")
+    merged = merged.sort_values(["_score", "_semantic", "_token_hits"], ascending=False).reset_index(drop=True)
+    return merged
+
+
+def compute_semantic_scores(query: str, df: pd.DataFrame, embed_assets: Dict[str, Any]) -> Optional[np.ndarray]:
+    if not embed_assets.get("enabled"):
+        return None
+    encoder = embed_assets.get("encoder")
+    matrix = embed_assets.get("matrix")
+    if encoder is None or matrix is None:
+        return None
+
+    try:
+        query_vector = encoder.encode([query], normalize_embeddings=bool(embed_assets.get("config", {}).get("normalize_embeddings", True)))[0]
+        meta = embed_assets.get("meta")
+        if meta is None or meta.empty:
+            return None
+
+        sims_meta = cosine_similarity_matrix(np.asarray(query_vector, dtype=float), np.asarray(matrix, dtype=float))
+        sim_map = dict(zip(meta["embedding_key"].astype(str), sims_meta)) if "embedding_key" in meta.columns else {}
+        scores = df["_embedding_key"].map(lambda x: float(sim_map.get(str(x), 0.0))).to_numpy(dtype=float)
+        return scores
+    except Exception:
+        return None
+
+
+# =========================================================
+# 차트
+# =========================================================
+def style_matplotlib() -> None:
+    plt.rcParams["font.family"] = [
+        "Malgun Gothic",
+        "AppleGothic",
+        "NanumGothic",
+        "Noto Sans CJK KR",
+        "DejaVu Sans",
+    ]
+    plt.rcParams["axes.unicode_minus"] = False
+    plt.rcParams["figure.facecolor"] = "white"
+    plt.rcParams["axes.facecolor"] = "white"
+
+
+style_matplotlib()
+
+
+def get_salary_distribution(df: pd.DataFrame, cmap: Dict[str, Any]) -> List[float]:
+    salary_col = cmap.get("salary")
+    if not salary_col:
+        return []
+    vals = df[salary_col].map(parse_numeric).dropna().astype(float).tolist()
+    return vals
+
+
+@st.cache_data(show_spinner=False)
+def salary_quantiles(vals: List[float]) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    if not vals:
+        return None, None, None
+    arr = np.array(vals, dtype=float)
+    return float(np.quantile(arr, 0.33)), float(np.quantile(arr, 0.66)), float(np.quantile(arr, 0.95))
+
+
+def fig_gender_profile(male_pct: Optional[float], female_pct: Optional[float]):
+    fig, ax = plt.subplots(figsize=(7.2, 2.8), dpi=170)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(-0.5, 0.9)
+    ax.axis("off")
+
+    ax.text(0, 0.72, "성별 분포", fontsize=14, fontweight="bold", color="#173a66")
+    ax.text(0, 0.54, "해당 직업 종사자 비중", fontsize=10, color="#5f6f86")
+
+    bg = patches.FancyBboxPatch((0, -0.02), 100, 0.24, boxstyle="round,pad=0.01,rounding_size=0.12", linewidth=0, facecolor="#edf3fb")
+    ax.add_patch(bg)
+
+    male = 0 if male_pct is None else max(0, min(100, male_pct))
+    female = 100 - male if female_pct is None else max(0, min(100, female_pct))
+    total = male + female
+    if total > 0 and abs(total - 100) > 1:
+        male = male / total * 100
+        female = female / total * 100
+
+    left_seg = patches.FancyBboxPatch((0, -0.02), male, 0.24, boxstyle="round,pad=0.01,rounding_size=0.12", linewidth=0, facecolor="#2d6cdf")
+    ax.add_patch(left_seg)
+    ax.add_patch(patches.Rectangle((male, -0.02), female, 0.24, linewidth=0, facecolor="#9cc4ff"))
+    if female > 0:
+        right_round = patches.FancyBboxPatch((100 - female, -0.02), female, 0.24, boxstyle="round,pad=0.01,rounding_size=0.12", linewidth=0, facecolor="#9cc4ff")
+        ax.add_patch(right_round)
+
+    ax.text(max(male * 0.5, 5), 0.10, f"남성 {male:.1f}%", ha="center", va="center", color="white", fontsize=10, fontweight="bold")
+    ax.text(min(male + female * 0.5, 95), 0.10, f"여성 {female:.1f}%", ha="center", va="center", color="#173a66", fontsize=10, fontweight="bold")
+    return fig
+
+
+
+def extract_age_distribution(row: pd.Series, cmap: Dict[str, Any]) -> Dict[str, float]:
+    pairs: Dict[str, float] = {}
+    for col in cmap.get("age_cols", []):
+        label = str(col)
+        val = ratio_to_percent(row.get(col))
+        if val is None:
+            continue
+
+        match = re.search(r"(10|20|30|40|50|60)대", label)
+        if match:
+            pairs[match.group(1) + "대"] = val
+            continue
+        num = re.search(r"(10|20|30|40|50|60)", label)
+        if num:
+            pairs[num.group(1) + "대"] = val
+    return dict(sorted(pairs.items(), key=lambda x: int(re.findall(r"\d+", x[0])[0])))
+
+
+
+def fig_age_profile(age_dist: Dict[str, float]):
+    if not age_dist:
+        age_dist = {"정보 없음": 0}
+    labels = list(age_dist.keys())
+    values = list(age_dist.values())
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.2), dpi=170)
+    ax.set_facecolor("white")
+    y = np.arange(len(labels))
+    ax.barh(y, values, color="#dbeafe", height=0.5)
+    ax.barh(y, values, color="#4f8df5", height=0.5, alpha=0.95)
+
+    ax.set_title("연령대 분포", loc="left", fontsize=14, fontweight="bold", color="#173a66", pad=14)
+    ax.text(0.0, 1.02, "주요 종사 연령 구간", transform=ax.transAxes, fontsize=10, color="#5f6f86")
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=10, color="#31445f")
+    ax.set_xlim(0, max(max(values) * 1.18 if values else 10, 10))
+    ax.grid(axis="x", color="#e8eef7", linewidth=1)
+    ax.set_axisbelow(True)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(axis="x", colors="#6b7c94")
+    for yi, val in zip(y, values):
+        ax.text(val + max(ax.get_xlim()[1] * 0.015, 0.3), yi, f"{val:.1f}%", va="center", fontsize=10, color="#173a66", fontweight="bold")
+    return fig
+
+
+
+def fig_salary_gauge(current_value: Optional[float], q1: Optional[float], q2: Optional[float], q3: Optional[float]):
+    fig, ax = plt.subplots(figsize=(7.2, 3.0), dpi=170)
+    ax.axis("off")
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 1)
+
+    ax.text(0, 0.86, "임금 수준", fontsize=14, fontweight="bold", color="#173a66")
+    ax.text(0, 0.68, "전체 직업 분포 대비 대략적 위치", fontsize=10, color="#5f6f86")
+
+    bands = [
+        (0, 33.3, "하위권", "#dbeafe"),
+        (33.3, 66.6, "중간권", "#93c5fd"),
+        (66.6, 100, "상위권", "#2d6cdf"),
+    ]
+    for x0, x1, label, color in bands:
+        rect = patches.FancyBboxPatch((x0, 0.22), x1 - x0, 0.18, boxstyle="round,pad=0.01,rounding_size=0.1", linewidth=0, facecolor=color)
+        ax.add_patch(rect)
+        ax.text((x0 + x1) / 2, 0.31, label, ha="center", va="center", fontsize=10, fontweight="bold", color="#173a66" if x1 < 100 else "white")
+
+    if current_value is not None and all(v is not None for v in [q1, q2, q3]):
+        if current_value <= q1:
+            pos = (current_value / max(q1, 1e-9)) * 33.3
+        elif current_value <= q2:
+            pos = 33.3 + ((current_value - q1) / max(q2 - q1, 1e-9)) * 33.3
+        elif current_value <= q3:
+            pos = 66.6 + ((current_value - q2) / max(q3 - q2, 1e-9)) * 33.4
+        else:
+            pos = min(100, 90 + min((current_value - q3) / max(q3, 1e-9), 1) * 10)
+
+        triangle = patches.RegularPolygon((pos, 0.51), 3, radius=2.4, orientation=math.pi, color="#173a66")
+        ax.add_patch(triangle)
+        ax.text(pos, 0.60, format_money_krw_manwon(current_value), ha="center", va="bottom", fontsize=10, fontweight="bold", color="#173a66")
+    else:
+        ax.text(0, 0.52, "임금 정보가 충분하지 않아 상대 위치를 계산하지 못했습니다.", fontsize=10.2, color="#5f6f86")
+
+    return fig
+
+
+# =========================================================
+# UI 컴포넌트
+# =========================================================
+def render_hero() -> None:
+    st.markdown(
+        """
+        <div class="hero">
+          <div class="hero-grid">
+            <div>
+              <h1 class="hero-title">AI 직업 탐색 리포트</h1>
+              <p class="hero-sub">
+                사용자가 입력한 직업명, 관심 키워드, 전공/역량 단서를 바탕으로 유사 직업을 탐색하고,
+                직무 요약·준비 방법·자격·고용 전망까지 한 화면에서 정리해주는 탐색형 리포트입니다.
+              </p>
+              <div class="hero-tags">
+                <span class="hero-tag">직업명 직접 검색</span>
+                <span class="hero-tag">유사 직업 추천</span>
+                <span class="hero-tag">전공/역량 단서 매칭</span>
+                <span class="hero-tag">준비 경로 요약</span>
+              </div>
+            </div>
+            <div class="hero-card">
+              <div class="hero-card-kicker">AI Search Navigator</div>
+              <h3 class="hero-card-title">이렇게 입력하면 잘 찾습니다</h3>
+              <p class="hero-card-body">
+                예시: <b>데이터 분석가</b>, <b>GIS 전문가</b>, <b>공간정보</b>, <b>연구직</b>, <b>환경 + 데이터</b><br/>
+                직업명이 정확하지 않아도 관련 핵심어, 수행 업무, 전공 단서를 함께 입력하면 탐색 품질이 좋아집니다.
+              </p>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+
+def render_loading() -> None:
+    st.markdown(
+        """
+        <div class="loading-wrap">
+          <div class="loading-card">
+            <div class="loading-head">
+              <span class="loading-dot"></span>
+              <span>AI가 직업 데이터와 유사도를 종합 분석하고 있습니다.</span>
+            </div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+            <div class="foot-note">직업명, 설명, 전공, 역량, 준비 경로, 임베딩 유사도를 함께 반영해 결과를 구성합니다.</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+
+def render_empty_state() -> None:
+    st.markdown(
+        """
+        <div class="empty-box">
+          <div class="empty-emoji">🧭</div>
+          <h3 class="empty-title">탐색할 직업 또는 관심 키워드를 입력해 주세요</h3>
+          <p class="empty-sub">
+            좌측 상단 검색창에 직업명, 관심 분야, 전공, 기술 키워드를 입력한 뒤 <b>AI 탐색 시작</b>을 누르면
+            유사 직업 후보와 함께 상세 리포트가 순차적으로 나타납니다.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+
+def render_result_list(results: pd.DataFrame, cmap: Dict[str, Any]) -> None:
+    st.markdown('<div class="section-title">추천 직업 후보</div>', unsafe_allow_html=True)
+    rows = []
+    for i, (_, row) in enumerate(results.iterrows(), start=1):
+        score_pct = min(98, max(18, int(round(float(row.get("_score", 0)) * 22))))
+        title = clean_name(row.get("_job", "")) or "직업명 없음"
+        desc = short_text(row.get("_summary", "정보가 없습니다."), 120)
+        match_terms = row.get("_matched_terms", []) or []
+        chips = "".join(f'<span class="chip">#{html.escape(str(t))}</span>' for t in match_terms[:4])
+        rows.append(
+            f"""
+            <div class="result-card">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <span class="result-rank">{i}</span>
+                <p class="result-title">{html.escape(title)}</p>
+              </div>
+              <div class="score-row">
+                <div class="score-track"><div class="score-fill" style="width:{score_pct}%"></div></div>
+                <div class="score-value">적합도 {score_pct}</div>
+              </div>
+              <p class="result-desc">{html.escape(desc)}</p>
+              <div class="chip-row">{chips}</div>
+            </div>
+            """
+        )
+    st.markdown('<div class="result-list">' + "".join(rows) + "</div>", unsafe_allow_html=True)
+
+
+
+def render_content_block(title: str, items: List[str], empty_text: str = "정보가 없습니다.") -> None:
+    st.markdown(f'<div class="section-title">{html.escape(title)}</div>', unsafe_allow_html=True)
+    if not items:
+        st.markdown(f'<div class="content-item">{html.escape(empty_text)}</div>', unsafe_allow_html=True)
+        return
+    html_items = "".join(f'<div class="content-item">{html.escape(item)}</div>' for item in items)
+    st.markdown(f'<div class="content-list">{html_items}</div>', unsafe_allow_html=True)
+
+
+
+def collect_job_keywords(row: pd.Series, cmap: Dict[str, Any], limit: int = 8) -> List[str]:
+    chips: List[str] = []
+    for source in [cmap.get("similar"), cmap.get("aptitude"), cmap.get("capacity"), cmap.get("task")]:
+        chips.extend(split_lines(safe_get(row, source), max_items=4))
+    for col in cmap.get("keyword_cols", [])[:5]:
+        chips.extend(split_lines(safe_get(row, col), max_items=3))
+
+    uniq: List[str] = []
+    seen = set()
+    for chip in chips:
+        cleaned = re.sub(r"\s+", " ", chip).strip()
+        key = normalize_key(cleaned)
+        if len(cleaned) < 2 or key in seen:
+            continue
+        seen.add(key)
+        uniq.append(cleaned)
+        if len(uniq) >= limit:
+            break
+    return uniq
+
+
+
+def render_job_overview(row: pd.Series, full_df: pd.DataFrame, cmap: Dict[str, Any]) -> None:
+    title = clean_name(row.get("_job", "")) or "직업명 없음"
+    summary = normalize_text(row.get("_summary", "")) or "직업 요약 정보가 없습니다."
+    salary_value = parse_numeric(safe_get(row, cmap.get("salary")))
+    growth_text = short_text(safe_get(row, cmap.get("growth"), "정보 없음"), 60)
+    route_text = short_text(safe_get(row, cmap.get("route"), "정보 없음"), 60)
+    cert_text = short_text(safe_get(row, cmap.get("cert"), "정보 없음"), 60)
+
+    st.markdown(
+        f"""
+        <div class="panel panel-soft">
+          <div class="lead-title">{html.escape(title)}</div>
+          <p class="lead-summary">{html.escape(summary)}</p>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">임금 수준</div>
+              <div class="kpi-value">{html.escape(format_money_krw_manwon(salary_value))}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">발전 가능성</div>
+              <div class="kpi-value">{html.escape(growth_text)}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">주요 진출 경로</div>
+              <div class="kpi-value">{html.escape(route_text)}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">관련 자격</div>
+              <div class="kpi-value">{html.escape(cert_text)}</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    chips = collect_job_keywords(row, cmap)
+    if chips:
+        html_chips = "".join(f'<span class="chip">#{html.escape(c)}</span>' for c in chips)
+        st.markdown(
+            f'<div class="panel" style="padding:16px 18px 14px 18px;"><div class="section-title" style="margin-top:0;">핵심 키워드</div><div class="chip-row">{html_chips}</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    col1, col2 = st.columns(2, gap="large")
+
+    male_pct = None
+    female_pct = None
+    for col in cmap.get("male_cols", []):
+        male_pct = ratio_to_percent(row.get(col))
+        if male_pct is not None:
+            break
+    for col in cmap.get("female_cols", []):
+        female_pct = ratio_to_percent(row.get(col))
+        if female_pct is not None:
+            break
+
+    with col1:
+        st.pyplot(fig_gender_profile(male_pct, female_pct), use_container_width=True)
+
+    age_dist = extract_age_distribution(row, cmap)
+    with col2:
+        st.pyplot(fig_age_profile(age_dist), use_container_width=True)
+
+    salary_vals = get_salary_distribution(full_df, cmap)
+    q1, q2, q3 = salary_quantiles(salary_vals)
+    st.pyplot(fig_salary_gauge(salary_value, q1, q2, q3), use_container_width=True)
+
+
+
+def render_detail_sections(row: pd.Series, cmap: Dict[str, Any]) -> None:
+    task_items = split_lines(safe_get(row, cmap.get("task")), max_items=6)
+    capacity_items = split_lines(safe_get(row, cmap.get("capacity")), max_items=8)
+    aptitude_items = split_lines(safe_get(row, cmap.get("aptitude")), max_items=8)
+    prepare_items = split_lines(safe_get(row, cmap.get("prepare")), max_items=8)
+    training_items = split_lines(safe_get(row, cmap.get("training")), max_items=8)
+    cert_items = split_lines(safe_get(row, cmap.get("cert")), max_items=8)
+    route_items = split_lines(safe_get(row, cmap.get("route")), max_items=8)
+    employment_items = split_lines(safe_get(row, cmap.get("employment")), max_items=8)
+    growth_items = split_lines(safe_get(row, cmap.get("growth")), max_items=6)
+
+    major_items: List[str] = []
+    for col in cmap.get("major_cols", []):
+        major_items.extend(split_lines(safe_get(row, col), max_items=2))
+    major_items = list(dict.fromkeys(major_items))[:10]
+
+    contact_items: List[str] = []
+    for col in cmap.get("contact_cols", []):
+        contact_items.extend(split_lines(safe_get(row, col), max_items=2))
+    contact_items = list(dict.fromkeys(contact_items))[:10]
+
+    left_panel_html = "".join([
+        build_content_block_html("주요 수행 업무", task_items, "주요 수행 업무 정보가 없습니다."),
+        build_content_block_html("필요 역량", capacity_items, "필요 역량 정보가 없습니다."),
+        build_content_block_html("적성 · 흥미", aptitude_items, "적성/흥미 정보가 없습니다."),
+    ])
+    right_panel_html = "".join([
+        build_content_block_html("준비 방법", prepare_items, "준비 방법 정보가 없습니다."),
+        build_content_block_html("교육 · 훈련", training_items, "교육/훈련 정보가 없습니다."),
+        build_content_block_html("관련 자격", cert_items, "관련 자격 정보가 없습니다."),
+    ])
+    bottom_left_html = "".join([
+        build_content_block_html("진출 경로", route_items, "진출 경로 정보가 없습니다."),
+        build_content_block_html("고용 전망", employment_items, "고용 전망 정보가 없습니다."),
+        build_content_block_html("발전 가능성", growth_items, "발전 가능성 정보가 없습니다."),
+    ])
+    bottom_right_html = "".join([
+        build_content_block_html("관련 전공", major_items, "관련 전공 정보가 없습니다."),
+        build_content_block_html("참고 기관 · 출처", contact_items, "참고 기관/출처 정보가 없습니다."),
+    ])
+
+    c1, c2 = st.columns(2, gap="large")
+    with c1:
+        st.markdown(f'<div class="panel">{left_panel_html}</div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown(f'<div class="panel">{right_panel_html}</div>', unsafe_allow_html=True)
+
+    c3, c4 = st.columns(2, gap="large")
+    with c3:
+        st.markdown(f'<div class="panel">{bottom_left_html}</div>', unsafe_allow_html=True)
+    with c4:
+        st.markdown(f'<div class="panel">{bottom_right_html}</div>', unsafe_allow_html=True)
+
+
+# =========================================================
+# 메인
+# =========================================================
+def main() -> None:
+    inject_css()
+    render_hero()
+
+    try:
+        raw_df = load_dataframe(DATA_FILE)
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"데이터를 불러오지 못했습니다. {exc}")
         st.stop()
 
-    if st.session_state.page == "detail" and st.session_state.selected_job:
-        matched = df[df["job"] == st.session_state.selected_job]
-        if matched.empty:
-            st.warning("선택한 직업 정보를 찾을 수 없어 목록 화면으로 이동합니다.")
-            st.session_state.page = "main"
-            st.session_state.selected_job = None
-            rerun_app()
-            return
-        render_detail_page(matched.iloc[0])
-    else:
-        render_main_page(df)
+    embed_assets = load_embedding_assets()
+    cmap = build_column_map(raw_df)
+    df = prepare_dataframe(raw_df, cmap, embed_assets)
+
+    if not cmap.get("job"):
+        st.error("직업명 컬럼을 식별하지 못했습니다. 데이터 컬럼명을 확인해 주세요.")
+        st.stop()
+
+    with st.container():
+        st.markdown('<div class="toolbar-title">탐색 입력</div>', unsafe_allow_html=True)
+        search_col, btn_col = st.columns([6.5, 1.5], gap="small")
+        with search_col:
+            query = st.text_input(
+                "직업명 또는 관심 키워드",
+                value=st.session_state.get("query", ""),
+                placeholder="예: GIS 전문가, 데이터 분석가, 환경 + 연구, 상담, 디자인",
+                label_visibility="collapsed",
+            )
+        with btn_col:
+            do_search = st.button("AI 탐색 시작", use_container_width=True)
+
+        st.markdown(
+            """
+            <div class="hint-row">
+                <span class="hint-chip">예시: 데이터 분석가</span>
+                <span class="hint-chip">예시: 공간정보</span>
+                <span class="hint-chip">예시: 연구직</span>
+                <span class="hint-chip">예시: 환경 + 데이터</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    if do_search:
+        st.session_state["query"] = query
+        st.session_state["searched"] = True
+        st.session_state["just_searched"] = True
+
+    searched = st.session_state.get("searched", False)
+    current_query = st.session_state.get("query", query).strip()
+
+    if not searched or not current_query:
+        render_empty_state()
+        return
+
+    if st.session_state.get("just_searched", False):
+        render_loading()
+        time.sleep(0.8)
+        st.session_state["just_searched"] = False
+
+    semantic_scores = compute_semantic_scores(current_query, df, embed_assets)
+    results = search_jobs_cached(current_query, df, cmap, semantic_scores, TOP_N)
+
+    if results.empty:
+        st.markdown(
+            """
+            <div class="empty-box">
+              <div class="empty-emoji">🔎</div>
+              <h3 class="empty-title">일치하는 직업을 찾지 못했습니다</h3>
+              <p class="empty-sub">
+                직업명 전체를 쓰지 않아도 됩니다. 전공, 수행 업무, 도메인 키워드처럼 더 넓은 단서로 다시 검색해 보세요.
+              </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    left, right = st.columns([0.94, 1.66], gap="large")
+    options = results["_job"].fillna("").astype(str).tolist()
+    if st.session_state.get("selected_job_name") not in options:
+        st.session_state["selected_job_name"] = options[0]
+
+    with left:
+        st.markdown(
+            f"""
+            <div class="meta-grid">
+              <div class="mini-card">
+                <div class="meta-label">검색어</div>
+                <div class="meta-value">{html.escape(current_query)}</div>
+              </div>
+              <div class="mini-card">
+                <div class="meta-label">추천 결과</div>
+                <div class="meta-value">{len(results)}건</div>
+              </div>
+              <div class="mini-card">
+                <div class="meta-label">임베딩 검색</div>
+                <div class="meta-value">{'활성' if embed_assets.get('encoder') is not None else '텍스트 기반'}</div>
+              </div>
+              <div class="mini-card">
+                <div class="meta-label">데이터 수</div>
+                <div class="meta-value">{len(df):,}건</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        selected_job_name = st.selectbox(
+            "상세 보기 직업",
+            options=options,
+            index=options.index(st.session_state.get("selected_job_name", options[0])),
+        )
+        st.session_state["selected_job_name"] = selected_job_name
+        render_result_list(results, cmap)
+
+    selected_rows = results[results["_job"].astype(str) == st.session_state["selected_job_name"]]
+    selected = selected_rows.iloc[0] if not selected_rows.empty else results.iloc[0]
+    with right:
+        render_job_overview(selected, df, cmap)
+        render_detail_sections(selected, cmap)
 
 
 if __name__ == "__main__":
