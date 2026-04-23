@@ -9,6 +9,7 @@ import json
 import textwrap
 from collections import Counter
 from difflib import SequenceMatcher
+from math import ceil, cos, pi, radians, sin
 
 import numpy as np
 import pandas as pd
@@ -805,86 +806,238 @@ def apply_fixed_plotly_theme(fig: go.Figure) -> go.Figure:
 # -----------------------------
 # Visualization helpers
 # -----------------------------
-def build_gender_chart(detail: pd.Series):
-    gender_rows = [
-        ("남성", combine_pcnt_value(detail.get("PCNT1_남자"), detail.get("PCNT2_남자"))),
-        ("여성", combine_pcnt_value(detail.get("PCNT1_여자"), detail.get("PCNT2_여자"))),
-    ]
-    chart_df = pd.DataFrame(gender_rows, columns=["구분", "값"])
-    chart_df = chart_df.dropna()
-    if chart_df.empty or chart_df["값"].sum() == 0:
-        return None
-
-    fig = px.pie(chart_df, values="값", names="구분", hole=0.45)
-    fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
-        legend_title_text="",
-        height=320,
-    )
-    fig.update_traces(
-        textposition="inside",
-        texttemplate="%{label}<br>%{value:.1f}%",
-        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
-    )
-    return apply_fixed_plotly_theme(fig)
+def _svg_point(cx: float, cy: float, r: float, degree: float) -> tuple[float, float]:
+    rad = radians(degree)
+    return cx + r * cos(rad), cy + r * sin(rad)
 
 
-def build_age_chart(detail: pd.Series):
-    age_rows = []
-    for label in ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]:
-        value = combine_pcnt_value(detail.get(f"PCNT1_{label}"), detail.get(f"PCNT2_{label}"))
-        if value is not None:
-            age_rows.append({"연령대": label, "값": value})
-
-    chart_df = pd.DataFrame(age_rows)
-    if chart_df.empty:
-        return None
-
-    fig = px.bar(chart_df, x="연령대", y="값", text="값")
-    fig.update_traces(
-        texttemplate="%{text:.1f}%",
-        textposition="outside",
-        hovertemplate="%{x}: %{y:.1f}%<extra></extra>",
-    )
-    fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
-        showlegend=False,
-        xaxis_title="",
-        yaxis_title="관심 비율(%)",
-        height=320,
-    )
-    return apply_fixed_plotly_theme(fig)
+def _svg_poly_arc(cx: float, cy: float, r: float, start_deg: float, end_deg: float, steps: int = 60) -> str:
+    if steps < 2:
+        steps = 2
+    pts = []
+    for i in range(steps):
+        deg = start_deg + (end_deg - start_deg) * i / (steps - 1)
+        x, y = _svg_point(cx, cy, r, deg)
+        pts.append(f"{x:.2f},{y:.2f}")
+    return "M " + " L ".join(pts)
 
 
-def build_salary_gauge(amount: float | None):
-    if amount is None:
-        return None
-
-    max_value = max(5000, amount * 1.35)
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=amount,
-            number={"suffix": "만원"},
-            gauge={
-                "axis": {"range": [0, max_value]},
-                "bar": {"thickness": 0.45},
-                "steps": [
-                    {"range": [0, max_value * 0.33], "color": "#dbeafe"},
-                    {"range": [max_value * 0.33, max_value * 0.66], "color": "#bfdbfe"},
-                    {"range": [max_value * 0.66, max_value], "color": "#93c5fd"},
-                ],
-            },
-            title={"text": "평균 임금 수준"},
+def _build_legend_html(items: list[tuple[str, float, str]]) -> str:
+    chips = []
+    for label, value, color in items:
+        chips.append(
+            f'''<div class="viz-legend-item">
+                    <span class="viz-swatch" style="background:{color};"></span>
+                    <span class="viz-legend-label">{html.escape(label)}</span>
+                    <strong class="viz-legend-value">{value:.1f}%</strong>
+                </div>'''
         )
-    )
-    fig.update_layout(height=260, margin=dict(l=20, r=20, t=50, b=10))
-    return apply_fixed_plotly_theme(fig)
+    return '<div class="viz-legend">' + ''.join(chips) + '</div>'
 
 
-# -----------------------------
-# UI styling
-# -----------------------------
+def build_gender_chart(detail: pd.Series) -> str | None:
+    male = combine_pcnt_value(detail, ["PCNT1_남자", "PCNT2_남자", "PNT1_남자", "PNT2_남자"])
+    female = combine_pcnt_value(detail, ["PCNT1_여자", "PCNT2_여자", "PNT1_여자", "PNT2_여자"])
+    total = male + female
+    if total <= 0:
+        return None
+
+    values = [male / total * 100, female / total * 100]
+    labels = ["남성", "여성"]
+    colors = ["#4f46e5", "#06b6d4"]
+
+    cx, cy, r = 170, 150, 88
+    circumference = 2 * pi * r
+    offset = 0.0
+    circles = []
+    label_nodes = []
+
+    for label, value, color in zip(labels, values, colors):
+        dash = circumference * (value / 100)
+        circles.append(
+            f'''<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="42"
+                    stroke-linecap="butt" stroke-dasharray="{dash:.2f} {circumference - dash:.2f}"
+                    stroke-dashoffset="{-offset:.2f}" transform="rotate(-90 {cx} {cy})" />'''
+        )
+        mid_angle = -90 + ((offset + dash / 2) / circumference) * 360
+        lx, ly = _svg_point(cx, cy, r + 34, mid_angle)
+        label_nodes.append(
+            f'''<text x="{lx:.2f}" y="{ly:.2f}" class="viz-label" text-anchor="middle">
+                    <tspan x="{lx:.2f}" dy="0">{html.escape(label)}</tspan>
+                    <tspan x="{lx:.2f}" dy="18">{value:.1f}%</tspan>
+                </text>'''
+        )
+        offset += dash
+
+    legend_html = _build_legend_html(list(zip(labels, values, colors)))
+    return f'''
+    <div class="static-viz-wrap">
+      <svg class="static-viz-svg" viewBox="0 0 420 310" role="img" aria-label="성별 관심도 비중">
+        <defs>
+          <filter id="vizShadowGender" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(15,23,42,0.10)"/>
+          </filter>
+        </defs>
+        <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#e9eef8" stroke-width="42" />
+        <g filter="url(#vizShadowGender)">
+          {''.join(circles)}
+        </g>
+        <circle cx="{cx}" cy="{cy}" r="56" fill="#ffffff" stroke="#eef2ff" stroke-width="1.5" />
+        <text x="{cx}" y="142" class="viz-center-kicker" text-anchor="middle">관심도 합계</text>
+        <text x="{cx}" y="174" class="viz-center-value" text-anchor="middle">100%</text>
+        {''.join(label_nodes)}
+      </svg>
+      {legend_html}
+    </div>
+    '''
+
+
+def _wrap_age_label(label: str) -> list[str]:
+    label = str(label).strip()
+    if not label:
+        return [""]
+    if '(' in label and ')' in label:
+        head, tail = label.split('(', 1)
+        return [head.strip(), '(' + tail.strip()]
+    if len(label) <= 12:
+        return [label]
+    midpoint = max(1, len(label) // 2)
+    split_pos = label.rfind(' ', 0, midpoint + 2)
+    if split_pos == -1:
+        split_pos = midpoint
+    return [label[:split_pos].strip(), label[split_pos:].strip()]
+
+
+def build_age_chart(detail: pd.Series) -> str | None:
+    teen = combine_pcnt_value(detail, ["PCNT1_중학생", "PCNT2_중학생", "PNT1_중학생", "PNT2_중학생"])
+    high = combine_pcnt_value(detail, ["PCNT1_고등학생", "PCNT2_고등학생", "PNT1_고등학생", "PNT2_고등학생"])
+    total = teen + high
+    if total <= 0:
+        return None
+
+    labels = ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]
+    values = [teen / total * 100, high / total * 100]
+    max_val = max(60.0, ceil(max(values) / 10) * 10)
+
+    svg_width, svg_height = 460, 320
+    left, right, top, bottom = 56, 26, 24, 88
+    chart_w = svg_width - left - right
+    chart_h = svg_height - top - bottom
+    bar_gap = 34
+    bar_w = (chart_w - bar_gap) / 2
+    x_positions = [left, left + bar_w + bar_gap]
+
+    grid_nodes = []
+    for tick in range(0, int(max_val) + 1, 10):
+        y = top + chart_h - (tick / max_val) * chart_h
+        grid_nodes.append(f'<line x1="{left}" y1="{y:.2f}" x2="{svg_width-right}" y2="{y:.2f}" class="viz-grid" />')
+        grid_nodes.append(f'<text x="{left-10}" y="{y+4:.2f}" class="viz-axis">{tick}</text>')
+
+    bar_nodes = []
+    label_nodes = []
+    for x, label, value in zip(x_positions, labels, values):
+        h = max(8.0, (value / max_val) * chart_h)
+        y = top + chart_h - h
+        bar_nodes.append(
+            f'''<g>
+                    <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="url(#ageBarGradient)" />
+                    <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1" />
+                    <text x="{x + bar_w/2:.2f}" y="{y - 10:.2f}" class="viz-bar-value" text-anchor="middle">{value:.1f}%</text>
+                </g>'''
+        )
+        lines = _wrap_age_label(label)
+        tspans = []
+        for idx, line in enumerate(lines):
+            dy = '0' if idx == 0 else '16'
+            tspans.append(f'<tspan x="{x + bar_w/2:.2f}" dy="{dy}">{html.escape(line)}</tspan>')
+        label_nodes.append(
+            f'<text x="{x + bar_w/2:.2f}" y="{svg_height - 42:.2f}" class="viz-x-label" text-anchor="middle">{"".join(tspans)}</text>'
+        )
+
+    return f'''
+    <div class="static-viz-wrap">
+      <svg class="static-viz-svg" viewBox="0 0 {svg_width} {svg_height}" role="img" aria-label="연령대별 선호도">
+        <defs>
+          <linearGradient id="ageBarGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#5b6bff"/>
+            <stop offset="100%" stop-color="#4338ca"/>
+          </linearGradient>
+        </defs>
+        {''.join(grid_nodes)}
+        <line x1="{left}" y1="{top + chart_h:.2f}" x2="{svg_width-right}" y2="{top + chart_h:.2f}" class="viz-axis-line" />
+        {''.join(bar_nodes)}
+        {''.join(label_nodes)}
+      </svg>
+      <div class="viz-footnote">관심도 분포를 연령대 기준으로 정적 시각화했습니다.</div>
+    </div>
+    '''
+
+
+def _describe_salary_band(amount: int, max_amount: int) -> tuple[str, str]:
+    ratio = 0 if max_amount <= 0 else amount / max_amount
+    if ratio < 0.34:
+        return '진입 구간', '직업군 내 하위권 임금대입니다.'
+    if ratio < 0.67:
+        return '중간 구간', '직업군 내 중간 수준의 임금대입니다.'
+    return '상위 구간', '직업군 내 비교적 높은 임금대입니다.'
+
+
+def build_salary_gauge(salary_amount: int) -> str | None:
+    if not salary_amount or salary_amount <= 0:
+        return None
+
+    max_amount = max(5000, int(ceil(salary_amount / 500.0) * 500))
+    ratio = min(1.0, salary_amount / max_amount)
+    ticks = [0, max_amount // 2, max_amount]
+    tick_labels = [f"{tick:,}".replace(',', '') for tick in ticks]
+
+    cx, cy, r = 260, 226, 164
+    base_path = _svg_poly_arc(cx, cy, r, 180, 360, 72)
+    progress_path = _svg_poly_arc(cx, cy, r, 180, 180 + 180 * ratio, 72)
+    pointer_x, pointer_y = _svg_point(cx, cy, r, 180 + 180 * ratio)
+    band_title, band_desc = _describe_salary_band(salary_amount, max_amount)
+
+    tick_nodes = []
+    for tick, label in zip(ticks, tick_labels):
+        deg = 180 + (tick / max_amount) * 180 if max_amount else 180
+        x1, y1 = _svg_point(cx, cy, r + 8, deg)
+        x2, y2 = _svg_point(cx, cy, r + 22, deg)
+        tx, ty = _svg_point(cx, cy, r + 42, deg)
+        tick_nodes.append(
+            f'''<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" class="viz-gauge-tick" />
+                <text x="{tx:.2f}" y="{ty:.2f}" class="viz-gauge-axis" text-anchor="middle">{label}</text>'''
+        )
+
+    return f'''
+    <div class="static-viz-wrap gauge-wrap">
+      <div class="salary-band-chip">{band_title}</div>
+      <svg class="static-viz-svg" viewBox="0 0 520 320" role="img" aria-label="평균 임금 수준">
+        <defs>
+          <linearGradient id="salaryTrack" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="#dbeafe"/>
+            <stop offset="50%" stop-color="#93c5fd"/>
+            <stop offset="100%" stop-color="#c7d2fe"/>
+          </linearGradient>
+          <linearGradient id="salaryProgress" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="#60a5fa"/>
+            <stop offset="100%" stop-color="#1d4ed8"/>
+          </linearGradient>
+          <filter id="vizShadowGauge" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(37,99,235,0.18)"/>
+          </filter>
+        </defs>
+        <path d="{base_path}" fill="none" stroke="url(#salaryTrack)" stroke-width="28" stroke-linecap="round" />
+        <path d="{progress_path}" fill="none" stroke="url(#salaryProgress)" stroke-width="28" stroke-linecap="round" filter="url(#vizShadowGauge)" />
+        <circle cx="{pointer_x:.2f}" cy="{pointer_y:.2f}" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="4" />
+        {''.join(tick_nodes)}
+        <text x="{cx}" y="170" class="viz-center-kicker" text-anchor="middle">평균 임금 수준</text>
+        <text x="{cx}" y="222" class="viz-gauge-value" text-anchor="middle">{salary_amount}만원</text>
+        <text x="{cx}" y="248" class="viz-gauge-desc" text-anchor="middle">{band_desc}</text>
+      </svg>
+    </div>
+    '''
+
+
 def inject_css() -> None:
     render_html(
         """
@@ -1620,6 +1773,137 @@ def inject_css() -> None:
             border:none !important;
         }
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
+
+        .static-viz-wrap{
+            width:100%;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:14px;
+            padding:8px 0 2px 0;
+        }
+        .static-viz-svg{
+            width:100%;
+            height:auto;
+            display:block;
+        }
+        .viz-legend{
+            width:100%;
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:10px;
+        }
+        .viz-legend-item{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:12px 14px;
+            background:linear-gradient(180deg,#f8fbff 0%,#f3f7ff 100%);
+            border:1px solid #e6eefc;
+            border-radius:16px;
+            box-shadow:0 8px 24px rgba(15,23,42,.05);
+        }
+        .viz-swatch{
+            width:12px;
+            height:12px;
+            border-radius:999px;
+            flex:0 0 12px;
+            box-shadow:0 0 0 4px rgba(255,255,255,.9);
+        }
+        .viz-legend-label{
+            flex:1;
+            color:#334155;
+            font-size:14px;
+            font-weight:700;
+        }
+        .viz-legend-value{
+            color:#0f172a;
+            font-size:14px;
+            font-weight:800;
+        }
+        .viz-label{
+            fill:#334155;
+            font-size:13px;
+            font-weight:700;
+        }
+        .viz-center-kicker{
+            fill:#64748b;
+            font-size:13px;
+            font-weight:700;
+            letter-spacing:.02em;
+        }
+        .viz-center-value{
+            fill:#0f172a;
+            font-size:32px;
+            font-weight:800;
+        }
+        .viz-grid{
+            stroke:#e7eef9;
+            stroke-width:1;
+        }
+        .viz-axis{
+            fill:#94a3b8;
+            font-size:11px;
+            font-weight:600;
+            text-anchor:end;
+        }
+        .viz-axis-line{
+            stroke:#cdd9ee;
+            stroke-width:1.3;
+        }
+        .viz-bar-value{
+            fill:#1e293b;
+            font-size:15px;
+            font-weight:800;
+        }
+        .viz-x-label{
+            fill:#334155;
+            font-size:12.5px;
+            font-weight:700;
+        }
+        .viz-footnote{
+            width:100%;
+            text-align:center;
+            color:#64748b;
+            font-size:12.5px;
+            font-weight:600;
+        }
+        .gauge-wrap{
+            gap:8px;
+        }
+        .salary-band-chip{
+            align-self:flex-start;
+            display:inline-flex;
+            align-items:center;
+            padding:7px 12px;
+            border-radius:999px;
+            background:#eef4ff;
+            border:1px solid #dbe7ff;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:800;
+            letter-spacing:.02em;
+        }
+        .viz-gauge-tick{
+            stroke:#94a3b8;
+            stroke-width:2;
+            stroke-linecap:round;
+        }
+        .viz-gauge-axis{
+            fill:#64748b;
+            font-size:11.5px;
+            font-weight:700;
+        }
+        .viz-gauge-value{
+            fill:#0f172a;
+            font-size:42px;
+            font-weight:800;
+        }
+        .viz-gauge-desc{
+            fill:#475569;
+            font-size:13px;
+            font-weight:600;
+        }
 
         @media (max-width: 1100px){
             .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
