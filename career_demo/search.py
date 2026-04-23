@@ -770,6 +770,38 @@ def filter_results(
     return filtered.reset_index(drop=True)
 
 
+PLOTLY_FONT_COLOR = "#15314b"
+PLOTLY_GRID_COLOR = "rgba(27, 79, 114, 0.12)"
+PLOTLY_ZERO_LINE_COLOR = "rgba(27, 79, 114, 0.18)"
+
+
+def apply_fixed_plotly_theme(fig: go.Figure) -> go.Figure:
+    """접속 환경과 무관하게 Plotly 표시 색상을 고정한다."""
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=PLOTLY_FONT_COLOR),
+    )
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor=PLOTLY_GRID_COLOR,
+        zeroline=False,
+        linecolor=PLOTLY_ZERO_LINE_COLOR,
+        tickfont=dict(color=PLOTLY_FONT_COLOR),
+        title_font=dict(color=PLOTLY_FONT_COLOR),
+    )
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor=PLOTLY_GRID_COLOR,
+        zeroline=False,
+        linecolor=PLOTLY_ZERO_LINE_COLOR,
+        tickfont=dict(color=PLOTLY_FONT_COLOR),
+        title_font=dict(color=PLOTLY_FONT_COLOR),
+    )
+    return fig
+
+
 # -----------------------------
 # Visualization helpers
 # -----------------------------
@@ -794,7 +826,7 @@ def build_gender_chart(detail: pd.Series):
         texttemplate="%{label}<br>%{value:.1f}%",
         hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
     )
-    return fig
+    return apply_fixed_plotly_theme(fig)
 
 
 def build_age_chart(detail: pd.Series):
@@ -821,7 +853,7 @@ def build_age_chart(detail: pd.Series):
         yaxis_title="관심 비율(%)",
         height=320,
     )
-    return fig
+    return apply_fixed_plotly_theme(fig)
 
 
 def build_salary_gauge(amount: float | None):
@@ -847,7 +879,7 @@ def build_salary_gauge(amount: float | None):
         )
     )
     fig.update_layout(height=260, margin=dict(l=20, r=20, t=50, b=10))
-    return fig
+    return apply_fixed_plotly_theme(fig)
 
 
 # -----------------------------
@@ -871,9 +903,15 @@ def inject_css() -> None:
             --shadow-strong:0 18px 40px rgba(37,99,235,.10);
             --radius:20px;
             --container:1280px;
+            color-scheme: light !important;
         }
 
-        html, body, [class*="css"] { color: var(--text); }
+        html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] > .main {
+            color: var(--text) !important;
+            font-family: "Pretendard", "Noto Sans KR", sans-serif;
+            background-color: var(--bg) !important;
+            color-scheme: light !important;
+        }
 
         header[data-testid="stHeader"],
         [data-testid="stToolbar"],
@@ -892,10 +930,51 @@ def inject_css() -> None:
             display:none !important;
         }
 
+        body {
+            background:
+                radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 20%),
+                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%) !important;
+        }
+
         .stApp {
             background:
                 radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 20%),
-                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%) !important;
+            color: var(--text) !important;
+            color-scheme: light !important;
+        }
+
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"],
+        div[data-baseweb="select"],
+        div[data-baseweb="popover"],
+        div[data-baseweb="popover"] *,
+        input,
+        textarea {
+            color-scheme: light !important;
+        }
+
+        div[data-baseweb="popover"] [role="dialog"],
+        div[data-baseweb="popover"] [role="listbox"],
+        div[data-baseweb="select"] > div,
+        ul[role="listbox"] {
+            background: #ffffff !important;
+            color: var(--text) !important;
+            border: 1px solid var(--line) !important;
+            box-shadow: 0 12px 30px rgba(15,23,42,.10) !important;
+        }
+
+        div[data-baseweb="popover"] li,
+        div[data-baseweb="popover"] [role="option"],
+        ul[role="listbox"] li {
+            background: #ffffff !important;
+            color: var(--text) !important;
+        }
+
+        div[data-baseweb="popover"] li:hover,
+        div[data-baseweb="popover"] [role="option"]:hover,
+        ul[role="listbox"] li:hover {
+            background: #eff6ff !important;
         }
 
         .block-container{
@@ -2147,7 +2226,7 @@ def render_market_section(detail: pd.Series) -> None:
         )
         gauge = build_salary_gauge(salary_amount)
         if gauge is not None:
-            st.plotly_chart(gauge, use_container_width=True, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
+            st.plotly_chart(gauge, use_container_width=True, theme=None, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
     with col2:
         tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
         with tab1:
@@ -2186,13 +2265,13 @@ def render_chart_section(detail: pd.Series) -> None:
     with col1:
         render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>성별 관심도 비중</div></div>")
         if gender_fig is not None:
-            st.plotly_chart(gender_fig, use_container_width=True, key=f"gender_chart_{detail.get('jobdicSeq', detail.name)}")
+            st.plotly_chart(gender_fig, use_container_width=True, theme=None, key=f"gender_chart_{detail.get('jobdicSeq', detail.name)}")
         else:
             st.info("성별 PCNT 데이터가 없습니다.")
     with col2:
         render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>연령대별 선호도</div></div>")
         if age_fig is not None:
-            st.plotly_chart(age_fig, use_container_width=True, key=f"age_chart_{detail.get('jobdicSeq', detail.name)}")
+            st.plotly_chart(age_fig, use_container_width=True, theme=None, key=f"age_chart_{detail.get('jobdicSeq', detail.name)}")
         else:
             st.info("연령대 PCNT 데이터가 없습니다.")
 
