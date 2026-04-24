@@ -279,6 +279,27 @@ def combine_pcnt_value(integer_part, decimal_part):
         return whole + (decimal / (10 ** digits))
     return whole + (decimal / 10)
 
+def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
+    """후보 컬럼 중 실제 존재하고 숫자로 변환 가능한 첫 값을 반환한다."""
+    for col in columns:
+        if col in row.index:
+            value = safe_float(row.get(col))
+            if value is not None:
+                return value
+    return None
+
+
+def combine_pcnt_columns(
+    row: pd.Series,
+    integer_columns: list[str],
+    decimal_columns: list[str],
+) -> float:
+    """PCNT1/PNT1 정수부와 PCNT2/PNT2 소수부 후보 컬럼을 안전하게 결합한다."""
+    integer_part = first_existing_numeric(row, integer_columns)
+    decimal_part = first_existing_numeric(row, decimal_columns)
+    value = combine_pcnt_value(integer_part, decimal_part)
+    return 0.0 if value is None else float(value)
+
 
 def normalize_search_token(token: str) -> str:
     token = clean_sentence(token).lower()
@@ -836,8 +857,17 @@ def _build_legend_html(items: list[tuple[str, float, str]]) -> str:
 
 
 def build_gender_chart(detail: pd.Series) -> str | None:
-    male = combine_pcnt_value(detail, ["PCNT1_남자", "PCNT2_남자", "PNT1_남자", "PNT2_남자"])
-    female = combine_pcnt_value(detail, ["PCNT1_여자", "PCNT2_여자", "PNT1_여자", "PNT2_여자"])
+    male = combine_pcnt_columns(
+        detail,
+        ["PCNT1_남자", "PNT1_남자"],
+        ["PCNT2_남자", "PNT2_남자"],
+    )
+    female = combine_pcnt_columns(
+        detail,
+        ["PCNT1_여자", "PNT1_여자"],
+        ["PCNT2_여자", "PNT2_여자"],
+    )
+
     total = male + female
     if total <= 0:
         return None
@@ -859,6 +889,7 @@ def build_gender_chart(detail: pd.Series) -> str | None:
                     stroke-linecap="butt" stroke-dasharray="{dash:.2f} {circumference - dash:.2f}"
                     stroke-dashoffset="{-offset:.2f}" transform="rotate(-90 {cx} {cy})" />'''
         )
+
         mid_angle = -90 + ((offset + dash / 2) / circumference) * 360
         lx, ly = _svg_point(cx, cy, r + 34, mid_angle)
         label_nodes.append(
@@ -870,12 +901,13 @@ def build_gender_chart(detail: pd.Series) -> str | None:
         offset += dash
 
     legend_html = _build_legend_html(list(zip(labels, values, colors)))
+
     return f'''
     <div class="static-viz-wrap">
       <svg class="static-viz-svg" viewBox="0 0 420 310" role="img" aria-label="성별 관심도 비중">
         <defs>
           <filter id="vizShadowGender" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(15,23,42,0.10)"/>
+            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.10"/>
           </filter>
         </defs>
         <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#e9eef8" stroke-width="42" />
@@ -909,8 +941,17 @@ def _wrap_age_label(label: str) -> list[str]:
 
 
 def build_age_chart(detail: pd.Series) -> str | None:
-    teen = combine_pcnt_value(detail, ["PCNT1_중학생", "PCNT2_중학생", "PNT1_중학생", "PNT2_중학생"])
-    high = combine_pcnt_value(detail, ["PCNT1_고등학생", "PCNT2_고등학생", "PNT1_고등학생", "PNT2_고등학생"])
+    teen = combine_pcnt_columns(
+        detail,
+        ["PCNT1_중학생", "PNT1_중학생"],
+        ["PCNT2_중학생", "PNT2_중학생"],
+    )
+    high = combine_pcnt_columns(
+        detail,
+        ["PCNT1_고등학생", "PNT1_고등학생"],
+        ["PCNT2_고등학생", "PNT2_고등학생"],
+    )
+
     total = teen + high
     if total <= 0:
         return None
@@ -935,9 +976,11 @@ def build_age_chart(detail: pd.Series) -> str | None:
 
     bar_nodes = []
     label_nodes = []
+
     for x, label, value in zip(x_positions, labels, values):
         h = max(8.0, (value / max_val) * chart_h)
         y = top + chart_h - h
+
         bar_nodes.append(
             f'''<g>
                     <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="url(#ageBarGradient)" />
@@ -945,11 +988,13 @@ def build_age_chart(detail: pd.Series) -> str | None:
                     <text x="{x + bar_w/2:.2f}" y="{y - 10:.2f}" class="viz-bar-value" text-anchor="middle">{value:.1f}%</text>
                 </g>'''
         )
+
         lines = _wrap_age_label(label)
         tspans = []
         for idx, line in enumerate(lines):
-            dy = '0' if idx == 0 else '16'
+            dy = "0" if idx == 0 else "16"
             tspans.append(f'<tspan x="{x + bar_w/2:.2f}" dy="{dy}">{html.escape(line)}</tspan>')
+
         label_nodes.append(
             f'<text x="{x + bar_w/2:.2f}" y="{svg_height - 42:.2f}" class="viz-x-label" text-anchor="middle">{"".join(tspans)}</text>'
         )
@@ -968,7 +1013,7 @@ def build_age_chart(detail: pd.Series) -> str | None:
         {''.join(bar_nodes)}
         {''.join(label_nodes)}
       </svg>
-      <div class="viz-footnote">관심도 분포를 연령대 기준으로 정적 시각화했습니다.</div>
+      <div class="viz-footnote">관심도 분포를 연령대 기준으로 시각화했습니다.</div>
     </div>
     '''
 
@@ -2549,13 +2594,13 @@ def render_chart_section(detail: pd.Series) -> None:
     with col1:
         render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>성별 관심도 비중</div></div>")
         if gender_fig is not None:
-            st.plotly_chart(gender_fig, use_container_width=True, theme=None, key=f"gender_chart_{detail.get('jobdicSeq', detail.name)}")
+            render_html(gender_fig)
         else:
             st.info("성별 PCNT 데이터가 없습니다.")
     with col2:
         render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>연령대별 선호도</div></div>")
         if age_fig is not None:
-            st.plotly_chart(age_fig, use_container_width=True, theme=None, key=f"age_chart_{detail.get('jobdicSeq', detail.name)}")
+            render_html(age_fig)
         else:
             st.info("연령대 PCNT 데이터가 없습니다.")
 
