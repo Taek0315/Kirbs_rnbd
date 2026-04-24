@@ -970,7 +970,6 @@ def build_age_chart(detail: pd.Series) -> str | None:
                 <div class="bar-track"><div class="bar-fill high-fill" style="width:{high_pct:.2f}%;"></div></div>
             </div>
         </div>
-        <div class="chart-note age-note">연령대 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
     </div>
     """
 
@@ -1402,6 +1401,7 @@ def inject_css() -> None:
 
         .result-card-wrap{
             animation:fadeUpCard .55s ease both;
+            margin-bottom:12px;
         }
         @keyframes fadeUpCard{
             0%{ opacity:0; transform:translateY(18px); }
@@ -1415,9 +1415,9 @@ def inject_css() -> None:
             border-radius:20px;
             box-shadow:var(--shadow);
             padding:20px 20px 18px 20px;
-            height:320px;
-            min-height:320px;
-            max-height:320px;
+            height:400px;
+            min-height:400px;
+            max-height:400px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
@@ -1451,9 +1451,9 @@ def inject_css() -> None:
             font-size:14px;
             line-height:1.76;
             color:#475467;
-            height:104px;
-            min-height:104px;
-            max-height:104px;
+            height:132px;
+            min-height:132px;
+            max-height:132px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
@@ -1462,9 +1462,9 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            height:76px;
-            min-height:76px;
-            max-height:76px;
+            height:92px;
+            min-height:92px;
+            max-height:92px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
@@ -1915,7 +1915,7 @@ def inject_css() -> None:
 
         @media (max-width: 1100px){
             .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
-            .result-card{ height:350px; min-height:350px; max-height:350px; }
+            .result-card{ height:430px; min-height:430px; max-height:430px; }
         }
         @media (max-width: 768px){
             .brief-grid, .similar-job-grid, .skeleton-grid, .legend-grid{ grid-template-columns:1fr; }
@@ -2134,7 +2134,7 @@ def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
     if row.get("salary_amount") is not None and not pd.isna(row.get("salary_amount")):
         salary_label = f"{int(row['salary_amount']):,}만원"
 
-    summary = shorten_text(row.get("summary", ""), 112)
+    summary = shorten_text(row.get("summary", ""), 130)
     if not summary:
         summary = "직업 요약 정보가 준비되지 않았습니다."
 
