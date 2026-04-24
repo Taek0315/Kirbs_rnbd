@@ -2994,19 +2994,14 @@ def render_main_page(df: pd.DataFrame) -> None:
 
     render_html(
         """
-        <div style="height:18px;"></div>
-        <div style="
-            width:100%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:10px;
-            margin:10px 0 28px 0;
-        ">
+        <div style="height:8px;"></div>
         """
     )
 
-    page_col_prev, page_col_num, page_col_next = st.columns([0.44, 0.12, 0.44], gap="small")
+    page_spacer_l, page_col_prev, page_col_num, page_col_next, page_spacer_r = st.columns(
+        [0.36, 0.10, 0.08, 0.10, 0.36],
+        gap="small",
+    )
 
     with page_col_prev:
         prev_disabled = current_page <= 1
@@ -3018,18 +3013,19 @@ def render_main_page(df: pd.DataFrame) -> None:
         render_html(
             f"""
             <div style="
-                height:44px;
+                height:38px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
                 border:1px solid #cfd9e8;
-                border-radius:14px;
+                border-radius:12px;
                 background:#ffffff;
                 color:#0f172a;
-                font-size:15px;
+                font-size:14px;
                 font-weight:800;
-                box-shadow:0 4px 14px rgba(15,23,42,.04);
+                box-shadow:0 4px 12px rgba(15,23,42,.035);
                 box-sizing:border-box;
+                white-space:nowrap;
             ">
                 {current_page} / {page_count}
             </div>
@@ -3042,7 +3038,7 @@ def render_main_page(df: pd.DataFrame) -> None:
             st.session_state.page_number = min(page_count, current_page + 1)
             rerun_app()
 
-    render_html("</div>")
+    render_html('<div style="height:18px;"></div>')
 
 
 # -----------------------------
