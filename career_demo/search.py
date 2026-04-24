@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,12 +8,11 @@ import json
 import textwrap
 from collections import Counter
 from difflib import SequenceMatcher
-from math import ceil, cos, pi, radians, sin
+from math import ceil
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import altair as alt
 import streamlit as st
 
 
@@ -25,6 +23,11 @@ EMBED_META_FILE = EMBEDDING_DIR / "career_jobs_embedding_meta.xlsx"
 EMBED_ARRAY_FILE = EMBEDDING_DIR / "career_jobs_embeddings.npy"
 EMBED_CONFIG_FILE = EMBEDDING_DIR / "embedding_config.json"
 SEMANTIC_THRESHOLD = 0.34
+
+try:
+    alt.data_transformers.disable_max_rows()
+except Exception:
+    pass
 
 st.set_page_config(
     page_title="AI 직업 탐색 리포트",
@@ -51,7 +54,7 @@ KOREAN_STOPWORDS = {
     "관련", "직업", "직무", "일", "일을", "하는", "대한", "및", "에서", "으로", "위한", "위해",
     "같은", "있는", "되는", "분야", "업무", "사람", "경우", "통한", "기반", "탐색", "분석",
     "미래", "검색", "관련된", "중심", "한다", "수행", "업무를", "업무에", "직업명", "정보",
-    "문장", "처럼", "원하는", "분위기", "직업을", "직업의", "하고", "하면서", "같은",
+    "문장", "처럼", "원하는", "분위기", "직업을", "직업의", "하고", "하면서",
 }
 
 SYNONYM_MAP = {
@@ -279,8 +282,8 @@ def combine_pcnt_value(integer_part, decimal_part):
         return whole + (decimal / (10 ** digits))
     return whole + (decimal / 10)
 
+
 def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
-    """후보 컬럼 중 존재하고 숫자로 변환 가능한 첫 값을 반환한다."""
     for col in columns:
         if col in row.index:
             value = safe_float(row.get(col))
@@ -294,32 +297,6 @@ def combine_pcnt_columns(
     integer_columns: list[str],
     decimal_columns: list[str],
 ) -> float:
-    """
-    PCNT1/PNT1 정수부와 PCNT2/PNT2 소수부 후보 컬럼을 안전하게 결합한다.
-    예: PCNT1_남자 + PCNT2_남자 / PNT1_남자 + PNT2_남자
-    """
-    integer_part = first_existing_numeric(row, integer_columns)
-    decimal_part = first_existing_numeric(row, decimal_columns)
-    value = combine_pcnt_value(integer_part, decimal_part)
-    return 0.0 if value is None else float(value)
-
-
-def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
-    """후보 컬럼 중 실제 존재하고 숫자로 변환 가능한 첫 값을 반환한다."""
-    for col in columns:
-        if col in row.index:
-            value = safe_float(row.get(col))
-            if value is not None:
-                return value
-    return None
-
-
-def combine_pcnt_columns(
-    row: pd.Series,
-    integer_columns: list[str],
-    decimal_columns: list[str],
-) -> float:
-    """PCNT1/PNT1 정수부와 PCNT2/PNT2 소수부 후보 컬럼을 안전하게 결합한다."""
     integer_part = first_existing_numeric(row, integer_columns)
     decimal_part = first_existing_numeric(row, decimal_columns)
     value = combine_pcnt_value(integer_part, decimal_part)
@@ -494,81 +471,6 @@ def compute_semantic_scores(df: pd.DataFrame, query: str) -> np.ndarray:
 
 
 # -----------------------------
-# Data loading and preparation
-# -----------------------------
-@st.cache_data(show_spinner=False)
-def load_data(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {path}")
-
-    if path.suffix.lower() in {".xlsx", ".xlsm", ".xls"}:
-        df = pd.read_excel(path)
-    else:
-        df = pd.read_csv(path)
-
-    df = df.copy()
-    df.columns = [str(col).strip() for col in df.columns]
-
-    for col in df.columns:
-        if df[col].dtype == object:
-            df[col] = df[col].map(lambda x: normalize_whitespace(x) if not is_missing_like(x) else "")
-
-    if "job" not in df.columns:
-        raise ValueError("career_jobs.xlsx에 'job' 컬럼이 없습니다.")
-
-    if "summary" not in df.columns:
-        df["summary"] = ""
-
-    df["job"] = df["job"].astype(str).str.strip()
-    df = df[df["job"] != ""].reset_index(drop=True)
-
-    salary_values = df.get("salery", pd.Series([""] * len(df))).map(extract_salary_amount)
-    valid_salary = salary_values.dropna()
-    if valid_salary.empty:
-        low_cut = None
-        high_cut = None
-    else:
-        low_cut = float(valid_salary.quantile(0.33))
-        high_cut = float(valid_salary.quantile(0.66))
-
-    df["salary_amount"] = salary_values
-    df["salary_bucket"] = df["salary_amount"].map(lambda x: classify_salary_bucket(x, low_cut, high_cut))
-    df["employment_status"] = df.apply(classify_employment_status, axis=1)
-    df["major_list"] = df.apply(get_major_list, axis=1)
-    df["similar_job_list"] = df.apply(get_similar_jobs, axis=1)
-    df["certification_list"] = df.apply(get_certifications, axis=1)
-    df["contact_list_all"] = df.apply(get_contacts, axis=1)
-    df["search_blob"] = df.apply(build_search_blob, axis=1)
-
-    assets = load_embedding_assets()
-    if assets:
-        meta = assets["meta"].copy()
-        meta["embedding_key"] = meta.apply(
-            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
-            axis=1,
-        )
-        meta_cols = ["embedding_key", "display_keywords_list", "topic_tags_list", "display_keywords_text", "topic_tags_text"]
-        df["embedding_key"] = df.apply(
-            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
-            axis=1,
-        )
-        df = df.merge(meta[meta_cols], on="embedding_key", how="left")
-        df.drop(columns=["embedding_key"], inplace=True)
-
-    if "display_keywords_list" not in df.columns:
-        df["display_keywords_list"] = [[] for _ in range(len(df))]
-    else:
-        df["display_keywords_list"] = df["display_keywords_list"].map(parse_embedded_list)
-
-    if "topic_tags_list" not in df.columns:
-        df["topic_tags_list"] = [[] for _ in range(len(df))]
-    else:
-        df["topic_tags_list"] = df["topic_tags_list"].map(parse_embedded_list)
-
-    return df
-
-
-# -----------------------------
 # Row-level extractors
 # -----------------------------
 def extract_salary_amount(text) -> float | None:
@@ -646,6 +548,88 @@ def build_search_blob(row: pd.Series) -> str:
     chunks.extend(row.get("display_keywords_list", []))
     chunks.extend(row.get("topic_tags_list", []))
     return " ".join(chunks).lower()
+
+
+# -----------------------------
+# Data loading and preparation
+# -----------------------------
+@st.cache_data(show_spinner=False)
+def load_data(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {path}")
+
+    if path.suffix.lower() in {".xlsx", ".xlsm", ".xls"}:
+        df = pd.read_excel(path)
+    else:
+        df = pd.read_csv(path)
+
+    df = df.copy()
+    df.columns = [str(col).strip() for col in df.columns]
+
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].map(lambda x: normalize_whitespace(x) if not is_missing_like(x) else "")
+
+    if "job" not in df.columns:
+        raise ValueError("career_jobs.xlsx에 'job' 컬럼이 없습니다.")
+
+    if "summary" not in df.columns:
+        df["summary"] = ""
+
+    df["job"] = df["job"].astype(str).str.strip()
+    df = df[df["job"] != ""].reset_index(drop=True)
+
+    salary_values = df.get("salery", pd.Series([""] * len(df))).map(extract_salary_amount)
+    valid_salary = salary_values.dropna()
+
+    if valid_salary.empty:
+        low_cut = None
+        high_cut = None
+    else:
+        low_cut = float(valid_salary.quantile(0.33))
+        high_cut = float(valid_salary.quantile(0.66))
+
+    df["salary_amount"] = salary_values
+    df["salary_bucket"] = df["salary_amount"].map(lambda x: classify_salary_bucket(x, low_cut, high_cut))
+    df["employment_status"] = df.apply(classify_employment_status, axis=1)
+    df["major_list"] = df.apply(get_major_list, axis=1)
+    df["similar_job_list"] = df.apply(get_similar_jobs, axis=1)
+    df["certification_list"] = df.apply(get_certifications, axis=1)
+    df["contact_list_all"] = df.apply(get_contacts, axis=1)
+    df["search_blob"] = df.apply(build_search_blob, axis=1)
+
+    assets = load_embedding_assets()
+    if assets:
+        meta = assets["meta"].copy()
+        meta["embedding_key"] = meta.apply(
+            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
+            axis=1,
+        )
+        meta_cols = [
+            "embedding_key",
+            "display_keywords_list",
+            "topic_tags_list",
+            "display_keywords_text",
+            "topic_tags_text",
+        ]
+        df["embedding_key"] = df.apply(
+            lambda row: build_embedding_key(row.get("jobdicSeq"), row.get("job", "")),
+            axis=1,
+        )
+        df = df.merge(meta[meta_cols], on="embedding_key", how="left")
+        df.drop(columns=["embedding_key"], inplace=True)
+
+    if "display_keywords_list" not in df.columns:
+        df["display_keywords_list"] = [[] for _ in range(len(df))]
+    else:
+        df["display_keywords_list"] = df["display_keywords_list"].map(parse_embedded_list)
+
+    if "topic_tags_list" not in df.columns:
+        df["topic_tags_list"] = [[] for _ in range(len(df))]
+    else:
+        df["topic_tags_list"] = df["topic_tags_list"].map(parse_embedded_list)
+
+    return df
 
 
 # -----------------------------
@@ -817,71 +801,39 @@ def filter_results(
     return filtered.reset_index(drop=True)
 
 
-PLOTLY_FONT_COLOR = "#15314b"
-PLOTLY_GRID_COLOR = "rgba(27, 79, 114, 0.12)"
-PLOTLY_ZERO_LINE_COLOR = "rgba(27, 79, 114, 0.18)"
-
-
-def apply_fixed_plotly_theme(fig: go.Figure) -> go.Figure:
-    """접속 환경과 무관하게 Plotly 표시 색상을 고정한다."""
-    fig.update_layout(
-        template="plotly_white",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=PLOTLY_FONT_COLOR),
-    )
-    fig.update_xaxes(
-        showgrid=True,
-        gridcolor=PLOTLY_GRID_COLOR,
-        zeroline=False,
-        linecolor=PLOTLY_ZERO_LINE_COLOR,
-        tickfont=dict(color=PLOTLY_FONT_COLOR),
-        title_font=dict(color=PLOTLY_FONT_COLOR),
-    )
-    fig.update_yaxes(
-        showgrid=True,
-        gridcolor=PLOTLY_GRID_COLOR,
-        zeroline=False,
-        linecolor=PLOTLY_ZERO_LINE_COLOR,
-        tickfont=dict(color=PLOTLY_FONT_COLOR),
-        title_font=dict(color=PLOTLY_FONT_COLOR),
-    )
-    return fig
-
-
 # -----------------------------
-# Visualization helpers
+# Altair visualization helpers
 # -----------------------------
-def _svg_point(cx: float, cy: float, r: float, degree: float) -> tuple[float, float]:
-    rad = radians(degree)
-    return cx + r * cos(rad), cy + r * sin(rad)
-
-
-def _svg_poly_arc(cx: float, cy: float, r: float, start_deg: float, end_deg: float, steps: int = 60) -> str:
-    if steps < 2:
-        steps = 2
-    pts = []
-    for i in range(steps):
-        deg = start_deg + (end_deg - start_deg) * i / (steps - 1)
-        x, y = _svg_point(cx, cy, r, deg)
-        pts.append(f"{x:.2f},{y:.2f}")
-    return "M " + " L ".join(pts)
-
-
-def _build_legend_html(items: list[tuple[str, float, str]]) -> str:
-    chips = []
-    for label, value, color in items:
-        chips.append(
-            f'''<div class="viz-legend-item">
-                    <span class="viz-swatch" style="background:{color};"></span>
-                    <span class="viz-legend-label">{html.escape(label)}</span>
-                    <strong class="viz-legend-value">{value:.1f}%</strong>
-                </div>'''
+def apply_altair_theme(chart):
+    return (
+        chart
+        .configure_view(strokeOpacity=0)
+        .configure_axis(
+            labelColor="#334155",
+            titleColor="#64748b",
+            gridColor="#e7eef9",
+            domainColor="#cdd9ee",
+            tickColor="#cdd9ee",
+            labelFont="Pretendard, Noto Sans KR, sans-serif",
+            titleFont="Pretendard, Noto Sans KR, sans-serif",
         )
-    return '<div class="viz-legend">' + ''.join(chips) + '</div>'
+        .configure_legend(
+            labelColor="#334155",
+            titleColor="#64748b",
+            labelFont="Pretendard, Noto Sans KR, sans-serif",
+            titleFont="Pretendard, Noto Sans KR, sans-serif",
+            orient="bottom",
+        )
+        .configure_title(
+            color="#102a43",
+            font="Pretendard, Noto Sans KR, sans-serif",
+            fontSize=15,
+            fontWeight="bold",
+        )
+    )
 
 
-def build_gender_chart(detail: pd.Series) -> str | None:
+def build_gender_chart(detail: pd.Series):
     male = combine_pcnt_columns(
         detail,
         ["PCNT1_남자", "PNT1_남자"],
@@ -897,90 +849,81 @@ def build_gender_chart(detail: pd.Series) -> str | None:
     if total <= 0:
         return None
 
-    values = [male / total * 100, female / total * 100]
-    labels = ["남성", "여성"]
-    colors = ["#4f46e5", "#06b6d4"]
+    rows = [
+        {"구분": "남성", "비율": male / total * 100},
+        {"구분": "여성", "비율": female / total * 100},
+    ]
+    chart_df = pd.DataFrame(rows)
+    chart_df["표시"] = chart_df.apply(lambda r: f"{r['구분']} {r['비율']:.1f}%", axis=1)
 
-    cx, cy, r = 170, 150, 88
-    circumference = 2 * pi * r
-    offset = 0.0
-    circles = []
-    label_nodes = []
+    base = alt.Chart(chart_df).encode(
+        theta=alt.Theta("비율:Q", stack=True),
+        color=alt.Color(
+            "구분:N",
+            scale=alt.Scale(domain=["남성", "여성"], range=["#4f46e5", "#06b6d4"]),
+            legend=alt.Legend(title=None),
+        ),
+        tooltip=[
+            alt.Tooltip("구분:N", title="구분"),
+            alt.Tooltip("비율:Q", title="비율", format=".1f"),
+        ],
+    )
 
-    for label, value, color in zip(labels, values, colors):
-        dash = circumference * (value / 100)
+    arc = base.mark_arc(
+        innerRadius=72,
+        outerRadius=112,
+        cornerRadius=2,
+        stroke="#ffffff",
+        strokeWidth=2,
+    )
 
-        circles.append(
-            f'''
-            <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="42"
-                stroke-linecap="butt"
-                stroke-dasharray="{dash:.2f} {circumference - dash:.2f}"
-                stroke-dashoffset="{-offset:.2f}"
-                transform="rotate(-90 {cx} {cy})" />
-            '''
-        )
+    text = base.mark_text(
+        radius=142,
+        size=13,
+        fontWeight="bold",
+        color="#334155",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        text="표시:N"
+    )
 
-        mid_angle = -90 + ((offset + dash / 2) / circumference) * 360
-        lx, ly = _svg_point(cx, cy, r + 34, mid_angle)
+    center_data = pd.DataFrame([
+        {"x": 0, "y": 0, "label": "관심도 합계", "value": "100%"}
+    ])
 
-        label_nodes.append(
-            f'''
-            <text x="{lx:.2f}" y="{ly:.2f}" class="viz-label" text-anchor="middle">
-                <tspan x="{lx:.2f}" dy="0">{html.escape(label)}</tspan>
-                <tspan x="{lx:.2f}" dy="18">{value:.1f}%</tspan>
-            </text>
-            '''
-        )
+    center_label = alt.Chart(center_data).mark_text(
+        align="center",
+        baseline="middle",
+        dy=-10,
+        size=12,
+        fontWeight="bold",
+        color="#64748b",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        text="label:N"
+    )
 
-        offset += dash
+    center_value = alt.Chart(center_data).mark_text(
+        align="center",
+        baseline="middle",
+        dy=14,
+        size=26,
+        fontWeight="bold",
+        color="#0f172a",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        text="value:N"
+    )
 
-    legend_html = _build_legend_html(list(zip(labels, values, colors)))
+    chart = (
+        (arc + text + center_label + center_value)
+        .properties(height=330)
+    )
 
-    return f'''
-    <div class="static-viz-wrap">
-        <svg class="static-viz-svg" viewBox="0 0 420 310" role="img" aria-label="성별 관심도 비중">
-            <defs>
-                <filter id="vizShadowGender" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.10"/>
-                </filter>
-            </defs>
-
-            <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#e9eef8" stroke-width="42" />
-
-            <g filter="url(#vizShadowGender)">
-                {''.join(circles)}
-            </g>
-
-            <circle cx="{cx}" cy="{cy}" r="56" fill="#ffffff" stroke="#eef2ff" stroke-width="1.5" />
-
-            <text x="{cx}" y="142" class="viz-center-kicker" text-anchor="middle">관심도 합계</text>
-            <text x="{cx}" y="174" class="viz-center-value" text-anchor="middle">100%</text>
-
-            {''.join(label_nodes)}
-        </svg>
-
-        {legend_html}
-    </div>
-    '''
-
-
-def _wrap_age_label(label: str) -> list[str]:
-    label = str(label).strip()
-    if not label:
-        return [""]
-    if '(' in label and ')' in label:
-        head, tail = label.split('(', 1)
-        return [head.strip(), '(' + tail.strip()]
-    if len(label) <= 12:
-        return [label]
-    midpoint = max(1, len(label) // 2)
-    split_pos = label.rfind(' ', 0, midpoint + 2)
-    if split_pos == -1:
-        split_pos = midpoint
-    return [label[:split_pos].strip(), label[split_pos:].strip()]
+    return apply_altair_theme(chart)
 
 
-def build_age_chart(detail: pd.Series) -> str | None:
+def build_age_chart(detail: pd.Series):
     teen = combine_pcnt_columns(
         detail,
         ["PCNT1_중학생", "PNT1_중학생"],
@@ -996,92 +939,75 @@ def build_age_chart(detail: pd.Series) -> str | None:
     if total <= 0:
         return None
 
-    labels = ["중학생(14~16세 청소년)", "고등학생(17~19세 청소년)"]
-    values = [teen / total * 100, high / total * 100]
-    max_val = max(60.0, ceil(max(values) / 10) * 10)
+    rows = [
+        {"연령대": "중학생\n14~16세", "비율": teen / total * 100, "색상": "#5b6bff"},
+        {"연령대": "고등학생\n17~19세", "비율": high / total * 100, "색상": "#4338ca"},
+    ]
+    chart_df = pd.DataFrame(rows)
+    max_val = max(60.0, ceil(chart_df["비율"].max() / 10) * 10)
 
-    svg_width, svg_height = 460, 320
-    left, right, top, bottom = 56, 26, 24, 88
-    chart_w = svg_width - left - right
-    chart_h = svg_height - top - bottom
-    bar_gap = 34
-    bar_w = (chart_w - bar_gap) / 2
-    x_positions = [left, left + bar_w + bar_gap]
+    base = alt.Chart(chart_df).encode(
+        x=alt.X(
+            "연령대:N",
+            title=None,
+            axis=alt.Axis(labelAngle=0, labelPadding=10),
+            sort=None,
+        ),
+        y=alt.Y(
+            "비율:Q",
+            title="비율(%)",
+            scale=alt.Scale(domain=[0, max_val + 8]),
+            axis=alt.Axis(grid=True),
+        ),
+        tooltip=[
+            alt.Tooltip("연령대:N", title="연령대"),
+            alt.Tooltip("비율:Q", title="비율", format=".1f"),
+        ],
+    )
 
-    grid_nodes = []
-
-    for tick in range(0, int(max_val) + 1, 10):
-        y = top + chart_h - (tick / max_val) * chart_h
-        grid_nodes.append(
-            f'<line x1="{left}" y1="{y:.2f}" x2="{svg_width-right}" y2="{y:.2f}" class="viz-grid" />'
+    bars = base.mark_bar(
+        cornerRadiusTopLeft=12,
+        cornerRadiusTopRight=12,
+        size=78,
+    ).encode(
+        color=alt.Color(
+            "연령대:N",
+            scale=alt.Scale(
+                domain=["중학생\n14~16세", "고등학생\n17~19세"],
+                range=["#5b6bff", "#4338ca"],
+            ),
+            legend=None,
         )
-        grid_nodes.append(
-            f'<text x="{left-10}" y="{y+4:.2f}" class="viz-axis">{tick}</text>'
-        )
+    )
 
-    bar_nodes = []
-    label_nodes = []
+    labels = base.mark_text(
+        dy=-8,
+        size=13,
+        fontWeight="bold",
+        color="#1e293b",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        text=alt.Text("비율:Q", format=".1f")
+    )
 
-    for x, label, value in zip(x_positions, labels, values):
-        h = max(8.0, (value / max_val) * chart_h)
-        y = top + chart_h - h
+    chart = (
+        (bars + labels)
+        .properties(height=320)
+    )
 
-        bar_nodes.append(
-            f'''
-            <g>
-                <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="url(#ageBarGradient)" />
-                <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1" />
-                <text x="{x + bar_w/2:.2f}" y="{y - 10:.2f}" class="viz-bar-value" text-anchor="middle">{value:.1f}%</text>
-            </g>
-            '''
-        )
-
-        lines = _wrap_age_label(label)
-        tspans = []
-
-        for idx, line in enumerate(lines):
-            dy = "0" if idx == 0 else "16"
-            tspans.append(
-                f'<tspan x="{x + bar_w/2:.2f}" dy="{dy}">{html.escape(line)}</tspan>'
-            )
-
-        label_nodes.append(
-            f'<text x="{x + bar_w/2:.2f}" y="{svg_height - 42:.2f}" class="viz-x-label" text-anchor="middle">{"".join(tspans)}</text>'
-        )
-
-    return f'''
-    <div class="static-viz-wrap">
-        <svg class="static-viz-svg" viewBox="0 0 {svg_width} {svg_height}" role="img" aria-label="연령대별 선호도">
-            <defs>
-                <linearGradient id="ageBarGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#5b6bff"/>
-                    <stop offset="100%" stop-color="#4338ca"/>
-                </linearGradient>
-            </defs>
-
-            {''.join(grid_nodes)}
-
-            <line x1="{left}" y1="{top + chart_h:.2f}" x2="{svg_width-right}" y2="{top + chart_h:.2f}" class="viz-axis-line" />
-
-            {''.join(bar_nodes)}
-            {''.join(label_nodes)}
-        </svg>
-
-        <div class="viz-footnote">관심도 분포를 연령대 기준으로 시각화했습니다.</div>
-    </div>
-    '''
+    return apply_altair_theme(chart)
 
 
 def _describe_salary_band(amount: int, max_amount: int) -> tuple[str, str]:
     ratio = 0 if max_amount <= 0 else amount / max_amount
     if ratio < 0.34:
-        return '진입 구간', '직업군 내 하위권 임금대입니다.'
+        return "진입 구간", "직업군 내 하위권 임금대입니다."
     if ratio < 0.67:
-        return '중간 구간', '직업군 내 중간 수준의 임금대입니다.'
-    return '상위 구간', '직업군 내 비교적 높은 임금대입니다.'
+        return "중간 구간", "직업군 내 중간 수준의 임금대입니다."
+    return "상위 구간", "직업군 내 비교적 높은 임금대입니다."
 
 
-def build_salary_gauge(salary_amount) -> str | None:
+def build_salary_gauge(salary_amount):
     if salary_amount is None:
         return None
 
@@ -1094,71 +1020,121 @@ def build_salary_gauge(salary_amount) -> str | None:
         return None
 
     max_amount = max(5000, int(ceil(salary_amount / 500.0) * 500))
-    ratio = min(1.0, salary_amount / max_amount)
-
-    ticks = [0, max_amount // 2, max_amount]
-    tick_labels = [f"{tick:,}" for tick in ticks]
-
-    cx, cy, r = 260, 226, 164
-
-    base_path = _svg_poly_arc(cx, cy, r, 180, 360, 72)
-    progress_path = _svg_poly_arc(cx, cy, r, 180, 180 + 180 * ratio, 72)
-    pointer_x, pointer_y = _svg_point(cx, cy, r, 180 + 180 * ratio)
-
     band_title, band_desc = _describe_salary_band(salary_amount, max_amount)
 
-    tick_nodes = []
+    chart_df = pd.DataFrame([
+        {
+            "항목": "평균 임금",
+            "임금": salary_amount,
+            "최대값": max_amount,
+            "표시": f"{salary_amount:,}만원",
+            "구간": band_title,
+            "설명": band_desc,
+        }
+    ])
 
-    for tick, label in zip(ticks, tick_labels):
-        deg = 180 + (tick / max_amount) * 180 if max_amount else 180
-        x1, y1 = _svg_point(cx, cy, r + 8, deg)
-        x2, y2 = _svg_point(cx, cy, r + 22, deg)
-        tx, ty = _svg_point(cx, cy, r + 42, deg)
+    tick_df = pd.DataFrame([
+        {"x": 0, "label": "0"},
+        {"x": max_amount / 2, "label": f"{max_amount // 2:,}"},
+        {"x": max_amount, "label": f"{max_amount:,}"},
+    ])
 
-        tick_nodes.append(
-            f'''
-            <line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" class="viz-gauge-tick" />
-            <text x="{tx:.2f}" y="{ty:.2f}" class="viz-gauge-axis" text-anchor="middle">{label}</text>
-            '''
+    background = alt.Chart(chart_df).mark_bar(
+        size=46,
+        cornerRadius=18,
+        color="#dbeafe",
+    ).encode(
+        x=alt.X(
+            "최대값:Q",
+            title="만원",
+            scale=alt.Scale(domain=[0, max_amount]),
+            axis=alt.Axis(grid=True, tickCount=4),
+        ),
+        y=alt.Y("항목:N", title=None, axis=None),
+    )
+
+    foreground = alt.Chart(chart_df).mark_bar(
+        size=46,
+        cornerRadius=18,
+        color="#2563eb",
+    ).encode(
+        x=alt.X(
+            "임금:Q",
+            scale=alt.Scale(domain=[0, max_amount]),
+        ),
+        y=alt.Y("항목:N", title=None, axis=None),
+        tooltip=[
+            alt.Tooltip("표시:N", title="평균 임금"),
+            alt.Tooltip("구간:N", title="구간"),
+            alt.Tooltip("설명:N", title="해석"),
+        ],
+    )
+
+    value_text = alt.Chart(chart_df).mark_text(
+        align="left",
+        baseline="middle",
+        dx=8,
+        size=16,
+        fontWeight="bold",
+        color="#0f172a",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        x=alt.X("임금:Q", scale=alt.Scale(domain=[0, max_amount])),
+        y=alt.Y("항목:N", axis=None),
+        text="표시:N",
+    )
+
+    band_text = alt.Chart(pd.DataFrame([
+        {"x": max_amount * 0.5, "항목": "평균 임금", "text": f"{band_title} · {band_desc}"}
+    ])).mark_text(
+        align="center",
+        baseline="middle",
+        dy=48,
+        size=12,
+        fontWeight="bold",
+        color="#475569",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount]), axis=None),
+        y=alt.Y("항목:N", axis=None),
+        text="text:N",
+    )
+
+    ticks = alt.Chart(tick_df).mark_rule(
+        color="#94a3b8",
+        strokeDash=[3, 3],
+        opacity=0.65,
+    ).encode(
+        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount])),
+    )
+
+    tick_labels = alt.Chart(tick_df).mark_text(
+        align="center",
+        baseline="top",
+        dy=32,
+        size=11,
+        fontWeight="bold",
+        color="#64748b",
+        font="Pretendard, Noto Sans KR, sans-serif",
+    ).encode(
+        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount]), axis=None),
+        text="label:N",
+    )
+
+    chart = (
+        (background + foreground + value_text + band_text + ticks + tick_labels)
+        .properties(
+            height=180,
+            title="평균 임금 수준",
         )
+    )
 
-    return f'''
-    <div class="static-viz-wrap gauge-wrap">
-        <div class="salary-band-chip">{html.escape(band_title)}</div>
-
-        <svg class="static-viz-svg" viewBox="0 0 520 320" role="img" aria-label="평균 임금 수준">
-            <defs>
-                <linearGradient id="salaryTrack" x1="0" x2="1" y1="0" y2="0">
-                    <stop offset="0%" stop-color="#dbeafe"/>
-                    <stop offset="50%" stop-color="#93c5fd"/>
-                    <stop offset="100%" stop-color="#c7d2fe"/>
-                </linearGradient>
-
-                <linearGradient id="salaryProgress" x1="0" x2="1" y1="0" y2="0">
-                    <stop offset="0%" stop-color="#60a5fa"/>
-                    <stop offset="100%" stop-color="#1d4ed8"/>
-                </linearGradient>
-
-                <filter id="vizShadowGauge" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#2563eb" flood-opacity="0.18"/>
-                </filter>
-            </defs>
-
-            <path d="{base_path}" fill="none" stroke="url(#salaryTrack)" stroke-width="28" stroke-linecap="round" />
-            <path d="{progress_path}" fill="none" stroke="url(#salaryProgress)" stroke-width="28" stroke-linecap="round" filter="url(#vizShadowGauge)" />
-
-            <circle cx="{pointer_x:.2f}" cy="{pointer_y:.2f}" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="4" />
-
-            {''.join(tick_nodes)}
-
-            <text x="{cx}" y="170" class="viz-center-kicker" text-anchor="middle">평균 임금 수준</text>
-            <text x="{cx}" y="222" class="viz-gauge-value" text-anchor="middle">{salary_amount:,}만원</text>
-            <text x="{cx}" y="248" class="viz-gauge-desc" text-anchor="middle">{html.escape(band_desc)}</text>
-        </svg>
-    </div>
-    '''
+    return apply_altair_theme(chart)
 
 
+# -----------------------------
+# CSS
+# -----------------------------
 def inject_css() -> None:
     render_html(
         """
@@ -1895,137 +1871,6 @@ def inject_css() -> None:
         }
         .stAlert, .stInfo, .stWarning{ border-radius:16px !important; }
 
-        .static-viz-wrap{
-            width:100%;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            gap:14px;
-            padding:8px 0 2px 0;
-        }
-        .static-viz-svg{
-            width:100%;
-            height:auto;
-            display:block;
-        }
-        .viz-legend{
-            width:100%;
-            display:grid;
-            grid-template-columns:repeat(2,minmax(0,1fr));
-            gap:10px;
-        }
-        .viz-legend-item{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            padding:12px 14px;
-            background:linear-gradient(180deg,#f8fbff 0%,#f3f7ff 100%);
-            border:1px solid #e6eefc;
-            border-radius:16px;
-            box-shadow:0 8px 24px rgba(15,23,42,.05);
-        }
-        .viz-swatch{
-            width:12px;
-            height:12px;
-            border-radius:999px;
-            flex:0 0 12px;
-            box-shadow:0 0 0 4px rgba(255,255,255,.9);
-        }
-        .viz-legend-label{
-            flex:1;
-            color:#334155;
-            font-size:14px;
-            font-weight:700;
-        }
-        .viz-legend-value{
-            color:#0f172a;
-            font-size:14px;
-            font-weight:800;
-        }
-        .viz-label{
-            fill:#334155;
-            font-size:13px;
-            font-weight:700;
-        }
-        .viz-center-kicker{
-            fill:#64748b;
-            font-size:13px;
-            font-weight:700;
-            letter-spacing:.02em;
-        }
-        .viz-center-value{
-            fill:#0f172a;
-            font-size:32px;
-            font-weight:800;
-        }
-        .viz-grid{
-            stroke:#e7eef9;
-            stroke-width:1;
-        }
-        .viz-axis{
-            fill:#94a3b8;
-            font-size:11px;
-            font-weight:600;
-            text-anchor:end;
-        }
-        .viz-axis-line{
-            stroke:#cdd9ee;
-            stroke-width:1.3;
-        }
-        .viz-bar-value{
-            fill:#1e293b;
-            font-size:15px;
-            font-weight:800;
-        }
-        .viz-x-label{
-            fill:#334155;
-            font-size:12.5px;
-            font-weight:700;
-        }
-        .viz-footnote{
-            width:100%;
-            text-align:center;
-            color:#64748b;
-            font-size:12.5px;
-            font-weight:600;
-        }
-        .gauge-wrap{
-            gap:8px;
-        }
-        .salary-band-chip{
-            align-self:flex-start;
-            display:inline-flex;
-            align-items:center;
-            padding:7px 12px;
-            border-radius:999px;
-            background:#eef4ff;
-            border:1px solid #dbe7ff;
-            color:#1d4ed8;
-            font-size:12px;
-            font-weight:800;
-            letter-spacing:.02em;
-        }
-        .viz-gauge-tick{
-            stroke:#94a3b8;
-            stroke-width:2;
-            stroke-linecap:round;
-        }
-        .viz-gauge-axis{
-            fill:#64748b;
-            font-size:11.5px;
-            font-weight:700;
-        }
-        .viz-gauge-value{
-            fill:#0f172a;
-            font-size:42px;
-            font-weight:800;
-        }
-        .viz-gauge-desc{
-            fill:#475569;
-            font-size:13px;
-            font-weight:600;
-        }
-
         @media (max-width: 1100px){
             .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
         }
@@ -2292,6 +2137,7 @@ def render_profile_section(detail: pd.Series) -> None:
         </div>
         """
     )
+
     col1, col2 = st.columns([1.2, 0.8], gap="large")
     with col1:
         render_html(
@@ -2302,6 +2148,7 @@ def render_profile_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
     with col2:
         similar_jobs = detail.get("similar_job_list", [])[:8]
         if similar_jobs:
@@ -2314,6 +2161,7 @@ def render_profile_section(detail: pd.Series) -> None:
             similar_body = f'<div class="similar-job-grid">{cards}</div>'
         else:
             similar_body = '<div class="empty-text">등록된 유사 직업 정보가 없습니다.</div>'
+
         render_html(
             f"""
             <div class="soft-card">
@@ -2322,9 +2170,12 @@ def render_profile_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
         majors = detail.get("major_list", [])[:8]
         major_html = "".join([f'<span class="pill">{html.escape(item)}</span>' for item in majors]) if majors else '<div class="empty-text">등록된 관련 전공 정보가 없습니다.</div>'
+
         render_html(
             f"""
             <div class="soft-card">
@@ -2418,6 +2269,7 @@ def extract_keywords_from_text(text: str, limit: int = 14) -> list[str]:
         "정직성", "신뢰성", "꼼꼼함", "윤리의식", "응용력", "열정", "애정", "혁신", "성취",
         "끈기", "체력", "역량", "지식", "능력",
     ]
+
     phrase_endings = sorted(phrase_endings, key=len, reverse=True)
     phrase_pattern = r"([가-힣A-Za-z·/ ]{1,28}?(?:" + "|".join(re.escape(x) for x in phrase_endings) + r"))"
 
@@ -2518,6 +2370,7 @@ def render_capability_section(detail: pd.Series) -> None:
         </div>
         """
     )
+
     col1, col2 = st.columns([1, 1], gap="large")
     with col1:
         render_html(
@@ -2528,6 +2381,7 @@ def render_capability_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
         aptitude_lines = split_lines(detail.get("aptitude", ""))
         if aptitude_lines:
             render_html(
@@ -2538,6 +2392,7 @@ def render_capability_section(detail: pd.Series) -> None:
                 </div>
                 """
             )
+
     with col2:
         render_html(
             f"""
@@ -2547,8 +2402,10 @@ def render_capability_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
         contacts = detail.get("contact_list_all", [])
         contact_html = "<ul class='bullet-list'>" + "".join([f"<li>{html.escape(item)}</li>" for item in contacts]) + "</ul>" if contacts else "<div class='empty-text'>추가 링크/연락처 정보가 없습니다.</div>"
+
         render_html(
             f"""
             <div class="soft-card" style="margin-top:16px;">
@@ -2631,10 +2488,10 @@ def render_market_section(detail: pd.Series) -> None:
             """
         )
 
-        gauge = build_salary_gauge(salary_amount)
+        salary_chart = build_salary_gauge(salary_amount)
 
-        if gauge is not None:
-            render_html(gauge)
+        if salary_chart is not None:
+            st.altair_chart(salary_chart, use_container_width=True)
         else:
             st.info("임금 그래프를 표시할 수 있는 데이터가 없습니다.")
 
@@ -2671,8 +2528,8 @@ def render_chart_section(detail: pd.Series) -> None:
         """
     )
 
-    gender_fig = build_gender_chart(detail)
-    age_fig = build_age_chart(detail)
+    gender_chart = build_gender_chart(detail)
+    age_chart = build_age_chart(detail)
 
     col1, col2 = st.columns(2, gap="large")
 
@@ -2685,8 +2542,8 @@ def render_chart_section(detail: pd.Series) -> None:
             """
         )
 
-        if gender_fig is not None:
-            render_html(gender_fig)
+        if gender_chart is not None:
+            st.altair_chart(gender_chart, use_container_width=True)
         else:
             st.info("성별 PCNT 데이터가 없습니다.")
 
@@ -2699,14 +2556,15 @@ def render_chart_section(detail: pd.Series) -> None:
             """
         )
 
-        if age_fig is not None:
-            render_html(age_fig)
+        if age_chart is not None:
+            st.altair_chart(age_chart, use_container_width=True)
         else:
             st.info("연령대 PCNT 데이터가 없습니다.")
 
 
 def render_detail_page(detail: pd.Series) -> None:
     job_name = str(detail.get("job", ""))
+
     render_html(
         f"""
         <div class="hero" style="margin-bottom:18px;">
@@ -2722,6 +2580,7 @@ def render_detail_page(detail: pd.Series) -> None:
         if st.button("← 목록으로", use_container_width=True):
             st.session_state.page = "main"
             rerun_app()
+
     with top_col2:
         st.caption("상세 분석 페이지")
 
@@ -2847,6 +2706,7 @@ def render_main_page(df: pd.DataFrame) -> None:
         step=1,
         key="page_number_input",
     )
+
     st.session_state.page_number = int(current_page)
     start = (current_page - 1) * per_page
     end = start + per_page
@@ -2887,6 +2747,7 @@ def main() -> None:
             st.session_state.selected_job = None
             rerun_app()
             return
+
         render_detail_page(matched.iloc[0])
     else:
         render_main_page(df)
