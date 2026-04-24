@@ -1451,9 +1451,9 @@ def inject_css() -> None:
             font-size:14px;
             line-height:1.76;
             color:#475467;
-            height:132px;
-            min-height:132px;
-            max-height:132px;
+            height:140px;
+            min-height:140px;
+            max-height:140px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
