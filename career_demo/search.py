@@ -1415,9 +1415,9 @@ def inject_css() -> None:
             border-radius:20px;
             box-shadow:var(--shadow);
             padding:20px 20px 18px 20px;
-            height:450px;
-            min-height:400px;
-            max-height:400px;
+            height:440px;
+            min-height:440px;
+            max-height:440px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
