@@ -2974,16 +2974,11 @@ def render_main_page(df: pd.DataFrame) -> None:
 
     per_page = 12
     page_count = max(1, (len(filtered) - 1) // per_page + 1)
-    current_page = st.number_input(
-        "페이지",
-        min_value=1,
-        max_value=page_count,
-        value=min(st.session_state.get("page_number", 1), page_count),
-        step=1,
-        key="page_number_input",
-    )
 
-    st.session_state.page_number = int(current_page)
+    current_page = int(st.session_state.get("page_number", 1))
+    current_page = max(1, min(current_page, page_count))
+    st.session_state.page_number = current_page
+
     start = (current_page - 1) * per_page
     end = start + per_page
     page_df = filtered.iloc[start:end].reset_index(drop=True)
@@ -2996,6 +2991,58 @@ def render_main_page(df: pd.DataFrame) -> None:
                 st.session_state.selected_job = row["job"]
                 st.session_state.page = "detail"
                 rerun_app()
+
+    render_html(
+        """
+        <div style="height:18px;"></div>
+        <div style="
+            width:100%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            margin:10px 0 28px 0;
+        ">
+        """
+    )
+
+    page_col_prev, page_col_num, page_col_next = st.columns([0.44, 0.12, 0.44], gap="small")
+
+    with page_col_prev:
+        prev_disabled = current_page <= 1
+        if st.button("←", key="page_prev_btn", use_container_width=True, disabled=prev_disabled):
+            st.session_state.page_number = max(1, current_page - 1)
+            rerun_app()
+
+    with page_col_num:
+        render_html(
+            f"""
+            <div style="
+                height:44px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                border:1px solid #cfd9e8;
+                border-radius:14px;
+                background:#ffffff;
+                color:#0f172a;
+                font-size:15px;
+                font-weight:800;
+                box-shadow:0 4px 14px rgba(15,23,42,.04);
+                box-sizing:border-box;
+            ">
+                {current_page} / {page_count}
+            </div>
+            """
+        )
+
+    with page_col_next:
+        next_disabled = current_page >= page_count
+        if st.button("→", key="page_next_btn", use_container_width=True, disabled=next_disabled):
+            st.session_state.page_number = min(page_count, current_page + 1)
+            rerun_app()
+
+    render_html("</div>")
 
 
 # -----------------------------
