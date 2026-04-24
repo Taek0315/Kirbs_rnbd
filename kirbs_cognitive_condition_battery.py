@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-KIRBS+ 무료 인지 기능 검사 패키지 v2
+KIRBS+ 무료 인지 기능 검사 패키지 v3
 - 단일 Streamlit .py 파일
-- 외부 .streamlit/config.toml 또는 별도 정적 파일 불필요
-- JS 기반 과제 실행부로 반응시간(performance.now) 측정
-- Trail 연결 과제, 2-back, Flanker, Go/No-Go 구성
+- 외부 .streamlit/config.toml / 정적 파일 불필요
+- 과제 실행부는 iframe 내부 JavaScript로 수행
+- 반응시간은 브라우저 performance.now() 기준 기록
+- 구성: Trail 연결 과제, 2-back, Flanker, Go/No-Go
 
 실행:
-  ENABLE_DB_INSERT=false streamlit run kirbs_cognitive_task_battery_v2.py
-  Windows CMD: set ENABLE_DB_INSERT=false && streamlit run kirbs_cognitive_task_battery_v2.py
+  Windows CMD: set ENABLE_DB_INSERT=false && streamlit run kirbs_cognitive_task_battery_v3_single.py
+  macOS/Linux: ENABLE_DB_INSERT=false streamlit run kirbs_cognitive_task_battery_v3_single.py
 """
 
 from __future__ import annotations
@@ -20,14 +21,14 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 페이지 설정
+# 기본 설정
 # ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="KIRBS+ 인지 기능 검사",
@@ -41,7 +42,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_TASK_BATTERY"
 EXAM_TITLE = "KIRBS+ 인지 기능 검사"
 EXAM_SUBTITLE = "주의 · 처리속도 · 작업기억 · 억제통제"
-EXAM_VERSION = "streamlit_js_2.0"
+EXAM_VERSION = "streamlit_js_3.0"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -66,13 +67,13 @@ def get_query_value(key: str, default: str = "") -> str:
     try:
         value = st.query_params.get(key, default)
         if isinstance(value, list):
-            return value[0] if value else default
+            return str(value[0]) if value else default
         return str(value)
     except Exception:
         try:
             params = st.experimental_get_query_params()
             value = params.get(key, [default])
-            return value[0] if value else default
+            return str(value[0]) if value else default
         except Exception:
             return default
 
@@ -198,7 +199,7 @@ def score_desc(score: Optional[float]) -> str:
     if score >= 65:
         return "현재 과제 수행에서는 속도와 정확도가 비교적 안정적으로 나타났습니다."
     if score >= 45:
-        return "현재 과제 수행은 기준 범위에 가까우나, 피로·긴장·기기 환경에 따라 변동될 수 있습니다."
+        return "현재 과제 수행은 내부 기준점에 가까운 범위입니다. 다만 피로, 긴장, 기기 환경에 따라 변동될 수 있습니다."
     return "일부 과제에서 반응 지연, 오류 증가, 반응 억제 어려움 또는 작업기억 부담이 관찰되었습니다."
 
 
@@ -277,8 +278,7 @@ def inject_css() -> None:
         """
 <style>
 :root {
-  color-scheme: dark !important;
-  --content-max-width: 980px;
+  --content-max-width: 960px;
   --bg: #071225;
   --surface: #0b1a33;
   --surface-2: #0d2140;
@@ -289,37 +289,27 @@ def inject_css() -> None:
   --primary: #4f9cff;
   --primary-soft: rgba(79, 156, 255, 0.16);
   --success: #56e39a;
-  --warning: #ffb454;
   --danger: #ff7373;
   --field-bg: #10284c;
   --field-bg-hover: #13315d;
   --field-border: rgba(96, 165, 250, 0.52);
-  --field-border-strong: rgba(120, 173, 255, 0.9);
+  --field-border-strong: rgba(120, 173, 255, 0.92);
   --field-shadow: 0 0 0 3px rgba(79, 156, 255, 0.16);
   --radius-xl: 22px;
-  --radius-lg: 18px;
-  --radius-md: 14px;
   --shadow-sm: 0 8px 24px rgba(2, 8, 23, 0.28);
   --shadow-md: 0 18px 40px rgba(2, 8, 23, 0.38);
 }
 
-html, body, .stApp {
-  background: var(--bg) !important;
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+  background: linear-gradient(180deg, #06101f 0%, #071225 100%) !important;
   color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
-  letter-spacing: -0.01em;
-}
-
-.stApp {
-  background:
-    radial-gradient(circle at top left, rgba(79,156,255,.08), transparent 30%),
-    linear-gradient(180deg, #06101f 0%, #071225 100%) !important;
 }
 
 .block-container {
   max-width: var(--content-max-width) !important;
   padding-top: 0.85rem !important;
-  padding-bottom: 3.2rem !important;
+  padding-bottom: 3rem !important;
 }
 
 header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, div[data-testid="stDecoration"] {
@@ -331,12 +321,6 @@ header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, di
 .page-wrap {
   width: min(100%, var(--content-max-width));
   margin: 0 auto;
-  animation: fadeIn .22s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .card {
@@ -344,14 +328,10 @@ header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, di
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  padding: 24px;
+  padding: 22px;
   margin-bottom: 16px;
 }
-
-.card.soft {
-  background: linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.004)), var(--surface-2);
-}
-
+.card.soft { background: linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.004)), var(--surface-2); }
 .badge {
   display: inline-flex;
   align-items: center;
@@ -365,66 +345,14 @@ header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, di
   margin-bottom: 8px;
   border: 1px solid rgba(79, 156, 255, 0.22);
 }
-
-.title-lg {
-  font-size: clamp(26px, 3vw, 34px) !important;
-  font-weight: 880 !important;
-  line-height: 1.28 !important;
-  color: var(--text) !important;
-  margin: 6px 0 0 !important;
-}
-
-.title-md {
-  font-size: clamp(18px, 2.2vw, 21px) !important;
-  font-weight: 780 !important;
-  line-height: 1.35 !important;
-  color: var(--text) !important;
-  margin: 0 0 8px !important;
-}
-
-.text, .muted, .card p, .card li {
-  color: var(--muted) !important;
-  line-height: 1.72 !important;
-  font-size: 15px !important;
-  opacity: 1 !important;
-}
-
-.intro-bullets {
-  margin: 0;
-  padding-left: 1.15rem;
-  display: grid;
-  gap: .68rem;
-  color: var(--muted);
-}
-
-.intro-bullets li {
-  line-height: 1.72;
-  word-break: keep-all;
-}
-
-.note-box {
-  border-radius: 14px;
-  padding: 14px 16px;
-  border: 1px dashed rgba(96,165,250,.22);
-  background: linear-gradient(180deg, rgba(79,156,255,.04), rgba(79,156,255,.02)), var(--surface-2);
-  color: var(--muted);
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 4px 0 22px;
-}
-
+.title-lg { font-size: clamp(26px, 3vw, 34px) !important; font-weight: 900 !important; line-height: 1.28 !important; color: var(--text) !important; margin: 6px 0 0 !important; }
+.title-md { font-size: clamp(18px, 2.2vw, 21px) !important; font-weight: 780 !important; line-height: 1.35 !important; color: var(--text) !important; margin: 0 0 8px !important; }
+.text, .muted, .card p, .card li { color: var(--muted) !important; line-height: 1.72 !important; font-size: 15px !important; opacity: 1 !important; }
+.intro-bullets { margin: 0; padding-left: 1.15rem; display: grid; gap: .68rem; color: var(--muted); }
+.intro-bullets li { line-height: 1.72; word-break: keep-all; }
+.stepper { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 22px; }
 .step-item { display: flex; flex-direction: column; align-items: center; min-width: 76px; }
-.step-circle {
-  width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 14px; border: 1px solid rgba(214, 226, 236, 0.55);
-  background: rgba(255, 255, 255, 0.10); color: #D8E7F5;
-}
+.step-circle { width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; border: 1px solid rgba(214, 226, 236, 0.55); background: rgba(255, 255, 255, 0.10); color: #D8E7F5; }
 .step-label { margin-top: 6px; font-size: 12px; color: #D8E7F5; font-weight: 750; text-align: center; }
 .step-item.active .step-circle { background: var(--primary); border-color: var(--primary); color: #fff; }
 .step-item.done .step-circle { background: var(--success); border-color: var(--success); color: #fff; }
@@ -432,7 +360,6 @@ header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, di
 .step-line { width: 42px; height: 2px; background: rgba(214, 226, 236, 0.45); border-radius: 999px; }
 .step-line.done { background: var(--success); }
 
-/* labels */
 div[data-testid="stTextInput"] label,
 div[data-testid="stSelectbox"] label,
 div[data-testid="stCheckbox"] label,
@@ -448,7 +375,6 @@ div[data-testid="stCaptionContainer"] p {
   -webkit-text-fill-color: var(--text) !important;
 }
 
-/* input/select visible field */
 div[data-testid="stTextInput"] input {
   background: var(--field-bg) !important;
   color: var(--text) !important;
@@ -487,53 +413,23 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] div {
   -webkit-text-fill-color: var(--text) !important;
   opacity: 1 !important;
 }
-
 div[data-testid="stSelectbox"] [data-baseweb="select"] svg,
 div[data-testid="stSelectbox"] [data-baseweb="select"] path { fill: var(--text) !important; color: var(--text) !important; opacity: 1 !important; }
 
 div[data-baseweb="popover"] { z-index: 99999 !important; }
-div[data-baseweb="popover"] [data-baseweb="menu"], div[data-baseweb="popover"] [role="listbox"], div[data-baseweb="popover"] ul {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--field-border) !important;
-  border-radius: 14px !important;
-  box-shadow: var(--shadow-md) !important;
-  overflow: hidden !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
-}
-div[data-baseweb="popover"] [role="option"], div[data-baseweb="popover"] li, div[data-baseweb="popover"] [data-baseweb="menu"] > div {
-  background: transparent !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  opacity: 1 !important;
-  min-height: 42px !important;
-}
+div[data-baseweb="popover"] [data-baseweb="menu"], div[data-baseweb="popover"] [role="listbox"], div[data-baseweb="popover"] ul { background: var(--surface-2) !important; border: 1px solid var(--field-border) !important; border-radius: 14px !important; box-shadow: var(--shadow-md) !important; overflow: hidden !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+div[data-baseweb="popover"] [role="option"], div[data-baseweb="popover"] li, div[data-baseweb="popover"] [data-baseweb="menu"] > div { background: transparent !important; color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; opacity: 1 !important; min-height: 42px !important; }
 div[data-baseweb="popover"] [role="option"] *, div[data-baseweb="popover"] li *, div[data-baseweb="popover"] [data-baseweb="menu"] > div * { color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
 div[data-baseweb="popover"] [role="option"]:hover, div[data-baseweb="popover"] li:hover, div[data-baseweb="popover"] [data-baseweb="menu"] > div:hover { background: rgba(79,156,255,.12) !important; }
 
-/* slider */
 .stSlider [role="slider"] { background-color: var(--primary) !important; border: 2px solid #fff !important; box-shadow: 0 0 0 2px rgba(79,156,255,.28) !important; }
 .stSlider * { color: var(--text) !important; }
-
-/* checkbox */
 div[data-testid="stCheckbox"] p, div[data-testid="stCheckbox"] span, div[data-testid="stCheckbox"] div { color: var(--text) !important; opacity: 1 !important; }
 div[data-testid="stCheckbox"] svg { color: var(--primary) !important; }
-
-/* alerts */
 div[data-testid="stAlert"] { background: rgba(255,115,115,.14) !important; border: 1px solid rgba(255,115,115,.24) !important; border-radius: 14px !important; color: #ffd6d6 !important; }
 div[data-testid="stAlert"] * { color: #ffd6d6 !important; }
 
-/* buttons */
-div[data-testid="stButton"] > button, .stDownloadButton > button {
-  border-radius: 12px !important;
-  min-height: 46px;
-  border: 1px solid var(--line) !important;
-  background: var(--surface-3) !important;
-  color: var(--text) !important;
-  font-weight: 760 !important;
-  transition: all .18s ease;
-  box-shadow: none !important;
-}
+div[data-testid="stButton"] > button, .stDownloadButton > button { border-radius: 12px !important; min-height: 46px; border: 1px solid var(--line) !important; background: var(--surface-3) !important; color: var(--text) !important; font-weight: 760 !important; transition: all .18s ease; box-shadow: none !important; }
 div[data-testid="stButton"] > button:hover, .stDownloadButton > button:hover { border-color: var(--field-border-strong) !important; background: #163864 !important; }
 div[data-testid="stButton"] > button[kind="primary"] { border-color: var(--field-border-strong) !important; background: linear-gradient(180deg, #1d4f8d, #163f73) !important; color: #fff !important; }
 div[data-testid="stButton"] > button[kind="primary"] * { color: #fff !important; -webkit-text-fill-color: #fff !important; }
@@ -560,7 +456,7 @@ div[data-testid="stButton"] > button:disabled { opacity: .56 !important; cursor:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# UI 구성
+# 일반 UI
 # ──────────────────────────────────────────────────────────────────────────────
 def render_stepper(current_page: str) -> None:
     steps = [("intro", "동의"), ("info", "정보입력"), ("task", "과제수행"), ("result", "결과")]
@@ -596,8 +492,8 @@ def page_intro() -> None:
     st.markdown(
         f"""
         <section class="card">
-          <span class="badge">Cognitive Task Battery v2</span>
-          <span class="badge">JS reaction timing</span>
+          <span class="badge">Cognitive Task Battery v3</span>
+          <span class="badge">Browser reaction timing</span>
           <h1 class="title-lg">{EXAM_TITLE}</h1>
           <p class="text" style="margin-top:10px;">{EXAM_SUBTITLE}</p>
         </section>
@@ -607,9 +503,9 @@ def page_intro() -> None:
 
     bullets = [
         "본 검사는 현재의 주의집중, 처리속도, 작업기억, 억제통제 수행을 짧게 확인하기 위한 비진단적 인지 과제 패키지입니다.",
-        "기존 상용 검사 원본을 복제하지 않고, 공개 인지실험 패러다임을 KIRBS+용 자체 과제로 재구성했습니다.",
-        "이번 버전에서는 단순 PVT와 색상 의존 Stroop을 제외하고, Trail 연결 과제·2-back·Flanker·Go/No-Go로 구성했습니다.",
-        "과제 수행부는 Streamlit 버튼이 아니라 브라우저 내부 JavaScript로 동작하여 반응시간을 performance.now() 기준으로 기록합니다.",
+        "색상 표시 안정성이 중요한 Stroop과 단순 반응시간 중심 PVT는 제외하고, 일반 사용자에게 체감이 더 분명한 Trail 연결 과제·2-back·Flanker·Go/No-Go로 구성했습니다.",
+        "과제 수행부는 Streamlit 버튼이 아니라 브라우저 내부 JavaScript로 동작하며, 반응시간은 performance.now() 기준으로 기록됩니다.",
+        "현재 결과는 규준 기반 상대평가가 아니라 50점을 내부 기준점으로 둔 절대 기준 환산점수입니다.",
     ]
     privacy = [
         "검사 진행을 위해 이름, 성별, 연령, 거주지역, 실시기기 등 기본 정보를 입력받습니다. 휴대폰 번호와 이메일은 선택 항목입니다.",
@@ -756,7 +652,7 @@ def page_info() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# JS 인지 과제 컴포넌트
+# JS 과제 실행부
 # ──────────────────────────────────────────────────────────────────────────────
 def cognitive_task_html() -> str:
     return dedent(
@@ -769,350 +665,186 @@ def cognitive_task_html() -> str:
 <style>
 :root{
   --bg:#071225; --surface:#0b1a33; --surface2:#0d2140; --surface3:#10284c;
-  --text:#f8fbff; --muted:#c7d3e3; --line:rgba(148,163,184,.28);
+  --text:#f8fbff; --muted:#c7d3e3; --line:rgba(148,163,184,.30);
   --primary:#4f9cff; --success:#56e39a; --warn:#ffb454; --danger:#ff7373;
   --shadow:0 18px 40px rgba(2,8,23,.32); --r:22px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:transparent;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;letter-spacing:-.01em}
 .wrap{width:100%;max-width:960px;margin:0 auto;padding:0 0 28px}
-.card{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.006)),var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px rgba(2,8,23,.28);padding:24px;margin-bottom:16px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.006)),var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px rgba(2,8,23,.28);padding:24px;margin-bottom:16px}
 .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .badge{display:inline-flex;padding:6px 12px;border-radius:999px;background:rgba(79,156,255,.16);border:1px solid rgba(79,156,255,.25);color:#89beff;font-weight:800;font-size:12px;margin-bottom:10px}
-.title{font-size:clamp(28px,4vw,38px);line-height:1.2;font-weight:900;margin:0 0 12px;color:#fff}
-.sub{color:var(--muted);font-size:15px;line-height:1.72;margin:0}.blue{color:#89beff;font-weight:800}.small{font-size:13px;color:var(--muted);line-height:1.65}.progress-row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#fff;font-weight:800;font-size:14px}.meter{height:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:8px}.fill{height:100%;width:0;background:linear-gradient(90deg,#3b82f6,#60a5fa);transition:width .25s ease}.stim-card{min-height:360px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}.center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.big{font-size:clamp(64px,10vw,96px);font-weight:950;line-height:1;color:#fff}.mid{font-size:clamp(32px,5vw,54px);font-weight:900;line-height:1.15;color:#fff}.guide{color:var(--muted);font-size:16px;line-height:1.7}.btnrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.btnrow.four{grid-template-columns:repeat(4,minmax(0,1fr))}button{border:1px solid var(--line);background:var(--surface3);color:#fff;border-radius:14px;min-height:54px;padding:12px 16px;font-size:16px;font-weight:850;cursor:pointer;transition:.15s ease;box-shadow:none}button:hover{border-color:rgba(120,173,255,.9);background:#163864}button.primary{border-color:rgba(120,173,255,.9);background:linear-gradient(180deg,#1d4f8d,#163f73);box-shadow:0 0 0 1px rgba(79,156,255,.25),0 8px 18px rgba(79,156,255,.16)}button.good{background:linear-gradient(180deg,#168a55,#0f6e44);border-color:rgba(86,227,154,.65)}button.warn{background:linear-gradient(180deg,#9a5b16,#74420f);border-color:rgba(255,180,84,.65)}button:disabled{opacity:.45;cursor:not-allowed}.trail-board{position:relative;width:100%;height:520px;background:linear-gradient(180deg,rgba(79,156,255,.05),rgba(79,156,255,.02)),#09172d;border:1px solid var(--line);border-radius:22px;overflow:hidden}.node{position:absolute;width:54px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#10284c;border:2px solid rgba(120,173,255,.6);color:#fff;font-size:20px;font-weight:900;cursor:pointer;user-select:none;box-shadow:0 10px 24px rgba(2,8,23,.25)}.node:hover{background:#163864}.node.done{background:#168a55;border-color:#56e39a;color:#fff}.node.next{box-shadow:0 0 0 4px rgba(79,156,255,.22),0 10px 24px rgba(2,8,23,.25)}.node.wrong{animation:shake .25s ease;background:#7f1d1d;border-color:#ff7373}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kv .box{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:12px}.kv .label{font-size:12px;color:var(--muted);font-weight:800}.kv .value{font-size:24px;color:#fff;font-weight:950;margin-top:4px}.fix{font-size:88px;font-weight:900;color:#89beff}.flanker{font-size:clamp(58px,9vw,90px);font-weight:950;letter-spacing:.06em;color:#fff}.result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.result-card{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:16px}.bar{height:12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--line);overflow:hidden;margin-top:10px}.bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#3b82f6,#56e39a)}.countdown{font-size:80px;font-weight:950;color:#fff}.hidden{display:none!important}.kbd{display:inline-flex;border:1px solid rgba(255,255,255,.25);border-bottom-width:3px;border-radius:8px;padding:2px 8px;font-size:13px;font-weight:900;color:#fff;background:rgba(255,255,255,.08)}@media(max-width:720px){.btnrow,.btnrow.four{grid-template-columns:1fr}.kv{grid-template-columns:repeat(2,minmax(0,1fr))}.trail-board{height:480px}.result-grid{grid-template-columns:1fr}.node{width:48px;height:48px;font-size:18px}.card{padding:18px}}
+.title{font-size:clamp(26px,4vw,38px);line-height:1.2;font-weight:900;margin:0 0 12px;color:#fff}
+.sub{color:var(--muted);font-size:15px;line-height:1.72;margin:0}.blue{color:#89beff;font-weight:800}.small{font-size:13px;color:var(--muted);line-height:1.65}.progress-row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#fff;font-weight:800;font-size:14px}.meter{height:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:8px}.fill{height:100%;width:0;background:linear-gradient(90deg,#3b82f6,#60a5fa);transition:width .25s ease}
+.work{min-height:540px;display:flex;align-items:stretch;justify-content:center;text-align:center;position:relative;overflow:hidden}.center{width:100%;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.big{font-size:clamp(64px,10vw,96px);font-weight:950;line-height:1;color:#fff}.mid{font-size:clamp(30px,5vw,54px);font-weight:900;line-height:1.15;color:#fff}.guide{color:var(--muted);font-size:16px;line-height:1.7}.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.actions.one{grid-template-columns:1fr}.actions.four{grid-template-columns:repeat(4,minmax(0,1fr))}button{border:1px solid var(--line);background:var(--surface3);color:#fff;border-radius:14px;min-height:54px;padding:12px 16px;font-size:16px;font-weight:850;cursor:pointer;transition:.15s ease;box-shadow:none}button:hover{border-color:rgba(120,173,255,.9);background:#163864}button.primary{border-color:rgba(120,173,255,.9);background:linear-gradient(180deg,#1d4f8d,#163f73);box-shadow:0 0 0 1px rgba(79,156,255,.25),0 8px 18px rgba(79,156,255,.16)}button.good{background:linear-gradient(180deg,#168a55,#0f6e44);border-color:rgba(86,227,154,.65)}button.danger{background:linear-gradient(180deg,#8b1d1d,#6e1717);border-color:rgba(255,115,115,.65)}button:disabled{opacity:.48;cursor:not-allowed}.grid-board{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-content:center;padding:8px}.node{height:86px;border-radius:20px;background:#10284c;border:2px solid rgba(120,173,255,.6);color:#fff;font-size:24px;font-weight:950;display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;box-shadow:0 10px 24px rgba(2,8,23,.24)}.node:hover{background:#163864}.node.done{background:#168a55;border-color:#56e39a}.node.next{box-shadow:0 0 0 4px rgba(79,156,255,.28),0 10px 24px rgba(2,8,23,.24)}.node.wrong{animation:shake .25s ease;background:#7f1d1d;border-color:#ff7373}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;max-width:800px}.kv .box{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:12px}.kv .label{font-size:12px;color:var(--muted);font-weight:800}.kv .value{font-size:22px;color:#fff;font-weight:950;margin-top:4px}.fix{font-size:88px;font-weight:900;color:#89beff}.flanker{font-size:clamp(58px,9vw,90px);font-weight:950;letter-spacing:.06em;color:#fff}.kbd{display:inline-flex;border:1px solid rgba(255,255,255,.25);border-bottom-width:3px;border-radius:8px;padding:2px 8px;font-size:13px;font-weight:900;color:#fff;background:rgba(255,255,255,.08)}.error{background:rgba(255,115,115,.12);border:1px solid rgba(255,115,115,.4);border-radius:18px;padding:18px;color:#ffd6d6;text-align:left;white-space:pre-wrap;line-height:1.5}.trail-status{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.status-box{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:12px;font-weight:900;color:#fff}.status-box span{color:#89beff}.hidden{display:none!important}@media(max-width:720px){.actions,.actions.four{grid-template-columns:1fr}.kv{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-board{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.node{height:70px;font-size:20px}.work{min-height:520px}.panel{padding:18px}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card" id="headerCard">
-    <div class="top">
-      <div>
-        <span class="badge" id="taskBadge">대기</span>
-        <h1 class="title" id="taskTitle">인지 과제 준비</h1>
-        <p class="sub" id="taskDesc">아래 안내를 확인한 뒤 시작해 주세요.</p>
-      </div>
-      <div class="small" id="taskHint">반응시간은 브라우저 내부 시간 기준으로 기록됩니다.</div>
-    </div>
-    <div class="progress-row"><span id="progressText">0 / 4</span><span id="progressPct">0%</span></div>
-    <div class="meter"><div class="fill" id="progressFill"></div></div>
-  </div>
-
-  <div class="card stim-card" id="mainCard">
-    <div class="center" id="mainArea">
-      <div class="mid">검사 시작 전 안내</div>
-      <div class="guide">가능하면 PC/노트북에서 실시하고, 과제 중에는 화면을 벗어나지 마세요.<br>각 과제는 연습문제 없이 바로 시작됩니다.</div>
-      <div class="kv" style="width:100%;max-width:760px;margin-top:12px">
-        <div class="box"><div class="label">과제 1</div><div class="value" style="font-size:18px">Trail</div></div>
-        <div class="box"><div class="label">과제 2</div><div class="value" style="font-size:18px">2-back</div></div>
-        <div class="box"><div class="label">과제 3</div><div class="value" style="font-size:18px">Flanker</div></div>
-        <div class="box"><div class="label">과제 4</div><div class="value" style="font-size:18px">Go/No-Go</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="actionArea" class="btnrow">
-    <button class="primary" id="startBtn">전체 과제 시작</button>
-    <button id="cancelBtn">처음 안내 다시 보기</button>
-  </div>
-</div>
-
+<div id="app" class="wrap"></div>
 <script>
-const EXAM_NAME = "KIRBS_COGNITIVE_TASK_BATTERY";
-const EXAM_VERSION = "streamlit_js_2.0";
+(function(){
+'use strict';
+window.addEventListener('error', function(e){ showFatal('JavaScript 오류가 발생했습니다.\n' + e.message + '\n' + (e.filename||'') + ':' + (e.lineno||'')); });
+window.addEventListener('unhandledrejection', function(e){ showFatal('Promise 오류가 발생했습니다.\n' + (e.reason && e.reason.stack ? e.reason.stack : e.reason)); });
 
-const state = {
-  taskIndex: 0,
-  records: [],
-  summaries: {},
-  startedAt: new Date().toISOString(),
-  seed: Math.floor(Math.random() * 1000000),
-  current: null,
-  locked: false,
-};
-
+const EXAM_NAME = 'KIRBS_COGNITIVE_TASK_BATTERY';
+const EXAM_VERSION = 'streamlit_js_3.0';
+const app = document.getElementById('app');
 const tasks = [
-  {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 전환능력', desc:'제시된 원을 순서대로 빠르게 클릭합니다. A는 숫자 순서, B는 숫자-글자 교대 순서입니다.'},
-  {key:'nback', title:'2-back 작업기억 과제', sub:'작업기억 · 정보 업데이트', desc:'현재 글자가 2개 전에 나온 글자와 같으면 일치, 아니면 불일치를 선택합니다.'},
-  {key:'flanker', title:'Flanker 화살표 과제', sub:'선택적 주의 · 반응 갈등 억제', desc:'가운데 화살표의 방향만 보고 왼쪽 또는 오른쪽을 선택합니다.'},
-  {key:'gng', title:'Go/No-Go 과제', sub:'지속주의 · 반응 억제', desc:'GO 자극에는 빠르게 반응하고, NO-GO 자극에는 반응하지 않습니다.'}
+  {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 전환능력', desc:'화면에 흩어진 항목을 정해진 순서대로 빠르게 선택합니다.'},
+  {key:'nback', title:'2-back 작업기억 과제', sub:'작업기억 · 정보 업데이트', desc:'현재 글자가 2개 전에 나온 글자와 같은지 판단합니다.'},
+  {key:'flanker', title:'Flanker 화살표 과제', sub:'선택적 주의 · 반응 갈등 억제', desc:'방해 화살표를 무시하고 가운데 화살표 방향만 판단합니다.'},
+  {key:'gng', title:'Go/No-Go 과제', sub:'지속주의 · 반응 억제', desc:'GO에는 반응하고, X에는 반응을 억제합니다.'}
 ];
-
-const $ = (id) => document.getElementById(id);
+const state = { taskIndex:0, records:[], summaries:{}, startedAt:new Date().toISOString(), locked:false };
+function $(id){ return document.getElementById(id); }
 function now(){ return performance.now(); }
-function round(x,n=2){ return Math.round(x * Math.pow(10,n)) / Math.pow(10,n); }
-function mean(a){ const b=a.filter(x=>Number.isFinite(x)); return b.length ? b.reduce((s,x)=>s+x,0)/b.length : null; }
+function round(x,n=2){ return Math.round(x*Math.pow(10,n))/Math.pow(10,n); }
+function clamp(x,a=20,b=80){ return Math.max(a,Math.min(b,x)); }
+function pct(x){ return Math.round(x) + '%'; }
 function median(a){ const b=a.filter(x=>Number.isFinite(x)).sort((x,y)=>x-y); if(!b.length) return null; const m=Math.floor(b.length/2); return b.length%2?b[m]:(b[m-1]+b[m])/2; }
-function clamp(x,a=20,b=80){ return Math.max(a, Math.min(b, x)); }
-function pct(x){ return `${Math.round(x)}%`; }
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
-function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function sample(a){ return a[Math.floor(Math.random()*a.length)]; }
+function escapeHtml(s){ return String(s).replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function headerHtml(idx, trialText, pctValue){
+  const t = idx < tasks.length ? tasks[idx] : {title:'결과 산출', sub:'완료', desc:'결과를 정리하고 있습니다.'};
+  const p = Number.isFinite(pctValue) ? pctValue : Math.min(idx,tasks.length)/tasks.length*100;
+  return `<div class="panel"><div class="top"><div><span class="badge">${idx < tasks.length ? (idx+1)+' / '+tasks.length : '완료'}</span><h1 class="title">${t.title}</h1><p class="sub"><span class="blue">${t.sub}</span><br>${t.desc}</p></div><div class="small">반응시간은 브라우저 내부 시간 기준으로 기록됩니다.</div></div><div class="progress-row"><span>${trialText || Math.min(idx,tasks.length)+' / '+tasks.length}</span><span>${Math.round(p)}%</span></div><div class="meter"><div class="fill" style="width:${p}%"></div></div></div>`;
+}
+function render(idx, body, actions, trialText, pctValue){
+  app.innerHTML = headerHtml(idx, trialText, pctValue) + `<div class="panel work"><div class="center">${body}</div></div><div class="actions ${actions && actions.length===1 ? 'one' : ''}" id="actions">${(actions||[]).map(a=>`<button id="${a.id}" class="${a.cls||''}" ${a.disabled?'disabled':''}>${a.label}</button>`).join('')}</div>`;
+}
+function setAction(id, fn){ const el=$(id); if(el) el.onclick=fn; }
+function showFatal(msg){ app.innerHTML = `<div class="panel"><div class="error">${escapeHtml(msg)}</div><div style="height:12px"></div><button class="primary" onclick="window.location.reload()">다시 불러오기</button></div>`; }
+function startBattery(){ state.taskIndex=0; state.records=[]; state.summaries={}; state.startedAt=new Date().toISOString(); runTrail(); }
+function nextTask(){ state.taskIndex += 1; if(state.taskIndex===1) runNback(); else if(state.taskIndex===2) runFlanker(); else if(state.taskIndex===3) runGoNoGo(); else finishBattery(); }
+function completeBody(title, lines){ return `<div class="mid">${title}</div><div class="guide">${lines.map(escapeHtml).join('<br>')}</div>`; }
+function continueActions(label){ return [{id:'nextBtn', label:label||'다음 과제로 이동', cls:'primary'}]; }
+function attachContinue(){ setAction('nextBtn', nextTask); }
+function progress(idx, done, total){ return ((idx + done/Math.max(total,1))/tasks.length)*100; }
 
-function setHeader(idx, trialText=''){
-  const t = tasks[idx] || {title:'결과 산출', sub:'완료', desc:'결과를 정리하고 있습니다.'};
-  $('taskBadge').textContent = idx < tasks.length ? `${idx+1} / ${tasks.length}` : '완료';
-  $('taskTitle').textContent = t.title;
-  $('taskDesc').innerHTML = `<span class="blue">${t.sub}</span><br>${t.desc}`;
-  const completed = Math.min(idx, tasks.length);
-  const p = completed / tasks.length * 100;
-  $('progressText').textContent = trialText || `${completed} / ${tasks.length}`;
-  $('progressPct').textContent = `${Math.round(p)}%`;
-  $('progressFill').style.width = `${p}%`;
-}
-function setTrialProgress(idx, done, total){
-  const pTotal = ((idx + (done/Math.max(total,1))) / tasks.length) * 100;
-  $('progressText').textContent = `진행률 ${done}/${total}`;
-  $('progressPct').textContent = `${Math.round(pTotal)}%`;
-  $('progressFill').style.width = `${pTotal}%`;
-}
-function setMain(html){ $('mainArea').innerHTML = html; }
-function setActions(html){ $('actionArea').innerHTML = html; }
-function continueButton(label='다음 과제로 이동'){
-  setActions(`<button class="primary" id="nextBtn">${label}</button>`);
-  $('nextBtn').onclick = () => nextTask();
-}
-function taskCompleteCard(title, lines){
-  setMain(`<div class="center"><div class="mid">${title}</div><div class="guide">${lines.join('<br>')}</div></div>`);
+function renderHome(){
+  const body = `<div class="mid">검사 시작 전 안내</div><div class="guide">가능하면 PC/노트북에서 실시하고, 과제 중에는 화면을 벗어나지 마세요.<br>각 과제는 연습 없이 바로 시작됩니다.</div><div class="kv"><div class="box"><div class="label">과제 1</div><div class="value">Trail</div></div><div class="box"><div class="label">과제 2</div><div class="value">2-back</div></div><div class="box"><div class="label">과제 3</div><div class="value">Flanker</div></div><div class="box"><div class="label">과제 4</div><div class="value">Go/No-Go</div></div></div>`;
+  render(0, body, [{id:'startBtn', label:'전체 과제 시작', cls:'primary'}, {id:'reloadBtn', label:'다시 불러오기'}], '0 / 4', 0);
+  setAction('startBtn', startBattery); setAction('reloadBtn', ()=>window.location.reload());
 }
 
-function startBattery(){
-  state.taskIndex = 0; state.records = []; state.summaries = {}; state.startedAt = new Date().toISOString();
-  runTrail();
-}
-function nextTask(){
-  state.taskIndex += 1;
-  if(state.taskIndex === 1) runNback();
-  else if(state.taskIndex === 2) runFlanker();
-  else if(state.taskIndex === 3) runGoNoGo();
-  else finishBattery();
-}
-
-// ───────────────────────────────── Trail ─────────────────────────────────
-function nonOverlapPositions(n, w, h, r){
-  const pts=[]; let attempts=0;
-  while(pts.length<n && attempts<5000){
-    attempts++;
-    const x = 35 + Math.random() * (w-70);
-    const y = 35 + Math.random() * (h-70);
-    let ok = true;
-    for(const p of pts){ const d=Math.hypot(x-p.x,y-p.y); if(d<r){ ok=false; break; } }
-    if(ok) pts.push({x,y});
-  }
-  while(pts.length<n) pts.push({x:35+Math.random()*(w-70), y:35+Math.random()*(h-70)});
-  return pts;
-}
+// Trail 과제: 절대좌표 대신 반응 안정성을 위해 grid-board를 사용한다.
 function runTrail(){
-  const idx = 0; setHeader(idx);
-  const phases = [
-    {name:'Trail-A', seq:['1','2','3','4','5','6','7','8','9','10','11','12']},
-    {name:'Trail-B', seq:['1','가','2','나','3','다','4','라','5','마','6','바']}
+  const idx=0;
+  const phases=[
+    {name:'Trail-A', seq:['1','2','3','4','5','6','7','8','9','10','11','12'], criterionSec:34},
+    {name:'Trail-B', seq:['1','가','2','나','3','다','4','라','5','마','6','바'], criterionSec:50}
   ];
-  let phaseIdx = 0;
-  const phaseResults = [];
-
-  function startPhase(){
-    const phase = phases[phaseIdx];
-    let expected = 0, errors = 0;
-    const clickRecords = [];
-    setHeader(idx, `${phase.name} 준비`);
-    setMain(`<div class="center"><div class="mid">${phase.name}</div><div class="guide">${phase.seq.join(' → ')} 순서로 원을 클릭하세요.</div></div>`);
-    setActions(`<button class="primary" id="trailStart">${phase.name} 시작</button>`);
-    $('trailStart').onclick = () => {
-      const boardW = Math.min(900, $('mainCard').clientWidth - 48);
-      const boardH = window.innerWidth < 720 ? 480 : 520;
-      const positions = nonOverlapPositions(phase.seq.length, boardW, boardH, 82);
-      const items = phase.seq.map((label,i)=>({label, i, ...positions[i]}));
-      const startT = now(); let lastT = startT;
-      $('mainArea').innerHTML = `<div class="trail-board" id="trailBoard" style="height:${boardH}px"></div>`;
-      setActions(`<button id="trailInfo" disabled>다음 목표: ${phase.seq[0]}</button><button id="trailErr" disabled>오류 0회</button>`);
-      const board = $('trailBoard');
-      items.forEach(item=>{
-        const d = document.createElement('div'); d.className='node'; d.textContent=item.label; d.style.left=(item.x-27)+'px'; d.style.top=(item.y-27)+'px'; d.dataset.index=item.i;
-        if(item.i===0) d.classList.add('next');
-        d.onclick = () => {
-          const clickT = now();
-          const correct = item.i === expected;
-          if(correct){
-            d.classList.remove('next'); d.classList.add('done');
-            clickRecords.push({task:phase.name, target:item.label, order:item.i+1, rt_from_start_ms:round(clickT-startT), delta_ms:round(clickT-lastT), correct:true});
-            lastT = clickT; expected++;
-            if(expected < phase.seq.length){
-              $('trailInfo').textContent = `다음 목표: ${phase.seq[expected]}`;
-              const nextNode = board.querySelector(`[data-index="${expected}"]`); if(nextNode) nextNode.classList.add('next');
-            } else {
-              const duration = clickT - startT;
-              phaseResults.push({phase:phase.name, duration_ms:round(duration), errors, click_records:clickRecords});
-              setTrialProgress(idx, phaseIdx+1, phases.length);
-              state.records.push(...clickRecords.map(r=>({task:'trail', phase:phase.name, target:r.target, order:r.order, rt_ms:r.rt_from_start_ms, delta_ms:r.delta_ms, correct:r.correct})));
-              setTimeout(()=>{ phaseIdx++; phaseIdx<phases.length ? startPhase() : finishTrail(); }, 500);
-            }
-          } else {
-            errors++; $('trailErr').textContent = `오류 ${errors}회`; d.classList.add('wrong'); setTimeout(()=>d.classList.remove('wrong'),260);
-            state.records.push({task:'trail', phase:phase.name, target:item.label, expected:phase.seq[expected], rt_ms:round(clickT-startT), correct:false});
-          }
-        };
-        board.appendChild(d);
-      });
-    };
+  let phaseIndex=0; const phaseResults=[];
+  function introPhase(){
+    const p=phases[phaseIndex];
+    const body = `<div class="mid">${p.name}</div><div class="guide"><b>${p.seq.join(' → ')}</b><br>위 순서대로 항목을 빠르게 클릭하세요.<br>틀리면 오류로 기록되고 다음 목표는 유지됩니다.</div>`;
+    render(idx, body, [{id:'startPhase', label:p.name+' 시작', cls:'primary'}], `${p.name} 준비`, progress(idx, phaseIndex, phases.length));
+    setAction('startPhase', ()=>startPhase(p));
+  }
+  function startPhase(p){
+    let expected=0, errors=0; const rec=[]; const order=shuffle(p.seq.map((label,i)=>({label,i}))); const startT=now(); let lastT=startT;
+    function draw(){
+      const board = `<div class="grid-board">${order.map(item=>{
+        const cls = item.i < expected ? 'node done' : item.i===expected ? 'node next' : 'node';
+        return `<button class="${cls}" id="node_${item.i}" data-i="${item.i}">${item.label}</button>`;
+      }).join('')}</div><div class="trail-status"><div class="status-box">다음 목표: <span>${p.seq[expected] || '완료'}</span></div><div class="status-box">오류: <span>${errors}회</span></div></div>`;
+      render(idx, board, [{id:'dummy1', label:'과제 진행 중', disabled:true},{id:'dummy2', label:'순서대로 클릭', disabled:true}], `${p.name} 진행 ${expected}/${p.seq.length}`, progress(idx, phaseIndex + expected/p.seq.length, phases.length));
+      order.forEach(item=>{ const el=$('node_'+item.i); if(el && item.i>=expected) el.onclick=()=>clickItem(item); });
+    }
+    function clickItem(item){
+      const t=now(); const correct=item.i===expected;
+      if(correct){
+        rec.push({task:'trail', phase:p.name, target:item.label, order:item.i+1, rt_from_start_ms:round(t-startT), delta_ms:round(t-lastT), correct:true});
+        lastT=t; expected++;
+        if(expected>=p.seq.length){
+          const dur=t-startT; phaseResults.push({phase:p.name, duration_ms:round(dur), errors, click_records:rec});
+          state.records.push(...rec.map(r=>({task:'trail', phase:p.name, target:r.target, order:r.order, rt_ms:r.rt_from_start_ms, delta_ms:r.delta_ms, correct:r.correct})));
+          phaseIndex++;
+          if(phaseIndex<phases.length){ setTimeout(introPhase, 450); } else { setTimeout(finishTrail, 450); }
+          return;
+        }
+        draw();
+      } else {
+        errors++;
+        state.records.push({task:'trail', phase:p.name, target:item.label, expected:p.seq[expected], rt_ms:round(t-startT), correct:false});
+        draw();
+      }
+    }
+    draw();
   }
   function finishTrail(){
-    const a = phaseResults.find(x=>x.phase==='Trail-A') || {}; const b = phaseResults.find(x=>x.phase==='Trail-B') || {};
-    const errors = (a.errors||0)+(b.errors||0);
-    const aSec = (a.duration_ms||0)/1000, bSec = (b.duration_ms||0)/1000;
-    const scoreA = clamp(50 + ((32 - aSec)/32)*18 - (a.errors||0)*3);
-    const scoreB = clamp(50 + ((48 - bSec)/48)*18 - (b.errors||0)*3);
-    const score = clamp((scoreA+scoreB)/2 - errors*1.5);
-    state.summaries.trail = {score:round(score,1), trail_a_sec:round(aSec,2), trail_b_sec:round(bSec,2), errors, criterion:'50점=내부 절대 기준점'};
-    taskCompleteCard('Trail 과제 완료', [`Trail-A: ${round(aSec,2)}초`, `Trail-B: ${round(bSec,2)}초`, `오류: ${errors}회`, `환산점수: ${round(score,1)}점`]);
-    continueButton();
+    const a=phaseResults.find(x=>x.phase==='Trail-A')||{}; const b=phaseResults.find(x=>x.phase==='Trail-B')||{};
+    const errors=(a.errors||0)+(b.errors||0); const aSec=(a.duration_ms||0)/1000; const bSec=(b.duration_ms||0)/1000;
+    const scoreA=clamp(50+((phases[0].criterionSec-aSec)/phases[0].criterionSec)*16-(a.errors||0)*3);
+    const scoreB=clamp(50+((phases[1].criterionSec-bSec)/phases[1].criterionSec)*16-(b.errors||0)*3);
+    const score=clamp((scoreA+scoreB)/2-errors*1.2);
+    state.summaries.trail={score:round(score,1), trail_a_sec:round(aSec,2), trail_b_sec:round(bSec,2), errors, criterion:'50점=내부 절대 기준점'};
+    render(idx, completeBody('Trail 과제 완료',[`Trail-A: ${round(aSec,2)}초`, `Trail-B: ${round(bSec,2)}초`, `오류: ${errors}회`, `환산점수: ${round(score,1)}점`]), continueActions(), 'Trail 완료', 25);
+    attachContinue();
   }
-  startPhase();
+  introPhase();
 }
 
-// ───────────────────────────────── N-back ─────────────────────────────────
-function makeNbackSeq(n=24){
-  const letters = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ'];
-  const seq=[]; const targets = new Set();
+function makeNbackSeq(n){
+  const letters=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ']; const seq=[];
   for(let i=0;i<n;i++){
-    if(i>=2 && Math.random()<0.30){ seq.push(seq[i-2]); targets.add(i); }
-    else {
-      let cand = sample(letters); let guard=0;
-      while(i>=2 && cand===seq[i-2] && guard<20){ cand=sample(letters); guard++; }
-      seq.push(cand);
-    }
+    if(i>=2 && Math.random()<0.30){ seq.push(seq[i-2]); }
+    else { let c=sample(letters); let guard=0; while(i>=2 && c===seq[i-2] && guard<30){ c=sample(letters); guard++; } seq.push(c); }
   }
-  return seq.map((letter,i)=>({letter, isTarget: i>=2 && letter===seq[i-2]}));
+  return seq.map((letter,i)=>({letter,isTarget:i>=2 && letter===seq[i-2]}));
 }
 function runNback(){
-  const idx=1; setHeader(idx);
-  const trials = makeNbackSeq(24); let ti=0; const rec=[]; let onset=0;
-  setMain(`<div class="center"><div class="mid">2-back</div><div class="guide">현재 글자가 <b>2개 전</b> 글자와 같으면 일치입니다.<br>처음 두 문항은 원칙상 불일치로 응답하세요.</div></div>`);
-  setActions(`<button class="primary" id="nbackStart">2-back 시작</button>`);
-  $('nbackStart').onclick = next;
+  const idx=1; const trials=makeNbackSeq(22); let ti=0; const rec=[]; let onset=0;
+  const intro=`<div class="mid">2-back</div><div class="guide">현재 글자가 <b>2개 전</b> 글자와 같으면 일치입니다.<br>처음 두 문항은 비교할 2개 전 글자가 없으므로 불일치로 응답하세요.</div>`;
+  render(idx, intro, [{id:'startN',label:'2-back 시작',cls:'primary'}], '2-back 준비', 25);
+  setAction('startN', next);
   function next(){
     if(ti>=trials.length) return finish();
-    const tr=trials[ti]; onset=now(); setTrialProgress(idx, ti, trials.length);
-    setMain(`<div class="center"><div class="big">${tr.letter}</div><div class="guide">2개 전 글자와 비교해 응답하세요.</div></div>`);
-    setActions(`<button id="nNo">불일치</button><button class="primary" id="nYes">일치</button>`);
-    $('nNo').onclick=()=>respond(false); $('nYes').onclick=()=>respond(true);
+    const tr=trials[ti]; onset=now(); state.locked=false;
+    render(idx, `<div class="big">${tr.letter}</div><div class="guide">2개 전 글자와 비교해 응답하세요.</div>`, [{id:'nNo',label:'불일치'}, {id:'nYes',label:'일치',cls:'primary'}], `진행률 ${ti}/${trials.length}`, progress(idx, ti, trials.length));
+    setAction('nNo',()=>respond(false)); setAction('nYes',()=>respond(true));
   }
-  function respond(ans){
-    const rt=now()-onset; const tr=trials[ti]; const correct = ans===tr.isTarget;
-    rec.push({task:'nback', trial:ti+1, stimulus:tr.letter, target:tr.isTarget, response:ans, correct, rt_ms:round(rt)});
-    ti++; setTimeout(next,150);
-  }
+  function respond(ans){ if(state.locked) return; state.locked=true; const tr=trials[ti]; const rt=now()-onset; const correct=ans===tr.isTarget; rec.push({task:'nback',trial:ti+1,stimulus:tr.letter,target:tr.isTarget,response:ans,correct,rt_ms:round(rt)}); ti++; setTimeout(next,140); }
   function finish(){
-    state.records.push(...rec);
-    const acc = rec.filter(r=>r.correct).length / rec.length;
-    const med = median(rec.map(r=>r.rt_ms));
-    const targets = rec.filter(r=>r.target); const foils = rec.filter(r=>!r.target);
-    const hit = targets.length ? targets.filter(r=>r.response===true).length/targets.length : 0;
-    const fa = foils.length ? foils.filter(r=>r.response===true).length/foils.length : 0;
-    const score = clamp(50 + (acc-.70)*45 + Math.max(0, (950-(med||950))/950)*5 - fa*10);
-    state.summaries.nback = {score:round(score,1), accuracy:round(acc,3), median_rt_ms:round(med||0), hit_rate:round(hit,3), false_alarm_rate:round(fa,3), criterion:'50점=내부 절대 기준점'};
-    taskCompleteCard('2-back 완료', [`정확률: ${pct(acc*100)}`, `중앙 반응시간: ${Math.round(med||0)}ms`, `환산점수: ${round(score,1)}점`]);
-    continueButton();
+    state.records.push(...rec); const acc=rec.filter(r=>r.correct).length/rec.length; const med=median(rec.map(r=>r.rt_ms)); const targets=rec.filter(r=>r.target); const foils=rec.filter(r=>!r.target); const hit=targets.length?targets.filter(r=>r.response===true).length/targets.length:0; const fa=foils.length?foils.filter(r=>r.response===true).length/foils.length:0; const score=clamp(50+(acc-.70)*45+Math.max(0,(950-(med||950))/950)*5-fa*10);
+    state.summaries.nback={score:round(score,1),accuracy:round(acc,3),median_rt_ms:round(med||0),hit_rate:round(hit,3),false_alarm_rate:round(fa,3),criterion:'50점=내부 절대 기준점'};
+    render(idx, completeBody('2-back 완료',[`정확률: ${pct(acc*100)}`, `중앙 반응시간: ${Math.round(med||0)}ms`, `환산점수: ${round(score,1)}점`]), continueActions(), '2-back 완료', 50); attachContinue();
   }
 }
 
-// ───────────────────────────────── Flanker ─────────────────────────────────
-function makeFlankerTrials(n=24){
-  const arr=[];
-  for(let i=0;i<n;i++){
-    const dir = Math.random()<.5 ? 'left' : 'right'; const congruent = i < n/2;
-    const center = dir==='left' ? '←' : '→';
-    const same = dir==='left' ? '←←' : '→→'; const diff = dir==='left' ? '→→' : '←←';
-    arr.push({dir, condition:congruent?'congruent':'incongruent', stim:congruent ? `${same}${center}${same}` : `${diff}${center}${diff}`});
-  }
-  return shuffle(arr);
-}
+function makeFlankerTrials(n){ const arr=[]; for(let i=0;i<n;i++){ const dir=Math.random()<.5?'left':'right'; const congruent=i<n/2; const center=dir==='left'?'←':'→'; const same=dir==='left'?'←←':'→→'; const diff=dir==='left'?'→→':'←←'; arr.push({dir,condition:congruent?'congruent':'incongruent',stim:congruent?`${same}${center}${same}`:`${diff}${center}${diff}`}); } return shuffle(arr); }
 function runFlanker(){
-  const idx=2; setHeader(idx);
-  const trials = makeFlankerTrials(24); let ti=0; const rec=[]; let onset=0;
-  setMain(`<div class="center"><div class="mid">Flanker</div><div class="guide">가운데 화살표 방향만 선택합니다.<br>키보드 사용 시 <span class="kbd">←</span> <span class="kbd">→</span> 방향키로도 응답할 수 있습니다.</div></div>`);
-  setActions(`<button class="primary" id="flankerStart">Flanker 시작</button>`);
-  $('flankerStart').onclick = next;
-  function keyHandler(e){ if(e.key==='ArrowLeft') respond('left'); if(e.key==='ArrowRight') respond('right'); }
-  function next(){
-    if(ti>=trials.length) return finish();
-    const tr=trials[ti]; onset=now(); state.locked=false; setTrialProgress(idx, ti, trials.length);
-    setMain(`<div class="center"><div class="flanker">${tr.stim}</div><div class="guide">가운데 화살표의 방향은?</div></div>`);
-    setActions(`<button id="fLeft">← 왼쪽</button><button class="primary" id="fRight">오른쪽 →</button>`);
-    $('fLeft').onclick=()=>respond('left'); $('fRight').onclick=()=>respond('right');
-  }
-  function respond(ans){
-    if(state.locked) return; state.locked=true;
-    const tr=trials[ti]; const rt=now()-onset; const correct=ans===tr.dir;
-    rec.push({task:'flanker', trial:ti+1, condition:tr.condition, stimulus:tr.stim, correct_response:tr.dir, response:ans, correct, rt_ms:round(rt)});
-    ti++; setTimeout(next,180);
-  }
-  window.addEventListener('keydown', keyHandler);
-  function finish(){
-    window.removeEventListener('keydown', keyHandler); state.records.push(...rec);
-    const acc=rec.filter(r=>r.correct).length/rec.length; const correct=rec.filter(r=>r.correct);
-    const con=correct.filter(r=>r.condition==='congruent').map(r=>r.rt_ms); const incon=correct.filter(r=>r.condition==='incongruent').map(r=>r.rt_ms);
-    const med=median(correct.map(r=>r.rt_ms)); const interference=(median(incon)||0)-(median(con)||0);
-    const score=clamp(50+(acc-.82)*42-Math.max(0,interference-130)*.035-Math.max(0,(med||0)-850)*.01);
-    state.summaries.flanker={score:round(score,1), accuracy:round(acc,3), median_rt_ms:round(med||0), interference_ms:round(interference), criterion:'50점=내부 절대 기준점'};
-    taskCompleteCard('Flanker 완료', [`정확률: ${pct(acc*100)}`, `간섭 효과: ${Math.round(interference)}ms`, `환산점수: ${round(score,1)}점`]);
-    continueButton();
-  }
+  const idx=2; const trials=makeFlankerTrials(20); let ti=0; const rec=[]; let onset=0;
+  const intro=`<div class="mid">Flanker</div><div class="guide">가운데 화살표 방향만 선택합니다.<br>키보드 사용 시 <span class="kbd">←</span> <span class="kbd">→</span> 방향키로도 응답할 수 있습니다.</div>`;
+  render(idx, intro, [{id:'startF',label:'Flanker 시작',cls:'primary'}], 'Flanker 준비', 50);
+  setAction('startF', ()=>{ window.addEventListener('keydown', keyHandler); next(); });
+  function keyHandler(e){ if(e.key==='ArrowLeft'){ e.preventDefault(); respond('left'); } if(e.key==='ArrowRight'){ e.preventDefault(); respond('right'); } }
+  function next(){ if(ti>=trials.length) return finish(); const tr=trials[ti]; onset=now(); state.locked=false; render(idx, `<div class="flanker">${tr.stim}</div><div class="guide">가운데 화살표의 방향은?</div>`, [{id:'fLeft',label:'← 왼쪽'}, {id:'fRight',label:'오른쪽 →',cls:'primary'}], `진행률 ${ti}/${trials.length}`, progress(idx, ti, trials.length)); setAction('fLeft',()=>respond('left')); setAction('fRight',()=>respond('right')); }
+  function respond(ans){ if(state.locked) return; state.locked=true; const tr=trials[ti]; const rt=now()-onset; const correct=ans===tr.dir; rec.push({task:'flanker',trial:ti+1,condition:tr.condition,stimulus:tr.stim,correct_response:tr.dir,response:ans,correct,rt_ms:round(rt)}); ti++; setTimeout(next,150); }
+  function finish(){ window.removeEventListener('keydown', keyHandler); state.records.push(...rec); const acc=rec.filter(r=>r.correct).length/rec.length; const correct=rec.filter(r=>r.correct); const con=correct.filter(r=>r.condition==='congruent').map(r=>r.rt_ms); const incon=correct.filter(r=>r.condition==='incongruent').map(r=>r.rt_ms); const med=median(correct.map(r=>r.rt_ms)); const interference=(median(incon)||0)-(median(con)||0); const score=clamp(50+(acc-.82)*42-Math.max(0,interference-130)*.035-Math.max(0,(med||0)-850)*.01); state.summaries.flanker={score:round(score,1),accuracy:round(acc,3),median_rt_ms:round(med||0),interference_ms:round(interference),criterion:'50점=내부 절대 기준점'}; render(idx, completeBody('Flanker 완료',[`정확률: ${pct(acc*100)}`, `간섭 효과: ${Math.round(interference)}ms`, `환산점수: ${round(score,1)}점`]), continueActions(), 'Flanker 완료', 75); attachContinue(); }
 }
 
-// ───────────────────────────────── Go/No-Go ─────────────────────────────────
-function makeGngTrials(n=28){
-  const arr=[]; const nogoN=Math.round(n*.28);
-  for(let i=0;i<n;i++) arr.push({type:i<nogoN?'nogo':'go'});
-  shuffle(arr);
-  return arr.map(x=>({type:x.type, stim:x.type==='go'?'GO':'X'}));
-}
+function makeGngTrials(n){ const arr=[]; const nogoN=Math.round(n*.30); for(let i=0;i<n;i++) arr.push({type:i<nogoN?'nogo':'go'}); return shuffle(arr).map(x=>({type:x.type,stim:x.type==='go'?'GO':'X'})); }
 function runGoNoGo(){
-  const idx=3; setHeader(idx);
-  const trials=makeGngTrials(28); let ti=0; const rec=[]; let onset=0; let responded=false; let timer=null;
-  setMain(`<div class="center"><div class="mid">Go/No-Go</div><div class="guide"><b>GO</b>가 나오면 빠르게 반응하세요.<br><b>X</b>가 나오면 아무것도 누르지 마세요.<br>키보드 사용 시 <span class="kbd">Space</span>로도 반응할 수 있습니다.</div></div>`);
-  setActions(`<button class="primary" id="gngStart">Go/No-Go 시작</button>`);
-  $('gngStart').onclick = () => { setActions(`<button class="primary" id="gngResp">반응 / Space</button><button disabled>NO-GO는 누르지 않기</button>`); $('gngResp').onclick=()=>respond(); next(); };
+  const idx=3; const trials=makeGngTrials(22); let ti=0; const rec=[]; let onset=0; let responded=false; let timer=null;
+  const intro=`<div class="mid">Go/No-Go</div><div class="guide"><b>GO</b>가 나오면 빠르게 반응하세요.<br><b>X</b>가 나오면 아무것도 누르지 마세요.<br>키보드 사용 시 <span class="kbd">Space</span>로도 반응할 수 있습니다.</div>`;
+  render(idx, intro, [{id:'startG',label:'Go/No-Go 시작',cls:'primary'}], 'Go/No-Go 준비', 75);
+  setAction('startG', ()=>{ window.addEventListener('keydown', keyHandler); next(); });
   function keyHandler(e){ if(e.code==='Space'){ e.preventDefault(); respond(); } }
-  window.addEventListener('keydown', keyHandler);
   function next(){
-    if(ti>=trials.length) return finish();
-    const tr=trials[ti]; responded=false; setTrialProgress(idx, ti, trials.length);
-    setMain(`<div class="center"><div class="fix">+</div><div class="guide">준비</div></div>`);
-    setTimeout(()=>{
-      onset=now(); const color=tr.type==='go'?'#56e39a':'#ff7373';
-      setMain(`<div class="center"><div class="big" style="color:${color}">${tr.stim}</div><div class="guide">${tr.type==='go'?'지금 반응':'누르지 마세요'}</div></div>`);
-      timer=setTimeout(()=>{
-        if(!responded){
-          const correct = tr.type==='nogo';
-          rec.push({task:'gng', trial:ti+1, condition:tr.type, stimulus:tr.stim, response:null, correct, rt_ms:null});
-          ti++; setTimeout(next,180);
-        }
-      },900);
-    },300);
+    if(ti>=trials.length) return finish(); const tr=trials[ti]; responded=false;
+    render(idx, `<div class="fix">+</div><div class="guide">준비</div>`, [{id:'gResp',label:'반응 / Space',cls:'primary'}, {id:'noResp',label:'X는 누르지 않기',disabled:true}], `진행률 ${ti}/${trials.length}`, progress(idx, ti, trials.length));
+    setAction('gResp', respond);
+    setTimeout(()=>{ onset=now(); const color=tr.type==='go'?'#56e39a':'#ff7373'; render(idx, `<div class="big" style="color:${color}">${tr.stim}</div><div class="guide">${tr.type==='go'?'지금 반응':'누르지 마세요'}</div>`, [{id:'gResp',label:'반응 / Space',cls:'primary'}, {id:'noResp',label:'X는 누르지 않기',disabled:true}], `진행률 ${ti}/${trials.length}`, progress(idx, ti, trials.length)); setAction('gResp', respond); timer=setTimeout(()=>{ if(!responded){ const correct=tr.type==='nogo'; rec.push({task:'gng',trial:ti+1,condition:tr.type,stimulus:tr.stim,response:null,correct,rt_ms:null}); ti++; setTimeout(next,120); } },900); },260);
   }
-  function respond(){
-    if(ti>=trials.length || responded) return;
-    responded=true; if(timer) clearTimeout(timer);
-    const tr=trials[ti]; const rt=now()-onset; const correct=tr.type==='go';
-    rec.push({task:'gng', trial:ti+1, condition:tr.type, stimulus:tr.stim, response:'press', correct, rt_ms:round(rt)});
-    ti++; setTimeout(next,180);
-  }
-  function finish(){
-    window.removeEventListener('keydown', keyHandler); if(timer) clearTimeout(timer); state.records.push(...rec);
-    const go=rec.filter(r=>r.condition==='go'), nogo=rec.filter(r=>r.condition==='nogo');
-    const goHit=go.length?go.filter(r=>r.response==='press').length/go.length:0;
-    const omission=1-goHit; const commission=nogo.length?nogo.filter(r=>r.response==='press').length/nogo.length:0;
-    const acc=rec.filter(r=>r.correct).length/rec.length; const med=median(go.filter(r=>r.correct).map(r=>r.rt_ms));
-    const score=clamp(50+(acc-.86)*45-commission*22-omission*16-Math.max(0,(med||0)-650)*.01);
-    state.summaries.gng={score:round(score,1), accuracy:round(acc,3), go_hit_rate:round(goHit,3), commission_error_rate:round(commission,3), omission_error_rate:round(omission,3), median_go_rt_ms:round(med||0), criterion:'50점=내부 절대 기준점'};
-    taskCompleteCard('Go/No-Go 완료', [`전체 정확률: ${pct(acc*100)}`, `NO-GO 오반응률: ${pct(commission*100)}`, `환산점수: ${round(score,1)}점`]);
-    continueButton('결과 정리하기');
-  }
+  function respond(){ if(ti>=trials.length || responded) return; responded=true; if(timer) clearTimeout(timer); const tr=trials[ti]; const rt=now()-onset; const correct=tr.type==='go'; rec.push({task:'gng',trial:ti+1,condition:tr.type,stimulus:tr.stim,response:'press',correct,rt_ms:round(rt)}); ti++; setTimeout(next,120); }
+  function finish(){ window.removeEventListener('keydown', keyHandler); if(timer) clearTimeout(timer); state.records.push(...rec); const go=rec.filter(r=>r.condition==='go'), nogo=rec.filter(r=>r.condition==='nogo'); const goHit=go.length?go.filter(r=>r.response==='press').length/go.length:0; const omission=1-goHit; const commission=nogo.length?nogo.filter(r=>r.response==='press').length/nogo.length:0; const acc=rec.filter(r=>r.correct).length/rec.length; const med=median(go.filter(r=>r.correct).map(r=>r.rt_ms)); const score=clamp(50+(acc-.86)*45-commission*22-omission*16-Math.max(0,(med||0)-650)*.01); state.summaries.gng={score:round(score,1),accuracy:round(acc,3),go_hit_rate:round(goHit,3),commission_error_rate:round(commission,3),omission_error_rate:round(omission,3),median_go_rt_ms:round(med||0),criterion:'50점=내부 절대 기준점'}; render(idx, completeBody('Go/No-Go 완료',[`전체 정확률: ${pct(acc*100)}`, `NO-GO 오반응률: ${pct(commission*100)}`, `환산점수: ${round(score,1)}점`]), [{id:'finishBtn',label:'결과 정리하기',cls:'primary'}], 'Go/No-Go 완료', 100); setAction('finishBtn', finishBattery); }
 }
 
-// ───────────────────────────────── Finish ─────────────────────────────────
 function finishBattery(){
-  setHeader(4);
   const s=state.summaries;
   const domains={
     processing_speed: round(((s.trail?.score||50)+(s.flanker?.score||50))/2,1),
@@ -1122,36 +854,20 @@ function finishBattery(){
   };
   const vals=Object.values(domains).filter(v=>v!==null && Number.isFinite(v));
   const overall=round(vals.reduce((a,b)=>a+b,0)/vals.length,1);
-  const payload={
-    exam_name:EXAM_NAME,
-    exam_version:EXAM_VERSION,
-    started_at:state.startedAt,
-    finished_at:new Date().toISOString(),
-    scoring_note:'criterion-referenced transformed score; 50 = internal criterion point, not population percentile',
-    summaries:s,
-    domains,
-    overall_score:overall,
-    records:state.records
-  };
-  setMain(`<div class="center"><div class="mid">과제 완료</div><div class="guide">결과를 Streamlit으로 전달합니다.<br>잠시만 기다려 주세요.</div></div>`);
-  setActions(`<button class="primary" disabled>결과 전달 중</button>`);
-  const json=JSON.stringify(payload);
-  const b64=btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const payload={exam_name:EXAM_NAME, exam_version:EXAM_VERSION, started_at:state.startedAt, finished_at:new Date().toISOString(), scoring_note:'criterion-referenced transformed score; 50 = internal criterion point, not population percentile', summaries:s, domains, overall_score:overall, records:state.records};
+  render(4, `<div class="mid">과제 완료</div><div class="guide">결과를 Streamlit으로 전달합니다.<br>잠시만 기다려 주세요.</div>`, [{id:'wait',label:'결과 전달 중',cls:'primary',disabled:true}], '완료', 100);
+  const b64=btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   setTimeout(()=>{
     try{
       const url=new URL(window.parent.location.href);
-      url.searchParams.set('cog_done','1');
-      url.searchParams.set('cog_data',b64);
+      url.searchParams.set('cog_done','1'); url.searchParams.set('cog_data',b64);
       window.parent.location.href=url.toString();
-    }catch(e){
-      setMain(`<div class="center"><div class="mid">전달 오류</div><div class="guide">결과 전달에 실패했습니다. 새로고침 후 다시 시도해 주세요.<br>${e}</div></div>`);
-    }
-  },500);
+    }catch(e){ showFatal('결과 전달에 실패했습니다.\n브라우저 또는 배포 환경에서 iframe의 상위 페이지 이동을 차단했습니다.\n' + e); }
+  },300);
 }
 
-$('startBtn').onclick = startBattery;
-$('cancelBtn').onclick = () => window.location.reload();
-setHeader(0);
+renderHome();
+})();
 </script>
 </body>
 </html>
@@ -1172,7 +888,7 @@ def page_task() -> None:
         """,
         unsafe_allow_html=True,
     )
-    components.html(cognitive_task_html(), height=1120, scrolling=True)
+    components.html(cognitive_task_html(), height=1060, scrolling=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1222,12 +938,9 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, Any]:
         "working_memory": domains.get("working_memory", ""),
         "inhibition_control": domains.get("inhibition_control", ""),
         "sustained_attention": domains.get("sustained_attention", ""),
-        "trail_score": (summaries.get("trail", {}) or {}).get("score", ""),
-        "nback_score": (summaries.get("nback", {}) or {}).get("score", ""),
-        "flanker_score": (summaries.get("flanker", {}) or {}).get("score", ""),
-        "gng_score": (summaries.get("gng", {}) or {}).get("score", ""),
         "scoring_note": payload.get("scoring_note", ""),
-        "raw_trial_count": len(records),
+        "task_count": 4,
+        "record_count": len(records),
     }
 
     return {
@@ -1239,21 +952,17 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def render_score_line(label: str, score: Optional[float]) -> None:
-    if score is None:
-        width = 0
-        score_text = "-"
-    else:
-        width = max(0, min(100, (score / 80) * 100))
-        score_text = f"{score:.1f}점 · {criterion_label(score)}"
+def render_score_bar(label: str, score: Optional[float]) -> None:
+    score_value = 0 if score is None else max(0, min(100, float(score)))
+    display = "-" if score is None else f"{score_value:.1f}점 · {criterion_label(score_value)}"
     st.markdown(
         f"""
         <div class="result-panel">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-            <div style="font-weight:850;color:#fff;">{label}</div>
-            <div style="font-weight:850;color:#89beff;">{score_text}</div>
+          <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;">
+            <div style="color:#f8fbff;font-weight:850;">{label}</div>
+            <div style="color:#c7d3e3;font-weight:800;">{display}</div>
           </div>
-          <div class="score-bar"><div class="score-fill" style="width:{width:.1f}%;"></div></div>
+          <div class="score-bar"><div class="score-fill" style="width:{score_value}%;"></div></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1266,68 +975,57 @@ def page_result(dev_mode: bool = False) -> None:
 
     payload = st.session_state.cog_payload
     if not payload:
-        st.warning("검사 결과 데이터가 없습니다. 과제를 다시 진행해 주세요.")
-        if st.button("과제로 이동", type="primary", use_container_width=True):
-            st.session_state.page = "task"
+        st.warning("결과 데이터가 없습니다. 다시 진행해 주세요.")
+        if st.button("처음으로", type="primary", use_container_width=True):
+            reset_all()
             rerun()
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    overall = payload.get("overall_score")
-    domains = payload.get("domains", {}) or {}
-    summaries = payload.get("summaries", {}) or {}
-    records = payload.get("records", []) or []
-    st.session_state.meta["submitted_ts"] = st.session_state.meta.get("submitted_ts") or now_iso()
-
     exam_data = build_exam_data(payload)
     auto_db_insert(exam_data)
+
+    domains = payload.get("domains", {}) or {}
+    overall = payload.get("overall_score")
+    overall_label = criterion_label(overall)
 
     st.markdown(
         f"""
         <section class="card">
           <span class="badge">결과</span>
           <h1 class="title-lg">인지 기능 검사 결과</h1>
-          <p class="text">본 점수는 현재 데이터가 없는 초기 버전이므로 상대평가/백분위가 아니라 <b>절대 기준 환산점수</b>입니다. 50점은 인구 평균이 아니라 내부 기준점입니다.</p>
-        </section>
-        <div class="metric-grid">
-          <div class="metric-card"><div class="metric-label">종합</div><div class="metric-value">{overall if overall is not None else '-'} </div></div>
-          <div class="metric-card"><div class="metric-label">판정</div><div class="metric-value" style="font-size:24px">{criterion_label(overall)}</div></div>
-          <div class="metric-card"><div class="metric-label">기록 수</div><div class="metric-value">{len(records)}</div></div>
-          <div class="metric-card"><div class="metric-label">기준점</div><div class="metric-value">50</div></div>
-        </div>
-        <section class="card soft">
-          <h2 class="title-md">요약 해석</h2>
-          <p class="text">{score_desc(overall)}</p>
+          <p class="text">본 점수는 현재 데이터가 없는 초기 버전이므로 상대평가·백분위가 아니라 절대 기준 환산점수입니다. <b>50점은 인구 평균이 아니라 내부 기준점</b>입니다.</p>
+          <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">종합 점수</div><div class="metric-value">{overall if overall is not None else '-'}</div></div>
+            <div class="metric-card"><div class="metric-label">판정</div><div class="metric-value" style="font-size:22px;">{overall_label}</div></div>
+            <div class="metric-card"><div class="metric-label">기록 수</div><div class="metric-value">{len(payload.get('records', []) or [])}</div></div>
+            <div class="metric-card"><div class="metric-label">기준</div><div class="metric-value" style="font-size:22px;">50점</div></div>
+          </div>
+          <p class="text"><b>해석:</b> {score_desc(overall)}</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<section class='card'><h2 class='title-md'>영역별 환산점수</h2>", unsafe_allow_html=True)
-    render_score_line("처리속도 / 시각탐색", domains.get("processing_speed"))
-    render_score_line("작업기억", domains.get("working_memory"))
-    render_score_line("억제통제", domains.get("inhibition_control"))
-    render_score_line("지속주의", domains.get("sustained_attention"))
-    st.markdown("</section>", unsafe_allow_html=True)
+    st.subheader("영역별 결과")
+    render_score_bar("처리속도 / 시각탐색", domains.get("processing_speed"))
+    render_score_bar("작업기억", domains.get("working_memory"))
+    render_score_bar("억제통제", domains.get("inhibition_control"))
+    render_score_bar("지속주의", domains.get("sustained_attention"))
 
-    st.markdown("<section class='card'><h2 class='title-md'>과제별 세부 지표</h2>", unsafe_allow_html=True)
-    for key, title in [("trail", "Trail 연결"), ("nback", "2-back"), ("flanker", "Flanker"), ("gng", "Go/No-Go")]:
-        s = summaries.get(key, {}) or {}
-        st.markdown(f"<div class='result-panel'><b style='color:#fff'>{title}</b><br><pre style='white-space:pre-wrap;color:#c7d3e3;font-size:13px;margin-bottom:0'>{json.dumps(s, ensure_ascii=False, indent=2)}</pre></div>", unsafe_allow_html=True)
-    st.markdown("</section>", unsafe_allow_html=True)
+    with st.expander("과제별 요약 확인", expanded=False):
+        st.json(payload.get("summaries", {}))
 
-    json_payload = json.dumps({"exam_data": exam_data, "internal_payload": payload}, ensure_ascii=False, indent=2)
-    st.download_button(
-        "결과 JSON 다운로드",
-        data=json_payload.encode("utf-8"),
-        file_name=f"{EXAM_NAME}_{st.session_state.meta.get('respondent_id','')}.json",
-        mime="application/json",
-        use_container_width=True,
-    )
+    with st.expander("원자료 확인", expanded=False):
+        st.json(payload.get("records", []))
+
+    if dev_mode or not ENABLE_DB_INSERT:
+        with st.expander("DB 저장용 exam_data 확인", expanded=False):
+            st.json(exam_data)
 
     c1, c2 = st.columns(2, gap="medium")
     with c1:
-        if st.button("새 검사 시작", type="primary", use_container_width=True):
+        if st.button("검사 다시하기", type="primary", use_container_width=True):
             reset_all()
             rerun()
     with c2:
@@ -1339,22 +1037,23 @@ def page_result(dev_mode: bool = False) -> None:
     if st.session_state.close_attempted:
         st.warning("탭이 자동으로 닫히지 않는 경우, 사용자가 직접 탭을 닫아주세요.")
 
-    if dev_mode:
-        st.caption("개발 모드 DB exam_data")
-        st.json(exam_data, expanded=False)
-        st.caption("개발 모드 internal payload")
-        st.json(payload, expanded=False)
-
-    st.markdown("<div class='footer-note'>※ 본 검사는 진단 도구가 아니며, 초기 버전의 절대 기준 환산점수는 향후 표본 데이터 축적 후 보정되어야 합니다.</div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="footer-note">
+        ※ 본 검사는 비진단적 스크리닝 도구입니다. 추후 표본 수집 후 연령대·기기·실시환경별 기준, 신뢰도, 반복측정 안정성 검토가 필요합니다.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 데이터 저장 분기 + DB 연동 전용 블록
+# DB 저장 분기
 # ──────────────────────────────────────────────────────────────────────────────
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "false")
-    return str(raw).strip().lower() == "true"
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
 
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
@@ -1382,8 +1081,6 @@ def auto_db_insert(exam_data: Dict[str, Any]) -> None:
         return
 
     if not ENABLE_DB_INSERT:
-        with st.expander("DB disabled debug payload", expanded=False):
-            st.json(exam_data)
         st.caption("DB disabled (ENABLE_DB_INSERT=false)")
         return
 
@@ -1405,13 +1102,15 @@ def auto_db_insert(exam_data: Dict[str, Any]) -> None:
 def main() -> None:
     inject_css()
     init_state()
-
-    query_payload = decode_payload_from_query()
-    if query_payload is not None:
-        st.session_state.cog_payload = query_payload
-        st.session_state.page = "result"
-
     dev_mode = get_query_value("dev", "0") == "1"
+
+    decoded = decode_payload_from_query()
+    if decoded:
+        st.session_state.cog_payload = decoded
+        st.session_state.meta["submitted_ts"] = now_iso()
+        st.session_state.page = "result"
+        clear_query_params()
+        rerun()
 
     if st.session_state.page == "intro":
         page_intro()
