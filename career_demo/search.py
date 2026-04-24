@@ -1485,9 +1485,9 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            height:104px;
-            min-height:104px;
-            max-height:104px;
+            height:108px;
+            min-height:108px;
+            max-height:108px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
