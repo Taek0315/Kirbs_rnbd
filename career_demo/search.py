@@ -280,6 +280,31 @@ def combine_pcnt_value(integer_part, decimal_part):
     return whole + (decimal / 10)
 
 def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
+    """후보 컬럼 중 존재하고 숫자로 변환 가능한 첫 값을 반환한다."""
+    for col in columns:
+        if col in row.index:
+            value = safe_float(row.get(col))
+            if value is not None:
+                return value
+    return None
+
+
+def combine_pcnt_columns(
+    row: pd.Series,
+    integer_columns: list[str],
+    decimal_columns: list[str],
+) -> float:
+    """
+    PCNT1/PNT1 정수부와 PCNT2/PNT2 소수부 후보 컬럼을 안전하게 결합한다.
+    예: PCNT1_남자 + PCNT2_남자 / PNT1_남자 + PNT2_남자
+    """
+    integer_part = first_existing_numeric(row, integer_columns)
+    decimal_part = first_existing_numeric(row, decimal_columns)
+    value = combine_pcnt_value(integer_part, decimal_part)
+    return 0.0 if value is None else float(value)
+
+
+def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
     """후보 컬럼 중 실제 존재하고 숫자로 변환 가능한 첫 값을 반환한다."""
     for col in columns:
         if col in row.index:
@@ -884,42 +909,57 @@ def build_gender_chart(detail: pd.Series) -> str | None:
 
     for label, value, color in zip(labels, values, colors):
         dash = circumference * (value / 100)
+
         circles.append(
-            f'''<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="42"
-                    stroke-linecap="butt" stroke-dasharray="{dash:.2f} {circumference - dash:.2f}"
-                    stroke-dashoffset="{-offset:.2f}" transform="rotate(-90 {cx} {cy})" />'''
+            f'''
+            <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="42"
+                stroke-linecap="butt"
+                stroke-dasharray="{dash:.2f} {circumference - dash:.2f}"
+                stroke-dashoffset="{-offset:.2f}"
+                transform="rotate(-90 {cx} {cy})" />
+            '''
         )
 
         mid_angle = -90 + ((offset + dash / 2) / circumference) * 360
         lx, ly = _svg_point(cx, cy, r + 34, mid_angle)
+
         label_nodes.append(
-            f'''<text x="{lx:.2f}" y="{ly:.2f}" class="viz-label" text-anchor="middle">
-                    <tspan x="{lx:.2f}" dy="0">{html.escape(label)}</tspan>
-                    <tspan x="{lx:.2f}" dy="18">{value:.1f}%</tspan>
-                </text>'''
+            f'''
+            <text x="{lx:.2f}" y="{ly:.2f}" class="viz-label" text-anchor="middle">
+                <tspan x="{lx:.2f}" dy="0">{html.escape(label)}</tspan>
+                <tspan x="{lx:.2f}" dy="18">{value:.1f}%</tspan>
+            </text>
+            '''
         )
+
         offset += dash
 
     legend_html = _build_legend_html(list(zip(labels, values, colors)))
 
     return f'''
     <div class="static-viz-wrap">
-      <svg class="static-viz-svg" viewBox="0 0 420 310" role="img" aria-label="성별 관심도 비중">
-        <defs>
-          <filter id="vizShadowGender" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.10"/>
-          </filter>
-        </defs>
-        <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#e9eef8" stroke-width="42" />
-        <g filter="url(#vizShadowGender)">
-          {''.join(circles)}
-        </g>
-        <circle cx="{cx}" cy="{cy}" r="56" fill="#ffffff" stroke="#eef2ff" stroke-width="1.5" />
-        <text x="{cx}" y="142" class="viz-center-kicker" text-anchor="middle">관심도 합계</text>
-        <text x="{cx}" y="174" class="viz-center-value" text-anchor="middle">100%</text>
-        {''.join(label_nodes)}
-      </svg>
-      {legend_html}
+        <svg class="static-viz-svg" viewBox="0 0 420 310" role="img" aria-label="성별 관심도 비중">
+            <defs>
+                <filter id="vizShadowGender" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.10"/>
+                </filter>
+            </defs>
+
+            <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#e9eef8" stroke-width="42" />
+
+            <g filter="url(#vizShadowGender)">
+                {''.join(circles)}
+            </g>
+
+            <circle cx="{cx}" cy="{cy}" r="56" fill="#ffffff" stroke="#eef2ff" stroke-width="1.5" />
+
+            <text x="{cx}" y="142" class="viz-center-kicker" text-anchor="middle">관심도 합계</text>
+            <text x="{cx}" y="174" class="viz-center-value" text-anchor="middle">100%</text>
+
+            {''.join(label_nodes)}
+        </svg>
+
+        {legend_html}
     </div>
     '''
 
@@ -969,10 +1009,15 @@ def build_age_chart(detail: pd.Series) -> str | None:
     x_positions = [left, left + bar_w + bar_gap]
 
     grid_nodes = []
+
     for tick in range(0, int(max_val) + 1, 10):
         y = top + chart_h - (tick / max_val) * chart_h
-        grid_nodes.append(f'<line x1="{left}" y1="{y:.2f}" x2="{svg_width-right}" y2="{y:.2f}" class="viz-grid" />')
-        grid_nodes.append(f'<text x="{left-10}" y="{y+4:.2f}" class="viz-axis">{tick}</text>')
+        grid_nodes.append(
+            f'<line x1="{left}" y1="{y:.2f}" x2="{svg_width-right}" y2="{y:.2f}" class="viz-grid" />'
+        )
+        grid_nodes.append(
+            f'<text x="{left-10}" y="{y+4:.2f}" class="viz-axis">{tick}</text>'
+        )
 
     bar_nodes = []
     label_nodes = []
@@ -982,18 +1027,23 @@ def build_age_chart(detail: pd.Series) -> str | None:
         y = top + chart_h - h
 
         bar_nodes.append(
-            f'''<g>
-                    <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="url(#ageBarGradient)" />
-                    <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1" />
-                    <text x="{x + bar_w/2:.2f}" y="{y - 10:.2f}" class="viz-bar-value" text-anchor="middle">{value:.1f}%</text>
-                </g>'''
+            f'''
+            <g>
+                <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="url(#ageBarGradient)" />
+                <rect x="{x:.2f}" y="{y:.2f}" width="{bar_w:.2f}" height="{h:.2f}" rx="18" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1" />
+                <text x="{x + bar_w/2:.2f}" y="{y - 10:.2f}" class="viz-bar-value" text-anchor="middle">{value:.1f}%</text>
+            </g>
+            '''
         )
 
         lines = _wrap_age_label(label)
         tspans = []
+
         for idx, line in enumerate(lines):
             dy = "0" if idx == 0 else "16"
-            tspans.append(f'<tspan x="{x + bar_w/2:.2f}" dy="{dy}">{html.escape(line)}</tspan>')
+            tspans.append(
+                f'<tspan x="{x + bar_w/2:.2f}" dy="{dy}">{html.escape(line)}</tspan>'
+            )
 
         label_nodes.append(
             f'<text x="{x + bar_w/2:.2f}" y="{svg_height - 42:.2f}" class="viz-x-label" text-anchor="middle">{"".join(tspans)}</text>'
@@ -1001,19 +1051,23 @@ def build_age_chart(detail: pd.Series) -> str | None:
 
     return f'''
     <div class="static-viz-wrap">
-      <svg class="static-viz-svg" viewBox="0 0 {svg_width} {svg_height}" role="img" aria-label="연령대별 선호도">
-        <defs>
-          <linearGradient id="ageBarGradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="#5b6bff"/>
-            <stop offset="100%" stop-color="#4338ca"/>
-          </linearGradient>
-        </defs>
-        {''.join(grid_nodes)}
-        <line x1="{left}" y1="{top + chart_h:.2f}" x2="{svg_width-right}" y2="{top + chart_h:.2f}" class="viz-axis-line" />
-        {''.join(bar_nodes)}
-        {''.join(label_nodes)}
-      </svg>
-      <div class="viz-footnote">관심도 분포를 연령대 기준으로 시각화했습니다.</div>
+        <svg class="static-viz-svg" viewBox="0 0 {svg_width} {svg_height}" role="img" aria-label="연령대별 선호도">
+            <defs>
+                <linearGradient id="ageBarGradient" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#5b6bff"/>
+                    <stop offset="100%" stop-color="#4338ca"/>
+                </linearGradient>
+            </defs>
+
+            {''.join(grid_nodes)}
+
+            <line x1="{left}" y1="{top + chart_h:.2f}" x2="{svg_width-right}" y2="{top + chart_h:.2f}" class="viz-axis-line" />
+
+            {''.join(bar_nodes)}
+            {''.join(label_nodes)}
+        </svg>
+
+        <div class="viz-footnote">관심도 분포를 연령대 기준으로 시각화했습니다.</div>
     </div>
     '''
 
@@ -1027,58 +1081,80 @@ def _describe_salary_band(amount: int, max_amount: int) -> tuple[str, str]:
     return '상위 구간', '직업군 내 비교적 높은 임금대입니다.'
 
 
-def build_salary_gauge(salary_amount: int) -> str | None:
-    if not salary_amount or salary_amount <= 0:
+def build_salary_gauge(salary_amount) -> str | None:
+    if salary_amount is None:
+        return None
+
+    try:
+        salary_amount = int(round(float(salary_amount)))
+    except Exception:
+        return None
+
+    if salary_amount <= 0:
         return None
 
     max_amount = max(5000, int(ceil(salary_amount / 500.0) * 500))
     ratio = min(1.0, salary_amount / max_amount)
+
     ticks = [0, max_amount // 2, max_amount]
-    tick_labels = [f"{tick:,}".replace(',', '') for tick in ticks]
+    tick_labels = [f"{tick:,}" for tick in ticks]
 
     cx, cy, r = 260, 226, 164
+
     base_path = _svg_poly_arc(cx, cy, r, 180, 360, 72)
     progress_path = _svg_poly_arc(cx, cy, r, 180, 180 + 180 * ratio, 72)
     pointer_x, pointer_y = _svg_point(cx, cy, r, 180 + 180 * ratio)
+
     band_title, band_desc = _describe_salary_band(salary_amount, max_amount)
 
     tick_nodes = []
+
     for tick, label in zip(ticks, tick_labels):
         deg = 180 + (tick / max_amount) * 180 if max_amount else 180
         x1, y1 = _svg_point(cx, cy, r + 8, deg)
         x2, y2 = _svg_point(cx, cy, r + 22, deg)
         tx, ty = _svg_point(cx, cy, r + 42, deg)
+
         tick_nodes.append(
-            f'''<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" class="viz-gauge-tick" />
-                <text x="{tx:.2f}" y="{ty:.2f}" class="viz-gauge-axis" text-anchor="middle">{label}</text>'''
+            f'''
+            <line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" class="viz-gauge-tick" />
+            <text x="{tx:.2f}" y="{ty:.2f}" class="viz-gauge-axis" text-anchor="middle">{label}</text>
+            '''
         )
 
     return f'''
     <div class="static-viz-wrap gauge-wrap">
-      <div class="salary-band-chip">{band_title}</div>
-      <svg class="static-viz-svg" viewBox="0 0 520 320" role="img" aria-label="평균 임금 수준">
-        <defs>
-          <linearGradient id="salaryTrack" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stop-color="#dbeafe"/>
-            <stop offset="50%" stop-color="#93c5fd"/>
-            <stop offset="100%" stop-color="#c7d2fe"/>
-          </linearGradient>
-          <linearGradient id="salaryProgress" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stop-color="#60a5fa"/>
-            <stop offset="100%" stop-color="#1d4ed8"/>
-          </linearGradient>
-          <filter id="vizShadowGauge" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(37,99,235,0.18)"/>
-          </filter>
-        </defs>
-        <path d="{base_path}" fill="none" stroke="url(#salaryTrack)" stroke-width="28" stroke-linecap="round" />
-        <path d="{progress_path}" fill="none" stroke="url(#salaryProgress)" stroke-width="28" stroke-linecap="round" filter="url(#vizShadowGauge)" />
-        <circle cx="{pointer_x:.2f}" cy="{pointer_y:.2f}" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="4" />
-        {''.join(tick_nodes)}
-        <text x="{cx}" y="170" class="viz-center-kicker" text-anchor="middle">평균 임금 수준</text>
-        <text x="{cx}" y="222" class="viz-gauge-value" text-anchor="middle">{salary_amount}만원</text>
-        <text x="{cx}" y="248" class="viz-gauge-desc" text-anchor="middle">{band_desc}</text>
-      </svg>
+        <div class="salary-band-chip">{html.escape(band_title)}</div>
+
+        <svg class="static-viz-svg" viewBox="0 0 520 320" role="img" aria-label="평균 임금 수준">
+            <defs>
+                <linearGradient id="salaryTrack" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stop-color="#dbeafe"/>
+                    <stop offset="50%" stop-color="#93c5fd"/>
+                    <stop offset="100%" stop-color="#c7d2fe"/>
+                </linearGradient>
+
+                <linearGradient id="salaryProgress" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stop-color="#60a5fa"/>
+                    <stop offset="100%" stop-color="#1d4ed8"/>
+                </linearGradient>
+
+                <filter id="vizShadowGauge" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#2563eb" flood-opacity="0.18"/>
+                </filter>
+            </defs>
+
+            <path d="{base_path}" fill="none" stroke="url(#salaryTrack)" stroke-width="28" stroke-linecap="round" />
+            <path d="{progress_path}" fill="none" stroke="url(#salaryProgress)" stroke-width="28" stroke-linecap="round" filter="url(#vizShadowGauge)" />
+
+            <circle cx="{pointer_x:.2f}" cy="{pointer_y:.2f}" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="4" />
+
+            {''.join(tick_nodes)}
+
+            <text x="{cx}" y="170" class="viz-center-kicker" text-anchor="middle">평균 임금 수준</text>
+            <text x="{cx}" y="222" class="viz-gauge-value" text-anchor="middle">{salary_amount:,}만원</text>
+            <text x="{cx}" y="248" class="viz-gauge-desc" text-anchor="middle">{html.escape(band_desc)}</text>
+        </svg>
     </div>
     '''
 
@@ -2531,6 +2607,7 @@ def render_market_section(detail: pd.Series) -> None:
     )
 
     col1, col2 = st.columns([0.9, 1.1], gap="large")
+
     with col1:
         render_html(
             f"""
@@ -2553,17 +2630,24 @@ def render_market_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
         gauge = build_salary_gauge(salary_amount)
+
         if gauge is not None:
-            st.plotly_chart(gauge, use_container_width=True, theme=None, key=f"salary_gauge_{detail.get('jobdicSeq', detail.name)}")
+            render_html(gauge)
+        else:
+            st.info("임금 그래프를 표시할 수 있는 데이터가 없습니다.")
+
     with col2:
         tab1, tab2 = st.tabs(["고용전망", "발전가능성"])
+
         with tab1:
             render_outlook_text_panel(
                 title="고용전망",
                 raw_text=detail.get("employment", ""),
                 empty_message="고용전망 설명이 없습니다.",
             )
+
         with tab2:
             render_outlook_text_panel(
                 title="발전가능성",
@@ -2591,14 +2675,30 @@ def render_chart_section(detail: pd.Series) -> None:
     age_fig = build_age_chart(detail)
 
     col1, col2 = st.columns(2, gap="large")
+
     with col1:
-        render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>성별 관심도 비중</div></div>")
+        render_html(
+            """
+            <div class="soft-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:10px;">성별 관심도 비중</div>
+            </div>
+            """
+        )
+
         if gender_fig is not None:
             render_html(gender_fig)
         else:
             st.info("성별 PCNT 데이터가 없습니다.")
+
     with col2:
-        render_html("<div class='soft-card'><div class='section-title' style='font-size:18px; margin-bottom:10px;'>연령대별 선호도</div></div>")
+        render_html(
+            """
+            <div class="soft-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:10px;">연령대별 선호도</div>
+            </div>
+            """
+        )
+
         if age_fig is not None:
             render_html(age_fig)
         else:
