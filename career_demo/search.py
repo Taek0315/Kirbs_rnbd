@@ -12,7 +12,6 @@ from math import ceil
 
 import numpy as np
 import pandas as pd
-import altair as alt
 import streamlit as st
 
 
@@ -23,11 +22,6 @@ EMBED_META_FILE = EMBEDDING_DIR / "career_jobs_embedding_meta.xlsx"
 EMBED_ARRAY_FILE = EMBEDDING_DIR / "career_jobs_embeddings.npy"
 EMBED_CONFIG_FILE = EMBEDDING_DIR / "embedding_config.json"
 SEMANTIC_THRESHOLD = 0.34
-
-try:
-    alt.data_transformers.disable_max_rows()
-except Exception:
-    pass
 
 st.set_page_config(
     page_title="AI 직업 탐색 리포트",
@@ -292,15 +286,18 @@ def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
     return None
 
 
-def combine_pcnt_columns(
-    row: pd.Series,
-    integer_columns: list[str],
-    decimal_columns: list[str],
-) -> float:
+def combine_pcnt_columns(row: pd.Series, integer_columns: list[str], decimal_columns: list[str]) -> float:
     integer_part = first_existing_numeric(row, integer_columns)
     decimal_part = first_existing_numeric(row, decimal_columns)
     value = combine_pcnt_value(integer_part, decimal_part)
     return 0.0 if value is None else float(value)
+
+
+def clamp_percent(value: float) -> float:
+    try:
+        return max(0.0, min(100.0, float(value)))
+    except Exception:
+        return 0.0
 
 
 def normalize_search_token(token: str) -> str:
@@ -413,10 +410,7 @@ def load_embedding_assets(
         axis=1,
     )
 
-    keys = [
-        build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
-        for _, row in meta.iterrows()
-    ]
+    keys = [build_embedding_key(row.get("jobdicSeq"), row.get("job", "")) for _, row in meta.iterrows()]
     key_to_index = {key: idx for idx, key in enumerate(keys)}
 
     return {
@@ -802,38 +796,55 @@ def filter_results(
 
 
 # -----------------------------
-# Altair visualization helpers
+# HTML/CSS visualization helpers
 # -----------------------------
-def apply_altair_theme(chart):
-    return (
-        chart
-        .configure_view(strokeOpacity=0)
-        .configure_axis(
-            labelColor="#334155",
-            titleColor="#64748b",
-            gridColor="#e7eef9",
-            domainColor="#cdd9ee",
-            tickColor="#cdd9ee",
-            labelFont="Pretendard, Noto Sans KR, sans-serif",
-            titleFont="Pretendard, Noto Sans KR, sans-serif",
-        )
-        .configure_legend(
-            labelColor="#334155",
-            titleColor="#64748b",
-            labelFont="Pretendard, Noto Sans KR, sans-serif",
-            titleFont="Pretendard, Noto Sans KR, sans-serif",
-            orient="bottom",
-        )
-        .configure_title(
-            color="#102a43",
-            font="Pretendard, Noto Sans KR, sans-serif",
-            fontSize=15,
-            fontWeight="bold",
-        )
-    )
+def _describe_salary_band(amount: int, max_amount: int) -> tuple[str, str]:
+    ratio = 0 if max_amount <= 0 else amount / max_amount
+    if ratio < 0.34:
+        return "진입 구간", "직업군 내 하위권 임금대입니다."
+    if ratio < 0.67:
+        return "중간 구간", "직업군 내 중간 수준의 임금대입니다."
+    return "상위 구간", "직업군 내 비교적 높은 임금대입니다."
 
 
-def build_gender_chart(detail: pd.Series):
+def build_salary_gauge(salary_amount) -> str | None:
+    if salary_amount is None:
+        return None
+
+    try:
+        salary_amount = int(round(float(salary_amount)))
+    except Exception:
+        return None
+
+    if salary_amount <= 0:
+        return None
+
+    max_amount = max(5000, int(ceil(salary_amount / 500.0) * 500))
+    ratio = clamp_percent((salary_amount / max_amount) * 100)
+    band_title, band_desc = _describe_salary_band(salary_amount, max_amount)
+    half_amount = max_amount // 2
+
+    return f"""
+    <div class="viz-box salary-viz-box">
+        <div class="viz-topline">
+            <span class="viz-chip">{html.escape(band_title)}</span>
+        </div>
+        <div class="salary-main-value">{salary_amount:,}만원</div>
+        <div class="salary-caption">평균 임금 수준</div>
+        <div class="salary-track" aria-label="평균 임금 수준">
+            <div class="salary-fill" style="width:{ratio:.2f}%;"></div>
+        </div>
+        <div class="salary-axis">
+            <span>0</span>
+            <span>{half_amount:,}</span>
+            <span>{max_amount:,}</span>
+        </div>
+        <div class="chart-note chart-note-separated">{html.escape(band_desc)}</div>
+    </div>
+    """
+
+
+def build_gender_chart(detail: pd.Series) -> str | None:
     male = combine_pcnt_columns(
         detail,
         ["PCNT1_남자", "PNT1_남자"],
@@ -849,81 +860,38 @@ def build_gender_chart(detail: pd.Series):
     if total <= 0:
         return None
 
-    rows = [
-        {"구분": "남성", "비율": male / total * 100},
-        {"구분": "여성", "비율": female / total * 100},
-    ]
-    chart_df = pd.DataFrame(rows)
-    chart_df["표시"] = chart_df.apply(lambda r: f"{r['구분']} {r['비율']:.1f}%", axis=1)
+    male_pct = clamp_percent(male / total * 100)
+    female_pct = clamp_percent(female / total * 100)
+    male_deg = male_pct * 3.6
 
-    base = alt.Chart(chart_df).encode(
-        theta=alt.Theta("비율:Q", stack=True),
-        color=alt.Color(
-            "구분:N",
-            scale=alt.Scale(domain=["남성", "여성"], range=["#4f46e5", "#06b6d4"]),
-            legend=alt.Legend(title=None),
-        ),
-        tooltip=[
-            alt.Tooltip("구분:N", title="구분"),
-            alt.Tooltip("비율:Q", title="비율", format=".1f"),
-        ],
-    )
-
-    arc = base.mark_arc(
-        innerRadius=72,
-        outerRadius=112,
-        cornerRadius=2,
-        stroke="#ffffff",
-        strokeWidth=2,
-    )
-
-    text = base.mark_text(
-        radius=142,
-        size=13,
-        fontWeight="bold",
-        color="#334155",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        text="표시:N"
-    )
-
-    center_data = pd.DataFrame([
-        {"x": 0, "y": 0, "label": "관심도 합계", "value": "100%"}
-    ])
-
-    center_label = alt.Chart(center_data).mark_text(
-        align="center",
-        baseline="middle",
-        dy=-10,
-        size=12,
-        fontWeight="bold",
-        color="#64748b",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        text="label:N"
-    )
-
-    center_value = alt.Chart(center_data).mark_text(
-        align="center",
-        baseline="middle",
-        dy=14,
-        size=26,
-        fontWeight="bold",
-        color="#0f172a",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        text="value:N"
-    )
-
-    chart = (
-        (arc + text + center_label + center_value)
-        .properties(height=330)
-    )
-
-    return apply_altair_theme(chart)
+    return f"""
+    <div class="viz-box donut-viz-box">
+        <div class="donut-area">
+            <div class="donut-chart" style="background:conic-gradient(#4f46e5 0deg {male_deg:.2f}deg, #06b6d4 {male_deg:.2f}deg 360deg);">
+                <div class="donut-center">
+                    <div class="donut-kicker">관심도 합계</div>
+                    <div class="donut-value">100%</div>
+                </div>
+            </div>
+        </div>
+        <div class="legend-grid">
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#4f46e5;"></span>
+                <span class="legend-label">남성</span>
+                <strong>{male_pct:.1f}%</strong>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#06b6d4;"></span>
+                <span class="legend-label">여성</span>
+                <strong>{female_pct:.1f}%</strong>
+            </div>
+        </div>
+        <div class="chart-note chart-note-separated">성별 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
+    </div>
+    """
 
 
-def build_age_chart(detail: pd.Series):
+def build_age_chart(detail: pd.Series) -> str | None:
     teen = combine_pcnt_columns(
         detail,
         ["PCNT1_중학생", "PNT1_중학생"],
@@ -939,197 +907,32 @@ def build_age_chart(detail: pd.Series):
     if total <= 0:
         return None
 
-    rows = [
-        {"연령대": "중학생\n14~16세", "비율": teen / total * 100, "색상": "#5b6bff"},
-        {"연령대": "고등학생\n17~19세", "비율": high / total * 100, "색상": "#4338ca"},
-    ]
-    chart_df = pd.DataFrame(rows)
-    max_val = max(60.0, ceil(chart_df["비율"].max() / 10) * 10)
+    teen_pct = clamp_percent(teen / total * 100)
+    high_pct = clamp_percent(high / total * 100)
 
-    base = alt.Chart(chart_df).encode(
-        x=alt.X(
-            "연령대:N",
-            title=None,
-            axis=alt.Axis(labelAngle=0, labelPadding=10),
-            sort=None,
-        ),
-        y=alt.Y(
-            "비율:Q",
-            title="비율(%)",
-            scale=alt.Scale(domain=[0, max_val + 8]),
-            axis=alt.Axis(grid=True),
-        ),
-        tooltip=[
-            alt.Tooltip("연령대:N", title="연령대"),
-            alt.Tooltip("비율:Q", title="비율", format=".1f"),
-        ],
-    )
-
-    bars = base.mark_bar(
-        cornerRadiusTopLeft=12,
-        cornerRadiusTopRight=12,
-        size=78,
-    ).encode(
-        color=alt.Color(
-            "연령대:N",
-            scale=alt.Scale(
-                domain=["중학생\n14~16세", "고등학생\n17~19세"],
-                range=["#5b6bff", "#4338ca"],
-            ),
-            legend=None,
-        )
-    )
-
-    labels = base.mark_text(
-        dy=-8,
-        size=13,
-        fontWeight="bold",
-        color="#1e293b",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        text=alt.Text("비율:Q", format=".1f")
-    )
-
-    chart = (
-        (bars + labels)
-        .properties(height=320)
-    )
-
-    return apply_altair_theme(chart)
-
-
-def _describe_salary_band(amount: int, max_amount: int) -> tuple[str, str]:
-    ratio = 0 if max_amount <= 0 else amount / max_amount
-    if ratio < 0.34:
-        return "진입 구간", "직업군 내 하위권 임금대입니다."
-    if ratio < 0.67:
-        return "중간 구간", "직업군 내 중간 수준의 임금대입니다."
-    return "상위 구간", "직업군 내 비교적 높은 임금대입니다."
-
-
-def build_salary_gauge(salary_amount):
-    if salary_amount is None:
-        return None
-
-    try:
-        salary_amount = int(round(float(salary_amount)))
-    except Exception:
-        return None
-
-    if salary_amount <= 0:
-        return None
-
-    max_amount = max(5000, int(ceil(salary_amount / 500.0) * 500))
-    band_title, band_desc = _describe_salary_band(salary_amount, max_amount)
-
-    chart_df = pd.DataFrame([
-        {
-            "항목": "평균 임금",
-            "임금": salary_amount,
-            "최대값": max_amount,
-            "표시": f"{salary_amount:,}만원",
-            "구간": band_title,
-            "설명": band_desc,
-        }
-    ])
-
-    tick_df = pd.DataFrame([
-        {"x": 0, "label": "0"},
-        {"x": max_amount / 2, "label": f"{max_amount // 2:,}"},
-        {"x": max_amount, "label": f"{max_amount:,}"},
-    ])
-
-    background = alt.Chart(chart_df).mark_bar(
-        size=46,
-        cornerRadius=18,
-        color="#dbeafe",
-    ).encode(
-        x=alt.X(
-            "최대값:Q",
-            title="만원",
-            scale=alt.Scale(domain=[0, max_amount]),
-            axis=alt.Axis(grid=True, tickCount=4),
-        ),
-        y=alt.Y("항목:N", title=None, axis=None),
-    )
-
-    foreground = alt.Chart(chart_df).mark_bar(
-        size=46,
-        cornerRadius=18,
-        color="#2563eb",
-    ).encode(
-        x=alt.X(
-            "임금:Q",
-            scale=alt.Scale(domain=[0, max_amount]),
-        ),
-        y=alt.Y("항목:N", title=None, axis=None),
-        tooltip=[
-            alt.Tooltip("표시:N", title="평균 임금"),
-            alt.Tooltip("구간:N", title="구간"),
-            alt.Tooltip("설명:N", title="해석"),
-        ],
-    )
-
-    value_text = alt.Chart(chart_df).mark_text(
-        align="left",
-        baseline="middle",
-        dx=8,
-        size=16,
-        fontWeight="bold",
-        color="#0f172a",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        x=alt.X("임금:Q", scale=alt.Scale(domain=[0, max_amount])),
-        y=alt.Y("항목:N", axis=None),
-        text="표시:N",
-    )
-
-    band_text = alt.Chart(pd.DataFrame([
-        {"x": max_amount * 0.5, "항목": "평균 임금", "text": f"{band_title} · {band_desc}"}
-    ])).mark_text(
-        align="center",
-        baseline="middle",
-        dy=48,
-        size=12,
-        fontWeight="bold",
-        color="#475569",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount]), axis=None),
-        y=alt.Y("항목:N", axis=None),
-        text="text:N",
-    )
-
-    ticks = alt.Chart(tick_df).mark_rule(
-        color="#94a3b8",
-        strokeDash=[3, 3],
-        opacity=0.65,
-    ).encode(
-        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount])),
-    )
-
-    tick_labels = alt.Chart(tick_df).mark_text(
-        align="center",
-        baseline="top",
-        dy=32,
-        size=11,
-        fontWeight="bold",
-        color="#64748b",
-        font="Pretendard, Noto Sans KR, sans-serif",
-    ).encode(
-        x=alt.X("x:Q", scale=alt.Scale(domain=[0, max_amount]), axis=None),
-        text="label:N",
-    )
-
-    chart = (
-        (background + foreground + value_text + band_text + ticks + tick_labels)
-        .properties(
-            height=180,
-            title="평균 임금 수준",
-        )
-    )
-
-    return apply_altair_theme(chart)
+    return f"""
+    <div class="viz-box bar-viz-box">
+        <div class="bar-row">
+            <div class="bar-head">
+                <span>중학생 <em>14~16세</em></span>
+                <strong>{teen_pct:.1f}%</strong>
+            </div>
+            <div class="bar-track">
+                <div class="bar-fill bar-fill-teen" style="width:{teen_pct:.2f}%;"></div>
+            </div>
+        </div>
+        <div class="bar-row">
+            <div class="bar-head">
+                <span>고등학생 <em>17~19세</em></span>
+                <strong>{high_pct:.1f}%</strong>
+            </div>
+            <div class="bar-track">
+                <div class="bar-fill bar-fill-high" style="width:{high_pct:.2f}%;"></div>
+            </div>
+        </div>
+        <div class="chart-note chart-note-separated">연령대별 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
+    </div>
+    """
 
 
 # -----------------------------
@@ -1237,7 +1040,7 @@ def inject_css() -> None:
             background:linear-gradient(135deg, #0f172a 0%, #173b74 56%, #2563eb 100%);
             border-radius:26px;
             padding:32px 32px 28px 32px;
-            margin-bottom:22px;
+            margin-bottom:24px;
             box-shadow:var(--shadow-strong);
             position:relative;
             overflow:hidden;
@@ -1300,9 +1103,9 @@ def inject_css() -> None:
             border-radius:22px;
             box-shadow:var(--shadow);
             padding:24px;
-            margin-bottom:22px;
+            margin:28px 0 18px 0;
         }
-        .panel-head{ margin-bottom:14px; }
+        .panel-head{ margin-bottom:0; }
         .section-kicker{
             font-size:12px;
             font-weight:800;
@@ -1329,9 +1132,9 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
             border-radius:22px;
-            padding:20px 20px 16px 20px;
+            padding:22px 22px 18px 22px;
             box-shadow:var(--shadow);
-            margin-bottom:18px;
+            margin-bottom:20px;
         }
         .ai-search-head{
             display:flex;
@@ -1370,7 +1173,7 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-top:10px;
+            margin-top:12px;
         }
         .meta-chip{
             display:inline-flex;
@@ -1392,15 +1195,15 @@ def inject_css() -> None:
         .brief-grid{
             display:grid;
             grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:14px;
-            margin-top:14px;
+            gap:16px;
+            margin-top:16px;
         }
         .brief-card{
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:18px;
-            padding:16px;
-            min-height:132px;
+            padding:18px;
+            min-height:138px;
         }
         .brief-label{
             font-size:12px;
@@ -1413,7 +1216,7 @@ def inject_css() -> None:
             line-height:1.3;
             color:#0f172a;
             font-weight:800;
-            margin-bottom:6px;
+            margin-bottom:8px;
         }
         .brief-text{
             font-size:13px;
@@ -1425,9 +1228,9 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px dashed #cfe0ff;
             border-radius:22px;
-            padding:28px 24px;
-            margin-top:16px;
-            margin-bottom:12px;
+            padding:30px 26px;
+            margin-top:18px;
+            margin-bottom:14px;
         }
         .search-idle-title{
             font-size:20px;
@@ -1449,7 +1252,7 @@ def inject_css() -> None:
             padding:22px;
             box-shadow:var(--shadow);
             margin-top:18px;
-            margin-bottom:20px;
+            margin-bottom:22px;
         }
         .ai-loading-top{
             display:flex;
@@ -1571,12 +1374,13 @@ def inject_css() -> None:
             border:1px solid var(--line);
             border-radius:20px;
             box-shadow:var(--shadow);
-            padding:20px 20px 18px 20px;
-            min-height:302px;
+            padding:22px 22px 20px 22px;
+            min-height:318px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
             overflow:hidden;
+            margin-bottom:20px;
         }
         .result-card::before{
             content:"";
@@ -1596,7 +1400,7 @@ def inject_css() -> None:
             line-height:1.42;
             font-weight:800;
             color:#102a43;
-            margin-bottom:10px;
+            margin-bottom:12px;
             letter-spacing:-0.02em;
             padding-left:4px;
         }
@@ -1604,15 +1408,15 @@ def inject_css() -> None:
             font-size:14px;
             line-height:1.76;
             color:#475467;
-            min-height:78px;
-            margin-bottom:16px;
+            min-height:86px;
+            margin-bottom:18px;
             padding-left:4px;
         }
         .tag-row{
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-bottom:16px;
+            margin-bottom:18px;
             padding-left:4px;
         }
         .tag-chip{
@@ -1657,7 +1461,8 @@ def inject_css() -> None:
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:18px;
-            padding:20px;
+            padding:22px;
+            margin-bottom:20px;
         }
         .profile-summary{
             font-size:15px;
@@ -1727,15 +1532,16 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:18px;
+            padding:20px;
             box-shadow:0 4px 16px rgba(15,23,42,.03);
+            margin-bottom:16px;
         }
         .outlook-summary{
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:16px;
-            padding:16px;
-            margin-bottom:14px;
+            padding:17px;
+            margin-bottom:0;
         }
         .outlook-summary-title{
             font-size:13px;
@@ -1758,18 +1564,20 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:18px;
-            height:100%;
+            padding:22px;
+            min-height:100%;
             box-shadow:0 4px 16px rgba(15,23,42,.03);
+            margin-bottom:20px;
         }
         .timeline-card{
             position:relative;
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:20px 18px 18px 18px;
-            min-height:250px;
+            padding:22px 20px 20px 20px;
+            min-height:260px;
             height:100%;
+            margin-bottom:20px;
         }
         .timeline-card::before{
             content:"";
@@ -1841,6 +1649,196 @@ def inject_css() -> None:
             color:#98a2b3;
         }
 
+        .viz-card{
+            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border:1px solid #e8eef7;
+            border-radius:20px;
+            box-shadow:0 6px 20px rgba(15,23,42,.04);
+            padding:22px;
+            margin-bottom:22px;
+        }
+        .viz-card-title{
+            font-size:18px;
+            line-height:1.45;
+            font-weight:800;
+            color:#102a43;
+            margin-bottom:16px;
+            letter-spacing:-0.01em;
+        }
+        .viz-box{
+            width:100%;
+            box-sizing:border-box;
+            padding:18px;
+            border:1px solid #edf3fb;
+            border-radius:18px;
+            background:#ffffff;
+        }
+        .viz-topline{
+            display:flex;
+            justify-content:flex-start;
+            margin-bottom:14px;
+        }
+        .viz-chip{
+            display:inline-flex;
+            align-items:center;
+            padding:7px 12px;
+            border-radius:999px;
+            background:#eef4ff;
+            border:1px solid #dbe7ff;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:800;
+        }
+        .salary-main-value{
+            font-size:30px;
+            font-weight:900;
+            color:#0f172a;
+            letter-spacing:-0.03em;
+            margin-bottom:4px;
+        }
+        .salary-caption{
+            color:#64748b;
+            font-size:13px;
+            font-weight:800;
+            margin-bottom:16px;
+        }
+        .salary-track,
+        .bar-track{
+            position:relative;
+            width:100%;
+            border-radius:999px;
+            background:#e8eef7;
+            overflow:hidden;
+            border:1px solid #dce8fb;
+            box-sizing:border-box;
+        }
+        .salary-track{ height:34px; }
+        .salary-fill{
+            height:100%;
+            border-radius:999px;
+            background:linear-gradient(90deg,#60a5fa 0%,#2563eb 100%);
+        }
+        .salary-axis{
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            margin-top:10px;
+            color:#64748b;
+            font-size:11px;
+            font-weight:700;
+        }
+        .donut-area{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:8px 0 20px 0;
+        }
+        .donut-chart{
+            width:220px;
+            height:220px;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-shadow:0 14px 30px rgba(15,23,42,.08);
+        }
+        .donut-center{
+            width:124px;
+            height:124px;
+            border-radius:50%;
+            background:#ffffff;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            border:1px solid #eef2ff;
+        }
+        .donut-kicker{
+            color:#64748b;
+            font-size:12px;
+            font-weight:800;
+            margin-bottom:4px;
+        }
+        .donut-value{
+            color:#0f172a;
+            font-size:30px;
+            font-weight:900;
+            letter-spacing:-0.03em;
+        }
+        .legend-grid{
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:10px;
+        }
+        .legend-item{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:12px 14px;
+            border-radius:16px;
+            background:#f8fbff;
+            border:1px solid #e6eefc;
+        }
+        .legend-dot{
+            width:12px;
+            height:12px;
+            border-radius:50%;
+            flex:0 0 12px;
+        }
+        .legend-label{
+            flex:1;
+            color:#334155;
+            font-size:13px;
+            font-weight:800;
+        }
+        .legend-item strong{
+            color:#0f172a;
+            font-size:13px;
+            font-weight:900;
+        }
+        .bar-viz-box{
+            display:flex;
+            flex-direction:column;
+            gap:20px;
+        }
+        .bar-head{
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:10px;
+            color:#334155;
+            font-size:13px;
+            font-weight:800;
+        }
+        .bar-head em{
+            color:#64748b;
+            font-style:normal;
+            font-weight:700;
+        }
+        .bar-head strong{
+            color:#0f172a;
+            font-weight:900;
+        }
+        .bar-track{ height:30px; }
+        .bar-fill{
+            height:100%;
+            border-radius:999px;
+        }
+        .bar-fill-teen{ background:linear-gradient(90deg,#93c5fd 0%,#5b6bff 100%); }
+        .bar-fill-high{ background:linear-gradient(90deg,#818cf8 0%,#4338ca 100%); }
+        .chart-note{
+            color:#64748b;
+            font-size:12px;
+            line-height:1.65;
+            font-weight:700;
+            text-align:center;
+        }
+        .chart-note-separated{
+            margin-top:20px;
+            padding-top:14px;
+            border-top:1px solid #edf3fb;
+        }
+
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div,
         [data-testid="stMultiSelect"] div[data-baseweb="select"] > div{
@@ -1875,8 +1873,10 @@ def inject_css() -> None:
             .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
         }
         @media (max-width: 768px){
-            .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr; }
+            .brief-grid, .similar-job-grid, .skeleton-grid, .legend-grid{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
+            .donut-chart{ width:190px; height:190px; }
+            .donut-center{ width:110px; height:110px; }
         }
         </style>
         """
@@ -2171,8 +2171,6 @@ def render_profile_section(detail: pd.Series) -> None:
             """
         )
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
         majors = detail.get("major_list", [])[:8]
         major_html = "".join([f'<span class="pill">{html.escape(item)}</span>' for item in majors]) if majors else '<div class="empty-text">등록된 관련 전공 정보가 없습니다.</div>'
 
@@ -2386,7 +2384,7 @@ def render_capability_section(detail: pd.Series) -> None:
         if aptitude_lines:
             render_html(
                 f"""
-                <div class="soft-card" style="margin-top:16px;">
+                <div class="soft-card">
                     <div class="section-title" style="font-size:18px; margin-bottom:10px;">적성 상세</div>
                     <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in aptitude_lines])}</ul>
                 </div>
@@ -2408,7 +2406,7 @@ def render_capability_section(detail: pd.Series) -> None:
 
         render_html(
             f"""
-            <div class="soft-card" style="margin-top:16px;">
+            <div class="soft-card">
                 <div class="section-title" style="font-size:18px; margin-bottom:10px;">추가 정보</div>
                 {contact_html}
             </div>
@@ -2488,10 +2486,9 @@ def render_market_section(detail: pd.Series) -> None:
             """
         )
 
-        salary_chart = build_salary_gauge(salary_amount)
-
-        if salary_chart is not None:
-            st.altair_chart(salary_chart, use_container_width=True)
+        salary_chart_html = build_salary_gauge(salary_amount)
+        if salary_chart_html is not None:
+            render_html(f"<div class='viz-card'><div class='viz-card-title'>평균 임금 시각화</div>{salary_chart_html}</div>")
         else:
             st.info("임금 그래프를 표시할 수 있는 데이터가 없습니다.")
 
@@ -2528,38 +2525,22 @@ def render_chart_section(detail: pd.Series) -> None:
         """
     )
 
-    gender_chart = build_gender_chart(detail)
-    age_chart = build_age_chart(detail)
+    gender_chart_html = build_gender_chart(detail)
+    age_chart_html = build_age_chart(detail)
 
     col1, col2 = st.columns(2, gap="large")
 
     with col1:
-        render_html(
-            """
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">성별 관심도 비중</div>
-            </div>
-            """
-        )
-
-        if gender_chart is not None:
-            st.altair_chart(gender_chart, use_container_width=True)
+        if gender_chart_html is not None:
+            render_html(f"<div class='viz-card'><div class='viz-card-title'>성별 관심도 비중</div>{gender_chart_html}</div>")
         else:
-            st.info("성별 PCNT 데이터가 없습니다.")
+            render_html("<div class='viz-card'><div class='viz-card-title'>성별 관심도 비중</div><div class='empty-text'>성별 PCNT 데이터가 없습니다.</div></div>")
 
     with col2:
-        render_html(
-            """
-            <div class="soft-card">
-                <div class="section-title" style="font-size:18px; margin-bottom:10px;">연령대별 선호도</div>
-            </div>
-            """
-        )
-
-        if age_chart is not None:
-            st.altair_chart(age_chart, use_container_width=True)
+        if age_chart_html is not None:
+            render_html(f"<div class='viz-card'><div class='viz-card-title'>연령대별 선호도</div>{age_chart_html}</div>")
         else:
-            st.info("연령대 PCNT 데이터가 없습니다.")
+            render_html("<div class='viz-card'><div class='viz-card-title'>연령대별 선호도</div><div class='empty-text'>연령대 PCNT 데이터가 없습니다.</div></div>")
 
 
 def render_detail_page(detail: pd.Series) -> None:
@@ -2567,7 +2548,7 @@ def render_detail_page(detail: pd.Series) -> None:
 
     render_html(
         f"""
-        <div class="hero" style="margin-bottom:18px;">
+        <div class="hero" style="margin-bottom:20px;">
             <div class="hero-kicker">Detail Page</div>
             <div class="hero-title">{html.escape(job_name)}</div>
             <div class="hero-sub">직무 프로필, 로드맵, 역량 및 자격, 시장 지표, PCNT 차트를 한 화면에서 확인할 수 있습니다.</div>
