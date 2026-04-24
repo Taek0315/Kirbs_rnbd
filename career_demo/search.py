@@ -277,6 +277,10 @@ def combine_pcnt_value(integer_part, decimal_part):
     return whole + (decimal / 10)
 
 
+def normalize_column_key(col) -> str:
+    return re.sub(r"[^a-z0-9가-힣]", "", str(col).strip().lower())
+
+
 def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
     for col in columns:
         if col in row.index:
@@ -286,18 +290,52 @@ def first_existing_numeric(row: pd.Series, columns: list[str]) -> float | None:
     return None
 
 
-def combine_pcnt_columns(row: pd.Series, integer_columns: list[str], decimal_columns: list[str]) -> float:
+def find_pcnt_part_by_alias(row: pd.Series, aliases: list[str], part_no: int) -> float | None:
+    alias_keys = [normalize_column_key(alias) for alias in aliases if alias]
+    if not alias_keys:
+        return None
+
+    part_patterns = [f"pcnt{part_no}", f"pnt{part_no}", f"percent{part_no}", f"pct{part_no}"]
+
+    for col in row.index:
+        key = normalize_column_key(col)
+        if not any(alias in key for alias in alias_keys):
+            continue
+        if not any(pattern in key for pattern in part_patterns):
+            # PCNT_남자_1, PNT_남자_2 같은 변형 대응
+            if not (("pcnt" in key or "pnt" in key or "percent" in key or "pct" in key) and key.endswith(str(part_no))):
+                continue
+        value = safe_float(row.get(col))
+        if value is not None:
+            return value
+    return None
+
+
+def combine_pcnt_columns(
+    row: pd.Series,
+    integer_columns: list[str],
+    decimal_columns: list[str],
+    aliases: list[str] | None = None,
+) -> float:
     integer_part = first_existing_numeric(row, integer_columns)
     decimal_part = first_existing_numeric(row, decimal_columns)
+
+    if aliases:
+        if integer_part is None:
+            integer_part = find_pcnt_part_by_alias(row, aliases, 1)
+        if decimal_part is None:
+            decimal_part = find_pcnt_part_by_alias(row, aliases, 2)
+
     value = combine_pcnt_value(integer_part, decimal_part)
     return 0.0 if value is None else float(value)
 
 
 def clamp_percent(value: float) -> float:
     try:
-        return max(0.0, min(100.0, float(value)))
+        value = float(value)
     except Exception:
         return 0.0
+    return max(0.0, min(100.0, value))
 
 
 def normalize_search_token(token: str) -> str:
@@ -410,7 +448,10 @@ def load_embedding_assets(
         axis=1,
     )
 
-    keys = [build_embedding_key(row.get("jobdicSeq"), row.get("job", "")) for _, row in meta.iterrows()]
+    keys = [
+        build_embedding_key(row.get("jobdicSeq"), row.get("job", ""))
+        for _, row in meta.iterrows()
+    ]
     key_to_index = {key: idx for idx, key in enumerate(keys)}
 
     return {
@@ -825,12 +866,10 @@ def build_salary_gauge(salary_amount) -> str | None:
     half_amount = max_amount // 2
 
     return f"""
-    <div class="viz-box salary-viz-box">
-        <div class="viz-topline">
-            <span class="viz-chip">{html.escape(band_title)}</span>
-        </div>
-        <div class="salary-main-value">{salary_amount:,}만원</div>
-        <div class="salary-caption">평균 임금 수준</div>
+    <div class="viz-card salary-viz-card">
+        <div class="salary-band-chip">{html.escape(band_title)}</div>
+        <div class="salary-viz-label">평균 임금 수준</div>
+        <div class="salary-viz-value">{salary_amount:,}만원</div>
         <div class="salary-track" aria-label="평균 임금 수준">
             <div class="salary-fill" style="width:{ratio:.2f}%;"></div>
         </div>
@@ -839,7 +878,7 @@ def build_salary_gauge(salary_amount) -> str | None:
             <span>{half_amount:,}</span>
             <span>{max_amount:,}</span>
         </div>
-        <div class="chart-note chart-note-separated">{html.escape(band_desc)}</div>
+        <div class="chart-note salary-note">{html.escape(band_desc)}</div>
     </div>
     """
 
@@ -847,13 +886,15 @@ def build_salary_gauge(salary_amount) -> str | None:
 def build_gender_chart(detail: pd.Series) -> str | None:
     male = combine_pcnt_columns(
         detail,
-        ["PCNT1_남자", "PNT1_남자"],
-        ["PCNT2_남자", "PNT2_남자"],
+        ["PCNT1_남자", "PNT1_남자", "PCNT1 남자", "PNT1 남자", "PCNT1_남성", "PNT1_남성"],
+        ["PCNT2_남자", "PNT2_남자", "PCNT2 남자", "PNT2 남자", "PCNT2_남성", "PNT2_남성"],
+        aliases=["남자", "남성", "male"],
     )
     female = combine_pcnt_columns(
         detail,
-        ["PCNT1_여자", "PNT1_여자"],
-        ["PCNT2_여자", "PNT2_여자"],
+        ["PCNT1_여자", "PNT1_여자", "PCNT1 여자", "PNT1 여자", "PCNT1_여성", "PNT1_여성"],
+        ["PCNT2_여자", "PNT2_여자", "PCNT2 여자", "PNT2 여자", "PCNT2_여성", "PNT2_여성"],
+        aliases=["여자", "여성", "female"],
     )
 
     total = male + female
@@ -865,10 +906,10 @@ def build_gender_chart(detail: pd.Series) -> str | None:
     male_deg = male_pct * 3.6
 
     return f"""
-    <div class="viz-box donut-viz-box">
-        <div class="donut-area">
-            <div class="donut-chart" style="background:conic-gradient(#4f46e5 0deg {male_deg:.2f}deg, #06b6d4 {male_deg:.2f}deg 360deg);">
-                <div class="donut-center">
+    <div class="viz-card gender-viz-card">
+        <div class="donut-stage">
+            <div class="donut-chart" style="background:conic-gradient(#5446e8 0deg {male_deg:.2f}deg, #2fb7cf {male_deg:.2f}deg 360deg);">
+                <div class="donut-hole">
                     <div class="donut-kicker">관심도 합계</div>
                     <div class="donut-value">100%</div>
                 </div>
@@ -876,17 +917,16 @@ def build_gender_chart(detail: pd.Series) -> str | None:
         </div>
         <div class="legend-grid">
             <div class="legend-item">
-                <span class="legend-dot" style="background:#4f46e5;"></span>
+                <span class="legend-dot" style="background:#5446e8;"></span>
                 <span class="legend-label">남성</span>
-                <strong>{male_pct:.1f}%</strong>
+                <strong class="legend-value">{male_pct:.1f}%</strong>
             </div>
             <div class="legend-item">
-                <span class="legend-dot" style="background:#06b6d4;"></span>
+                <span class="legend-dot" style="background:#2fb7cf;"></span>
                 <span class="legend-label">여성</span>
-                <strong>{female_pct:.1f}%</strong>
+                <strong class="legend-value">{female_pct:.1f}%</strong>
             </div>
         </div>
-        <div class="chart-note chart-note-separated">성별 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
     </div>
     """
 
@@ -894,13 +934,15 @@ def build_gender_chart(detail: pd.Series) -> str | None:
 def build_age_chart(detail: pd.Series) -> str | None:
     teen = combine_pcnt_columns(
         detail,
-        ["PCNT1_중학생", "PNT1_중학생"],
-        ["PCNT2_중학생", "PNT2_중학생"],
+        ["PCNT1_중학생", "PNT1_중학생", "PCNT1 중학생", "PNT1 중학생", "PCNT1_중등", "PNT1_중등"],
+        ["PCNT2_중학생", "PNT2_중학생", "PCNT2 중학생", "PNT2 중학생", "PCNT2_중등", "PNT2_중등"],
+        aliases=["중학생", "중등", "middle"],
     )
     high = combine_pcnt_columns(
         detail,
-        ["PCNT1_고등학생", "PNT1_고등학생"],
-        ["PCNT2_고등학생", "PNT2_고등학생"],
+        ["PCNT1_고등학생", "PNT1_고등학생", "PCNT1 고등학생", "PNT1 고등학생", "PCNT1_고등", "PNT1_고등"],
+        ["PCNT2_고등학생", "PNT2_고등학생", "PCNT2 고등학생", "PNT2 고등학생", "PCNT2_고등", "PNT2_고등"],
+        aliases=["고등학생", "고등", "high"],
     )
 
     total = teen + high
@@ -911,26 +953,24 @@ def build_age_chart(detail: pd.Series) -> str | None:
     high_pct = clamp_percent(high / total * 100)
 
     return f"""
-    <div class="viz-box bar-viz-box">
-        <div class="bar-row">
-            <div class="bar-head">
-                <span>중학생 <em>14~16세</em></span>
-                <strong>{teen_pct:.1f}%</strong>
+    <div class="viz-card age-viz-card">
+        <div class="bar-chart-list">
+            <div class="bar-chart-row">
+                <div class="bar-chart-head">
+                    <span>중학생 <em>14~16세</em></span>
+                    <strong>{teen_pct:.1f}%</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill middle-fill" style="width:{teen_pct:.2f}%;"></div></div>
             </div>
-            <div class="bar-track">
-                <div class="bar-fill bar-fill-teen" style="width:{teen_pct:.2f}%;"></div>
-            </div>
-        </div>
-        <div class="bar-row">
-            <div class="bar-head">
-                <span>고등학생 <em>17~19세</em></span>
-                <strong>{high_pct:.1f}%</strong>
-            </div>
-            <div class="bar-track">
-                <div class="bar-fill bar-fill-high" style="width:{high_pct:.2f}%;"></div>
+            <div class="bar-chart-row">
+                <div class="bar-chart-head">
+                    <span>고등학생 <em>17~19세</em></span>
+                    <strong>{high_pct:.1f}%</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill high-fill" style="width:{high_pct:.2f}%;"></div></div>
             </div>
         </div>
-        <div class="chart-note chart-note-separated">연령대별 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
+        <div class="chart-note age-note">연령대 PCNT 값을 합산 기준 100%로 환산하여 표시했습니다.</div>
     </div>
     """
 
@@ -1040,7 +1080,7 @@ def inject_css() -> None:
             background:linear-gradient(135deg, #0f172a 0%, #173b74 56%, #2563eb 100%);
             border-radius:26px;
             padding:32px 32px 28px 32px;
-            margin-bottom:24px;
+            margin-bottom:22px;
             box-shadow:var(--shadow-strong);
             position:relative;
             overflow:hidden;
@@ -1103,9 +1143,9 @@ def inject_css() -> None:
             border-radius:22px;
             box-shadow:var(--shadow);
             padding:24px;
-            margin:28px 0 18px 0;
+            margin-bottom:22px;
         }
-        .panel-head{ margin-bottom:0; }
+        .panel-head{ margin-bottom:14px; }
         .section-kicker{
             font-size:12px;
             font-weight:800;
@@ -1132,9 +1172,9 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid var(--line);
             border-radius:22px;
-            padding:22px 22px 18px 22px;
+            padding:20px 20px 16px 20px;
             box-shadow:var(--shadow);
-            margin-bottom:20px;
+            margin-bottom:18px;
         }
         .ai-search-head{
             display:flex;
@@ -1173,7 +1213,7 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-top:12px;
+            margin-top:10px;
         }
         .meta-chip{
             display:inline-flex;
@@ -1195,15 +1235,15 @@ def inject_css() -> None:
         .brief-grid{
             display:grid;
             grid-template-columns:repeat(3, minmax(0, 1fr));
-            gap:16px;
-            margin-top:16px;
+            gap:14px;
+            margin-top:14px;
         }
         .brief-card{
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:18px;
-            padding:18px;
-            min-height:138px;
+            padding:16px;
+            min-height:132px;
         }
         .brief-label{
             font-size:12px;
@@ -1216,7 +1256,7 @@ def inject_css() -> None:
             line-height:1.3;
             color:#0f172a;
             font-weight:800;
-            margin-bottom:8px;
+            margin-bottom:6px;
         }
         .brief-text{
             font-size:13px;
@@ -1228,9 +1268,9 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px dashed #cfe0ff;
             border-radius:22px;
-            padding:30px 26px;
-            margin-top:18px;
-            margin-bottom:14px;
+            padding:28px 24px;
+            margin-top:16px;
+            margin-bottom:12px;
         }
         .search-idle-title{
             font-size:20px;
@@ -1252,7 +1292,7 @@ def inject_css() -> None:
             padding:22px;
             box-shadow:var(--shadow);
             margin-top:18px;
-            margin-bottom:22px;
+            margin-bottom:20px;
         }
         .ai-loading-top{
             display:flex;
@@ -1374,13 +1414,15 @@ def inject_css() -> None:
             border:1px solid var(--line);
             border-radius:20px;
             box-shadow:var(--shadow);
-            padding:22px 22px 20px 22px;
-            min-height:318px;
+            padding:20px 20px 18px 20px;
+            height:320px;
+            min-height:320px;
+            max-height:320px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
             overflow:hidden;
-            margin-bottom:20px;
+            box-sizing:border-box;
         }
         .result-card::before{
             content:"";
@@ -1400,35 +1442,45 @@ def inject_css() -> None:
             line-height:1.42;
             font-weight:800;
             color:#102a43;
-            margin-bottom:12px;
+            margin-bottom:10px;
             letter-spacing:-0.02em;
             padding-left:4px;
+            min-height:30px;
         }
         .job-summary{
             font-size:14px;
             line-height:1.76;
             color:#475467;
-            min-height:86px;
-            margin-bottom:18px;
+            height:104px;
+            min-height:104px;
+            max-height:104px;
+            overflow:hidden;
+            margin-bottom:14px;
             padding-left:4px;
         }
         .tag-row{
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            margin-bottom:18px;
+            height:76px;
+            min-height:76px;
+            max-height:76px;
+            overflow:hidden;
+            margin-bottom:14px;
             padding-left:4px;
         }
         .tag-chip{
             display:inline-flex;
             align-items:center;
-            padding:7px 11px;
+            height:32px;
+            padding:0 11px;
             border-radius:999px;
             background:#f8fbff;
             border:1px solid #dce8fb;
             color:#2563eb;
             font-size:12px;
             font-weight:700;
+            box-sizing:border-box;
         }
         .metric-row{
             display:grid;
@@ -1461,8 +1513,7 @@ def inject_css() -> None:
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:18px;
-            padding:22px;
-            margin-bottom:20px;
+            padding:20px;
         }
         .profile-summary{
             font-size:15px;
@@ -1532,16 +1583,15 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:20px;
+            padding:18px;
             box-shadow:0 4px 16px rgba(15,23,42,.03);
-            margin-bottom:16px;
         }
         .outlook-summary{
             background:#f8fbff;
             border:1px solid #dce8fb;
             border-radius:16px;
-            padding:17px;
-            margin-bottom:0;
+            padding:16px;
+            margin-bottom:14px;
         }
         .outlook-summary-title{
             font-size:13px;
@@ -1564,20 +1614,18 @@ def inject_css() -> None:
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:22px;
-            min-height:100%;
+            padding:18px;
+            height:100%;
             box-shadow:0 4px 16px rgba(15,23,42,.03);
-            margin-bottom:20px;
         }
         .timeline-card{
             position:relative;
             background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             border:1px solid #e8eef7;
             border-radius:18px;
-            padding:22px 20px 20px 20px;
-            min-height:260px;
+            padding:20px 18px 18px 18px;
+            min-height:250px;
             height:100%;
-            margin-bottom:20px;
         }
         .timeline-card::before{
             content:"";
@@ -1650,88 +1698,20 @@ def inject_css() -> None:
         }
 
         .viz-card{
-            background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            width:100%;
+            margin-top:18px;
+            padding:20px;
             border:1px solid #e8eef7;
-            border-radius:20px;
-            box-shadow:0 6px 20px rgba(15,23,42,.04);
-            padding:22px;
-            margin-bottom:22px;
-        }
-        .viz-card-title{
-            font-size:18px;
-            line-height:1.45;
-            font-weight:800;
-            color:#102a43;
-            margin-bottom:16px;
-            letter-spacing:-0.01em;
-        }
-        .viz-box{
-            width:100%;
-            box-sizing:border-box;
-            padding:18px;
-            border:1px solid #edf3fb;
             border-radius:18px;
-            background:#ffffff;
-        }
-        .viz-topline{
-            display:flex;
-            justify-content:flex-start;
-            margin-bottom:14px;
-        }
-        .viz-chip{
-            display:inline-flex;
-            align-items:center;
-            padding:7px 12px;
-            border-radius:999px;
-            background:#eef4ff;
-            border:1px solid #dbe7ff;
-            color:#1d4ed8;
-            font-size:12px;
-            font-weight:800;
-        }
-        .salary-main-value{
-            font-size:30px;
-            font-weight:900;
-            color:#0f172a;
-            letter-spacing:-0.03em;
-            margin-bottom:4px;
-        }
-        .salary-caption{
-            color:#64748b;
-            font-size:13px;
-            font-weight:800;
-            margin-bottom:16px;
-        }
-        .salary-track,
-        .bar-track{
-            position:relative;
-            width:100%;
-            border-radius:999px;
-            background:#e8eef7;
-            overflow:hidden;
-            border:1px solid #dce8fb;
+            background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);
+            box-shadow:0 4px 16px rgba(15,23,42,.03);
             box-sizing:border-box;
         }
-        .salary-track{ height:34px; }
-        .salary-fill{
-            height:100%;
-            border-radius:999px;
-            background:linear-gradient(90deg,#60a5fa 0%,#2563eb 100%);
-        }
-        .salary-axis{
-            display:flex;
-            justify-content:space-between;
-            gap:8px;
-            margin-top:10px;
-            color:#64748b;
-            font-size:11px;
-            font-weight:700;
-        }
-        .donut-area{
+        .donut-stage{
             display:flex;
             align-items:center;
             justify-content:center;
-            padding:8px 0 20px 0;
+            margin:6px 0 20px 0;
         }
         .donut-chart{
             width:220px;
@@ -1740,9 +1720,9 @@ def inject_css() -> None:
             display:flex;
             align-items:center;
             justify-content:center;
-            box-shadow:0 14px 30px rgba(15,23,42,.08);
+            box-shadow:0 16px 34px rgba(15,23,42,.08);
         }
-        .donut-center{
+        .donut-hole{
             width:124px;
             height:124px;
             border-radius:50%;
@@ -1757,7 +1737,7 @@ def inject_css() -> None:
             color:#64748b;
             font-size:12px;
             font-weight:800;
-            margin-bottom:4px;
+            margin-bottom:5px;
         }
         .donut-value{
             color:#0f172a;
@@ -1791,17 +1771,18 @@ def inject_css() -> None:
             font-size:13px;
             font-weight:800;
         }
-        .legend-item strong{
+        .legend-value{
             color:#0f172a;
             font-size:13px;
             font-weight:900;
         }
-        .bar-viz-box{
+        .bar-chart-list{
             display:flex;
             flex-direction:column;
-            gap:20px;
+            gap:22px;
+            margin-top:6px;
         }
-        .bar-head{
+        .bar-chart-head{
             display:flex;
             justify-content:space-between;
             gap:10px;
@@ -1810,33 +1791,96 @@ def inject_css() -> None:
             font-size:13px;
             font-weight:800;
         }
-        .bar-head em{
+        .bar-chart-head em{
             color:#64748b;
             font-style:normal;
             font-weight:700;
         }
-        .bar-head strong{
+        .bar-chart-head strong{
             color:#0f172a;
             font-weight:900;
         }
-        .bar-track{ height:30px; }
+        .bar-track{
+            width:100%;
+            height:30px;
+            border-radius:999px;
+            background:#e8eef7;
+            overflow:hidden;
+            border:1px solid #dce8fb;
+            box-sizing:border-box;
+        }
         .bar-fill{
             height:100%;
             border-radius:999px;
         }
-        .bar-fill-teen{ background:linear-gradient(90deg,#93c5fd 0%,#5b6bff 100%); }
-        .bar-fill-high{ background:linear-gradient(90deg,#818cf8 0%,#4338ca 100%); }
-        .chart-note{
-            color:#64748b;
+        .middle-fill{
+            background:linear-gradient(90deg,#93c5fd 0%,#5b6bff 100%);
+        }
+        .high-fill{
+            background:linear-gradient(90deg,#818cf8 0%,#4338ca 100%);
+        }
+        .salary-viz-card{
+            margin-top:18px;
+        }
+        .salary-band-chip{
+            display:inline-flex;
+            align-items:center;
+            padding:7px 12px;
+            border-radius:999px;
+            background:#eef4ff;
+            border:1px solid #dbe7ff;
+            color:#1d4ed8;
             font-size:12px;
+            font-weight:800;
+            margin-bottom:16px;
+        }
+        .salary-viz-label{
+            font-size:13px;
+            font-weight:800;
+            color:#64748b;
+            margin-bottom:8px;
+        }
+        .salary-viz-value{
+            font-size:30px;
+            font-weight:900;
+            color:#0f172a;
+            letter-spacing:-0.03em;
+            margin-bottom:16px;
+        }
+        .salary-track{
+            width:100%;
+            height:34px;
+            border-radius:999px;
+            background:#dbeafe;
+            overflow:hidden;
+            border:1px solid #bfdbfe;
+            box-sizing:border-box;
+        }
+        .salary-fill{
+            height:100%;
+            border-radius:999px;
+            background:linear-gradient(90deg,#60a5fa 0%,#2563eb 100%);
+        }
+        .salary-axis{
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            margin-top:10px;
+            color:#64748b;
+            font-size:11px;
+            font-weight:700;
+        }
+        .chart-note{
+            margin-top:22px;
+            padding:13px 14px;
+            border-radius:14px;
+            background:#f8fbff;
+            border:1px solid #dce8fb;
+            color:#475569;
+            font-size:13px;
             line-height:1.65;
             font-weight:700;
             text-align:center;
-        }
-        .chart-note-separated{
-            margin-top:20px;
-            padding-top:14px;
-            border-top:1px solid #edf3fb;
         }
 
         div[data-baseweb="input"] > div,
@@ -1871,12 +1915,13 @@ def inject_css() -> None:
 
         @media (max-width: 1100px){
             .brief-grid, .similar-job-grid, .skeleton-grid{ grid-template-columns:1fr 1fr; }
+            .result-card{ height:350px; min-height:350px; max-height:350px; }
         }
         @media (max-width: 768px){
             .brief-grid, .similar-job-grid, .skeleton-grid, .legend-grid{ grid-template-columns:1fr; }
             .hero{ padding:26px 22px 22px 22px; }
-            .donut-chart{ width:190px; height:190px; }
-            .donut-center{ width:110px; height:110px; }
+            .result-card{ height:auto; min-height:0; max-height:none; }
+            .job-summary, .tag-row{ height:auto; min-height:0; max-height:none; }
         }
         </style>
         """
@@ -2089,7 +2134,7 @@ def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
     if row.get("salary_amount") is not None and not pd.isna(row.get("salary_amount")):
         salary_label = f"{int(row['salary_amount']):,}만원"
 
-    summary = shorten_text(row.get("summary", ""), 92)
+    summary = shorten_text(row.get("summary", ""), 112)
     if not summary:
         summary = "직업 요약 정보가 준비되지 않았습니다."
 
@@ -2170,6 +2215,8 @@ def render_profile_section(detail: pd.Series) -> None:
             </div>
             """
         )
+
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
         majors = detail.get("major_list", [])[:8]
         major_html = "".join([f'<span class="pill">{html.escape(item)}</span>' for item in majors]) if majors else '<div class="empty-text">등록된 관련 전공 정보가 없습니다.</div>'
@@ -2384,7 +2431,7 @@ def render_capability_section(detail: pd.Series) -> None:
         if aptitude_lines:
             render_html(
                 f"""
-                <div class="soft-card">
+                <div class="soft-card" style="margin-top:16px;">
                     <div class="section-title" style="font-size:18px; margin-bottom:10px;">적성 상세</div>
                     <ul class="bullet-list">{''.join([f'<li>{html.escape(line)}</li>' for line in aptitude_lines])}</ul>
                 </div>
@@ -2406,7 +2453,7 @@ def render_capability_section(detail: pd.Series) -> None:
 
         render_html(
             f"""
-            <div class="soft-card">
+            <div class="soft-card" style="margin-top:16px;">
                 <div class="section-title" style="font-size:18px; margin-bottom:10px;">추가 정보</div>
                 {contact_html}
             </div>
@@ -2488,7 +2535,7 @@ def render_market_section(detail: pd.Series) -> None:
 
         salary_chart_html = build_salary_gauge(salary_amount)
         if salary_chart_html is not None:
-            render_html(f"<div class='viz-card'><div class='viz-card-title'>평균 임금 시각화</div>{salary_chart_html}</div>")
+            render_html(salary_chart_html)
         else:
             st.info("임금 그래프를 표시할 수 있는 데이터가 없습니다.")
 
@@ -2531,16 +2578,32 @@ def render_chart_section(detail: pd.Series) -> None:
     col1, col2 = st.columns(2, gap="large")
 
     with col1:
+        render_html(
+            """
+            <div class="soft-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:10px;">성별 관심도 비중</div>
+            </div>
+            """
+        )
+
         if gender_chart_html is not None:
-            render_html(f"<div class='viz-card'><div class='viz-card-title'>성별 관심도 비중</div>{gender_chart_html}</div>")
+            render_html(gender_chart_html)
         else:
-            render_html("<div class='viz-card'><div class='viz-card-title'>성별 관심도 비중</div><div class='empty-text'>성별 PCNT 데이터가 없습니다.</div></div>")
+            st.info("성별 PCNT 데이터가 없습니다.")
 
     with col2:
+        render_html(
+            """
+            <div class="soft-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:10px;">연령대별 선호도</div>
+            </div>
+            """
+        )
+
         if age_chart_html is not None:
-            render_html(f"<div class='viz-card'><div class='viz-card-title'>연령대별 선호도</div>{age_chart_html}</div>")
+            render_html(age_chart_html)
         else:
-            render_html("<div class='viz-card'><div class='viz-card-title'>연령대별 선호도</div><div class='empty-text'>연령대 PCNT 데이터가 없습니다.</div></div>")
+            st.info("연령대 PCNT 데이터가 없습니다.")
 
 
 def render_detail_page(detail: pd.Series) -> None:
@@ -2548,7 +2611,7 @@ def render_detail_page(detail: pd.Series) -> None:
 
     render_html(
         f"""
-        <div class="hero" style="margin-bottom:20px;">
+        <div class="hero" style="margin-bottom:18px;">
             <div class="hero-kicker">Detail Page</div>
             <div class="hero-title">{html.escape(job_name)}</div>
             <div class="hero-sub">직무 프로필, 로드맵, 역량 및 자격, 시장 지표, PCNT 차트를 한 화면에서 확인할 수 있습니다.</div>
@@ -2556,14 +2619,11 @@ def render_detail_page(detail: pd.Series) -> None:
         """
     )
 
-    top_col1, top_col2 = st.columns([0.18, 0.82])
-    with top_col1:
+    back_col, _ = st.columns([0.18, 0.82])
+    with back_col:
         if st.button("← 목록으로", use_container_width=True):
             st.session_state.page = "main"
             rerun_app()
-
-    with top_col2:
-        st.caption("상세 분석 페이지")
 
     render_profile_section(detail)
     render_roadmap_section(detail)
