@@ -1415,13 +1415,13 @@ def inject_css() -> None:
             border-radius:20px;
             box-shadow:var(--shadow);
             padding:20px 20px 18px 20px;
-            height:440px;
-            min-height:440px;
-            max-height:440px;
+            height:400px;
+            min-height:400px;
+            max-height:400px;
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-            overflow:visible;
+            overflow:hidden;
             box-sizing:border-box;
         }
         .result-card::before{
@@ -1451,9 +1451,9 @@ def inject_css() -> None:
             font-size:14px;
             line-height:1.76;
             color:#475467;
-            height:140px;
-            min-height:140px;
-            max-height:140px;
+            height:132px;
+            min-height:132px;
+            max-height:132px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
@@ -1462,9 +1462,9 @@ def inject_css() -> None:
             display:flex;
             flex-wrap:wrap;
             gap:8px;
-            height:112px;
-            min-height:112px;
-            max-height:112px;
+            height:92px;
+            min-height:92px;
+            max-height:92px;
             overflow:hidden;
             margin-bottom:14px;
             padding-left:4px;
@@ -2120,14 +2120,248 @@ def render_ai_search_animation(query: str) -> None:
     placeholder.empty()
 
 
+
+# -----------------------------
+# Runtime keyword refinement helpers
+# -----------------------------
+CARD_TRAIT_KEYWORDS = [
+    "문제해결능력", "문제 해결 능력", "의사소통능력", "의사소통 능력", "자료분석능력", "자료 분석 능력",
+    "수리능력", "수리 능력", "분석적 사고", "논리적 사고", "공간 지각력", "공간지각력",
+    "판단력", "분석력", "창의력", "창의성", "응용력", "응용능력", "순발력",
+    "협동심", "대인관계", "사교성", "사회성", "정직성", "신뢰성", "책임감",
+    "리더십", "집중력", "인내심", "꼼꼼함", "성실성", "도전정신", "성취욕",
+    "배려심", "봉사심", "희생정신", "객관성", "외국어 실력", "프로그래밍 능력", "기획력", "기술력", "전문지식",
+]
+CARD_TRAIT_KEYWORDS = sorted(set(CARD_TRAIT_KEYWORDS), key=len, reverse=True)
+
+CARD_ACTION_WORDS = [
+    "보조", "관리", "개발", "분석", "진단", "상담", "자문", "조사", "평가", "측정", "기록",
+    "소독", "살균", "설계", "기획", "연구", "검사", "투약", "치료", "수립", "제시", "조율",
+    "제작", "운영", "교육", "프로그래밍", "디자인", "모델링", "관찰", "전달", "수납", "접수",
+    "회복", "유지", "증진", "상태파악", "수행", "처리", "컨설팅", "지도",
+]
+CARD_ACTION_WORDS = sorted(set(CARD_ACTION_WORDS), key=len, reverse=True)
+
+CARD_BAD_WORDS = {
+    "환자", "해당", "각종", "여러", "다양한", "관련", "대한", "있는", "되는", "하는", "위해",
+    "경우", "통해", "중심", "한다", "수행", "업무", "사람", "분야", "직업", "직무", "정보",
+    "내용", "방법", "과정", "정도", "자료", "워크넷",
+}
+
+CARD_SPECIAL_PATTERNS = [
+    (r"의료검사.*투약.*보조", "의료검사·투약 보조"),
+    (r"진료.*보조", "진료 보조"),
+    (r"간호.*보조", "간호 보조"),
+    (r"체온.*맥박.*호흡.*측정|혈압.*체온.*측정|체온.*맥박.*측정", "활력징후 측정"),
+    (r"치료내용.*기록|상태.*반응.*관찰.*기록", "환자 상태 기록"),
+    (r"의료기구.*소독|의료기구.*살균|물품.*소독|물품.*살균", "의료기구 소독"),
+    (r"접수.*수납", "접수·수납 업무"),
+    (r"문서.*관리", "문서 관리"),
+    (r"3차원.*모델링|3D.*모델링", "3D 모델링"),
+    (r"가상.*시스템.*개발|가상현실.*시스템.*개발|가상시스템.*개발", "가상현실 시스템 개발"),
+    (r"개발방향.*설정", "개발방향 설정"),
+    (r"컴퓨터그래픽.*프로그래밍|프로그래밍", "컴퓨터그래픽 프로그래밍"),
+    (r"가상현실.*시스템.*디자인|시스템.*디자인", "가상현실 시스템 디자인"),
+    (r"문제점.*분석", "문제점 분석"),
+    (r"대책.*연구", "대책 연구"),
+    (r"상담.*자문", "상담·자문"),
+    (r"진단.*지도", "진단·지도"),
+    (r"수출입.*상담|수출입.*자문", "수출입 상담"),
+    (r"환경관리.*문제점.*진단|문제점.*진단", "문제점 진단"),
+    (r"해결책.*제시", "해결책 제시"),
+    (r"영향.*측정.*평가|측정평가", "환경영향 평가"),
+    (r"장기계획.*수립", "장기계획 수립"),
+    (r"원인.*규명", "원인 규명"),
+]
+
+
+def refine_keyword_phrase(text: str) -> str:
+    text = normalize_whitespace(text)
+    text = re.sub(r"\([^)]*\)", " ", text)
+    text = re.sub(r"\[[^\]]*\]", " ", text)
+    text = text.replace("ㆍ", "·")
+    text = re.sub(
+        r"(한다|된다|있다|필요하다|요구된다|유리하다|적합하다|수행한다|돕는다)\.?$",
+        "",
+        text,
+    )
+    text = re.sub(r"\s+", " ", text).strip(" .,-;:·")
+    text = re.sub(
+        r"^(?:[가-힣A-Za-z0-9·]+는|[가-힣A-Za-z0-9·]+은|[가-힣A-Za-z0-9·]+가|[가-힣A-Za-z0-9·]+이)\s+",
+        "",
+        text,
+    )
+    protected_suffix = r"(학과|공학과|과학과|디자인학과|소프트웨어과|기계과|전자과|통신과|평가)$"
+    if not re.search(protected_suffix, text):
+        text = re.sub(r"(을|를|에|의|은|는|이|가)$", "", text).strip()
+    return re.sub(r"\s+", " ", text)
+
+
+def is_good_keyword_phrase(text: str) -> bool:
+    text = refine_keyword_phrase(text)
+    if not text or len(text) < 2 or len(text) > 26:
+        return False
+    if re.match(r"^(및|고|여|나|한 후|한|등|또한|그리고|또|와|과|상의)\s+", text):
+        return False
+    if re.search(
+        r"(하면|하며|하고|하여|하므로|되며|되어|있어야|가지고|경우가|사람에게|사람들에게|유리하다|요구된다|필요하다|적합하며|시키며)",
+        text,
+    ):
+        return False
+    tokens = [tok for tok in re.split(r"\s+", text) if tok]
+    if len(tokens) > 4:
+        return False
+    if text in CARD_BAD_WORDS:
+        return False
+    if any(tok in CARD_BAD_WORDS for tok in tokens):
+        return False
+    if text.endswith(("들", "등")) and len(text) < 6:
+        return False
+    return True
+
+
+def unique_refined_keywords(items: list[str]) -> list[str]:
+    result: list[str] = []
+    seen = set()
+    for item in items:
+        value = refine_keyword_phrase(item)
+        if not is_good_keyword_phrase(value):
+            continue
+        key = value.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def extract_trait_keywords_from_row(row: pd.Series) -> list[str]:
+    source = f"{row.get('aptitude', '')}\n{row.get('summary', '')}"
+    output: list[str] = []
+
+    normalize_map = {
+        "문제 해결 능력": "문제해결능력",
+        "의사소통 능력": "의사소통능력",
+        "자료 분석 능력": "자료분석능력",
+        "수리 능력": "수리능력",
+        "공간지각력": "공간 지각력",
+    }
+
+    for keyword in CARD_TRAIT_KEYWORDS:
+        if keyword in source:
+            output.append(normalize_map.get(keyword, keyword))
+
+    for line in split_lines(source):
+        for part in re.split(r",| 및 |/|·", line):
+            part = refine_keyword_phrase(part)
+            part = re.sub(r"^(남에 대한 )", "", part)
+            part = {
+                "정직": "정직성",
+                "신뢰": "신뢰성",
+                "배려": "배려심",
+                "협조": "협조성",
+                "혁신": "혁신성",
+            }.get(part, part)
+            if part in CARD_TRAIT_KEYWORDS or part in {"협조성", "배려심", "봉사심", "희생정신", "혁신성"}:
+                output.append(part)
+
+    return unique_refined_keywords(output)
+
+
+def extract_action_keywords_from_row(row: pd.Series, limit: int = 8) -> list[str]:
+    summary = str(row.get("summary", ""))
+    output: list[str] = []
+
+    for line in split_lines(summary):
+        cleaned = refine_keyword_phrase(line)
+        for pattern, keyword in CARD_SPECIAL_PATTERNS:
+            if re.search(pattern, cleaned):
+                output.append(keyword)
+
+    action_group = "|".join(re.escape(word) for word in CARD_ACTION_WORDS)
+    for line in split_lines(summary):
+        cleaned = refine_keyword_phrase(line)
+        for match in re.finditer(
+            rf"([가-힣A-Za-z0-9·/\s]{{2,18}}?)(?:을|를|에|의)?\s*({action_group})(?:하|한|할|하고|하며|한다|함|되|한다)?",
+            cleaned,
+        ):
+            obj = refine_keyword_phrase(match.group(1))
+            action = match.group(2)
+            obj = re.sub(
+                r"^(?:환자의|환자|사용자|기업이나 공공조직|기업|의사나 간호사의 지시에 따라)\s*",
+                "",
+                obj,
+            ).strip()
+            obj = re.sub(r"(?:업무|활동)$", "", obj).strip()
+            if len(obj) < 2:
+                continue
+            phrase = f"{obj} {action}".strip()
+            if is_good_keyword_phrase(phrase) and not re.match(r"^(의료|각종|관련|여러|다양한)\s", phrase):
+                output.append(phrase)
+
+    output = unique_refined_keywords(output)
+    special_keywords = [keyword for _, keyword in CARD_SPECIAL_PATTERNS]
+
+    def sort_key(value: str) -> tuple[int, int]:
+        score = 0
+        if value in special_keywords:
+            score += 8
+        if "·" in value:
+            score += 3
+        if any(action in value for action in CARD_ACTION_WORDS):
+            score += 2
+        if len(value) <= 12:
+            score += 1
+        return (-score, len(value))
+
+    return sorted(output, key=sort_key)[:limit]
+
+
+def derive_display_keywords_for_row(row: pd.Series, max_keywords: int = 10) -> list[str]:
+    action_keywords = extract_action_keywords_from_row(row, limit=8)
+    trait_keywords = extract_trait_keywords_from_row(row)
+
+    output: list[str] = []
+    for keyword in action_keywords + trait_keywords:
+        if keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
+
+    # meta 키워드는 보조로만 사용한다. 문장 조각이 섞여 있을 수 있으므로 필터링한다.
+    for keyword in row.get("display_keywords_list", []):
+        keyword = refine_keyword_phrase(str(keyword))
+        if is_good_keyword_phrase(keyword) and keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
+
+    for keyword in row.get("similar_job_list", []) + row.get("major_list", []):
+        keyword = refine_keyword_phrase(str(keyword))
+        if is_good_keyword_phrase(keyword) and keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
+
+    return output
+
+
+def select_card_tags(row: pd.Series, limit: int = 3) -> list[str]:
+    keywords = derive_display_keywords_for_row(row, max_keywords=limit)
+    if len(keywords) >= limit:
+        return keywords[:limit]
+
+    for keyword in row.get("similar_job_list", []) + row.get("major_list", []) + row.get("topic_tags_list", []):
+        keyword = refine_keyword_phrase(str(keyword))
+        if is_good_keyword_phrase(keyword) and keyword not in keywords:
+            keywords.append(keyword)
+        if len(keywords) >= limit:
+            break
+    return keywords[:limit]
+
+
+
 def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
-    tags = row.get("topic_tags_list", [])[:3]
-    if not tags:
-        tags = row.get("similar_job_list", [])[:3]
-    if not tags:
-        tags = row.get("display_keywords_list", [])[:3]
-    if not tags:
-        tags = row.get("major_list", [])[:3]
+    tags = select_card_tags(row, limit=3)
     tags_html = "".join([f'<span class="tag-chip">{html.escape(tag)}</span>' for tag in tags])
 
     salary_label = "정보 없음"
@@ -2159,6 +2393,7 @@ def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
         </div>
         """
     )
+
 
 
 def render_profile_section(detail: pd.Series) -> None:
@@ -2392,7 +2627,7 @@ def extract_keywords_from_text(text: str, limit: int = 14) -> list[str]:
 
 
 def render_capability_section(detail: pd.Series) -> None:
-    aptitude_keywords = detail.get("display_keywords_list", [])[:10]
+    aptitude_keywords = derive_display_keywords_for_row(detail, max_keywords=10)
     if not aptitude_keywords:
         aptitude_keywords = extract_keywords_from_text(str(detail.get("aptitude", "")), limit=12)
     if not aptitude_keywords:

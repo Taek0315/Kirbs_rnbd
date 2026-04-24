@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 import json
+import re
 from typing import Iterable
 
 import numpy as np
@@ -10,17 +10,12 @@ import pandas as pd
 
 try:
     from sentence_transformers import SentenceTransformer
-except ImportError as exc:  # pragma: no cover
+except ImportError as exc:
     raise SystemExit(
         "sentence-transformers가 설치되어 있지 않습니다.\n"
-        "conda 환경 또는 Jupyter에서 아래를 먼저 실행해 주세요.\n"
-        "pip install -U sentence-transformers openpyxl pandas pyarrow kiwipiepy"
+        "아래 패키지를 먼저 설치해 주세요.\n"
+        "pip install -U sentence-transformers openpyxl pandas numpy"
     ) from exc
-
-try:
-    from kiwipiepy import Kiwi
-except ImportError:  # pragma: no cover
-    Kiwi = None
 
 
 # =========================
@@ -49,53 +44,68 @@ TEXT_COLUMNS = [
     "capacity_all",
 ]
 
-KEYWORD_SOURCE_COLUMNS = [
-    "capacity_1",
-    "capacity_all",
-    "aptitude",
-    "summary",
-]
-
 MAJOR_PREFIX = "major_"
 CONTACT_PREFIX = "contact_"
 MAX_DISPLAY_KEYWORDS = 10
 MAX_TOPIC_TAGS = 12
 
-PREFERRED_KEYWORD_ENDINGS = [
-    "문제 해결 능력", "문제해결능력", "의사소통 능력", "의사소통능력", "자료 분석 능력",
-    "자료분석능력", "분석 능력", "분석능력", "프로그래밍 능력", "기획 능력", "기획력",
-    "사고 능력", "사고능력", "사고력", "분석력", "판단력", "통제력", "리더십",
-    "책임감", "창의력", "창의성", "혁신성", "집중력", "인내심", "협동심", "대인관계",
-    "대인관계능력", "자기통제력", "사회성", "정직성", "신뢰성", "응용력", "응용능력",
-    "활용능력", "기술력", "지식", "전문지식", "성취욕", "도전정신", "꼼꼼함", "성실성",
+
+# =========================
+# 키워드 추출 사전
+# =========================
+TRAIT_KEYWORDS = [
+    "문제해결능력", "문제 해결 능력", "의사소통능력", "의사소통 능력", "자료분석능력", "자료 분석 능력",
+    "수리능력", "수리 능력", "분석적 사고", "논리적 사고", "공간 지각력", "공간지각력",
+    "판단력", "분석력", "창의력", "창의성", "응용력", "응용능력", "순발력",
+    "협동심", "대인관계", "사교성", "사회성", "정직성", "신뢰성", "책임감",
+    "리더십", "집중력", "인내심", "꼼꼼함", "성실성", "도전정신", "성취욕",
+    "배려심", "봉사심", "희생정신", "객관성", "외국어 실력", "프로그래밍 능력", "기획력", "기술력", "전문지식",
 ]
-PREFERRED_KEYWORD_ENDINGS = sorted(set(PREFERRED_KEYWORD_ENDINGS), key=len, reverse=True)
+TRAIT_KEYWORDS = sorted(set(TRAIT_KEYWORDS), key=len, reverse=True)
 
-KEYWORD_STOPWORDS = {
-    "관련", "직업", "직무", "일", "일을", "하는", "대한", "및", "에서", "으로", "위한", "위해",
-    "같은", "있는", "되는", "분야", "업무", "사람", "경우", "통한", "기반", "탐색", "분석",
-    "미래", "검색", "관련된", "중심", "한다", "수행", "업무를", "업무에", "직업명", "정보",
-    "수", "것", "등", "필요", "요구", "평가", "준비", "훈련", "현장", "과정", "정도",
-    "있다", "된다", "있으며", "통해", "전반적", "전반적인", "직업정보", "워크넷", "자료",
-    "능력", "지식", "역량", "문장", "설명", "내용", "자격", "조건", "방법",
+ACTION_WORDS = [
+    "보조", "관리", "개발", "분석", "진단", "상담", "자문", "조사", "평가", "측정", "기록",
+    "소독", "살균", "설계", "기획", "연구", "검사", "투약", "치료", "수립", "제시", "조율",
+    "제작", "운영", "교육", "프로그래밍", "디자인", "모델링", "관찰", "전달", "수납", "접수",
+    "회복", "유지", "증진", "상태파악", "수행", "처리", "컨설팅", "지도",
+]
+ACTION_WORDS = sorted(set(ACTION_WORDS), key=len, reverse=True)
+
+BAD_WORDS = {
+    "환자", "해당", "각종", "여러", "다양한", "관련", "대한", "있는", "되는", "하는", "위해",
+    "경우", "통해", "중심", "한다", "수행", "업무", "사람", "분야", "직업", "직무", "정보",
+    "내용", "방법", "과정", "정도", "자료", "워크넷",
 }
 
-BAD_PHRASE_TOKENS = {
-    "수", "있는", "있는", "되는", "하는", "하게", "하므로", "하고", "하며", "하여", "대한",
-    "관련", "관련된", "관한", "자주", "또는", "그리고", "또", "이", "그", "저", "및", "등",
-    "문제", "사람", "업무", "직업", "분야",
-}
-
-PROTECTED_SINGLE_KEYWORDS = {
-    "끈기", "책임감", "리더십", "창의력", "창의성", "혁신성", "집중력", "인내심", "협동심",
-    "정직성", "신뢰성", "성취욕", "도전정신", "사회성", "분석력", "판단력", "기획력", "꼼꼼함",
-}
-
-NOUN_TAGS = {"NNG", "NNP", "SL", "SN", "XR", "XPN"}
+SPECIAL_PATTERNS = [
+    (r"의료검사.*투약.*보조", "의료검사·투약 보조"),
+    (r"진료.*보조", "진료 보조"),
+    (r"간호.*보조", "간호 보조"),
+    (r"체온.*맥박.*호흡.*측정|혈압.*체온.*측정|체온.*맥박.*측정", "활력징후 측정"),
+    (r"치료내용.*기록|상태.*반응.*관찰.*기록", "환자 상태 기록"),
+    (r"의료기구.*소독|의료기구.*살균|물품.*소독|물품.*살균", "의료기구 소독"),
+    (r"접수.*수납", "접수·수납 업무"),
+    (r"문서.*관리", "문서 관리"),
+    (r"3차원.*모델링|3D.*모델링", "3D 모델링"),
+    (r"가상.*시스템.*개발|가상현실.*시스템.*개발|가상시스템.*개발", "가상현실 시스템 개발"),
+    (r"개발방향.*설정", "개발방향 설정"),
+    (r"컴퓨터그래픽.*프로그래밍|프로그래밍", "컴퓨터그래픽 프로그래밍"),
+    (r"가상현실.*시스템.*디자인|시스템.*디자인", "가상현실 시스템 디자인"),
+    (r"문제점.*분석", "문제점 분석"),
+    (r"대책.*연구", "대책 연구"),
+    (r"상담.*자문", "상담·자문"),
+    (r"진단.*지도", "진단·지도"),
+    (r"수출입.*상담|수출입.*자문", "수출입 상담"),
+    (r"환경관리.*문제점.*진단|문제점.*진단", "문제점 진단"),
+    (r"해결책.*제시", "해결책 제시"),
+    (r"영향.*측정.*평가|측정평가", "환경영향 평가"),
+    (r"장기계획.*수립", "장기계획 수립"),
+    (r"원인.*규명", "원인 규명"),
+]
 
 
 # =========================
-# 전처리 유틸
+# 전처리
 # =========================
 def is_missing_like(value) -> bool:
     if value is None:
@@ -109,10 +119,9 @@ def is_missing_like(value) -> bool:
         return False
 
 
-
 def normalize_whitespace(text: str) -> str:
     text = str(text)
-    text = text.replace("_x000D_", " ")
+    text = text.replace("_x000D_", "\n")
     text = text.replace("\\r", "\n").replace("\\n", "\n")
     text = text.replace("\r", "\n")
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
@@ -123,78 +132,37 @@ def normalize_whitespace(text: str) -> str:
     return text.strip()
 
 
-
 def clean_sentence(text: str) -> str:
     if is_missing_like(text):
         return ""
-    text = normalize_whitespace(text)
+    text = normalize_whitespace(str(text))
     text = re.sub(r"^[\-•·▪■]\s*", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip(" ,;:-")
 
 
-
 def split_lines(text) -> list[str]:
     if is_missing_like(text):
         return []
-
-    if isinstance(text, (list, tuple, set)):
-        lines: list[str] = []
-        for item in text:
-            lines.extend(split_lines(item))
-        return lines
-
-    text = normalize_whitespace(text)
-    if not text:
-        return []
-
-    text = re.sub(r"\n\s*[-•·▪■]\s*", "\n", text)
-    text = re.sub(r"^\s*[-•·▪■]\s*", "", text)
-
-    raw_parts: list[str] = []
-    for part in re.split(r"\n|;", text):
-        part = clean_sentence(part)
-        if not part:
-            continue
-        if "," in part and len(part) < 90:
-            raw_parts.extend([clean_sentence(p) for p in part.split(",") if clean_sentence(p)])
-        else:
-            raw_parts.append(part)
-
-    seen = set()
-    deduped: list[str] = []
-    for part in raw_parts:
-        key = part.lower()
-        if key not in seen:
-            seen.add(key)
-            deduped.append(part)
-    return deduped
-
-
-
-def split_job_names(text) -> list[str]:
-    if is_missing_like(text):
-        return []
-
     text = normalize_whitespace(str(text))
     if not text:
         return []
+    text = re.sub(r"\n\s*[-•·▪■]\s*", "\n", text)
+    text = re.sub(r"^\s*[-•·▪■]\s*", "", text)
 
-    text = re.sub(r"\s*(?:\n|;|/|\||,|，)\s*", "\n", text)
     parts: list[str] = []
-    for part in text.split("\n"):
-        part = re.sub(r"^\d+[.)]\s*", "", clean_sentence(part))
+    for part in re.split(r"\n|;", text):
+        part = clean_sentence(part)
         if part:
             parts.append(part)
     return unique_keep_order(parts)
-
 
 
 def unique_keep_order(items: Iterable[str]) -> list[str]:
     seen = set()
     result: list[str] = []
     for item in items:
-        value = clean_sentence(item)
+        value = clean_sentence(str(item))
         if not value:
             continue
         key = value.lower()
@@ -204,302 +172,209 @@ def unique_keep_order(items: Iterable[str]) -> list[str]:
     return result
 
 
+def refine_keyword_phrase(text: str) -> str:
+    text = normalize_whitespace(str(text))
+    text = re.sub(r"\([^)]*\)", " ", text)
+    text = re.sub(r"\[[^\]]*\]", " ", text)
+    text = text.replace("ㆍ", "·")
+    text = re.sub(
+        r"(한다|된다|있다|필요하다|요구된다|유리하다|적합하다|수행한다|돕는다)\.?$",
+        "",
+        text,
+    )
+    text = re.sub(r"\s+", " ", text).strip(" .,-;:·")
+    text = re.sub(
+        r"^(?:[가-힣A-Za-z0-9·]+는|[가-힣A-Za-z0-9·]+은|[가-힣A-Za-z0-9·]+가|[가-힣A-Za-z0-9·]+이)\s+",
+        "",
+        text,
+    )
+    protected_suffix = r"(학과|공학과|과학과|디자인학과|소프트웨어과|기계과|전자과|통신과|평가)$"
+    if not re.search(protected_suffix, text):
+        text = re.sub(r"(을|를|에|의|은|는|이|가)$", "", text).strip()
+    return re.sub(r"\s+", " ", text)
+
+
+def is_good_keyword_phrase(text: str) -> bool:
+    text = refine_keyword_phrase(text)
+    if not text or len(text) < 2 or len(text) > 26:
+        return False
+    if re.match(r"^(및|고|여|나|한 후|한|등|또한|그리고|또|와|과|상의)\s+", text):
+        return False
+    if re.search(
+        r"(하면|하며|하고|하여|하므로|되며|되어|있어야|가지고|경우가|사람에게|사람들에게|유리하다|요구된다|필요하다|적합하며|시키며)",
+        text,
+    ):
+        return False
+    tokens = [tok for tok in re.split(r"\s+", text) if tok]
+    if len(tokens) > 4:
+        return False
+    if text in BAD_WORDS:
+        return False
+    if any(tok in BAD_WORDS for tok in tokens):
+        return False
+    if text.endswith(("들", "등")) and len(text) < 6:
+        return False
+    return True
+
+
+def unique_refined_keywords(items: list[str]) -> list[str]:
+    result: list[str] = []
+    seen = set()
+    for item in items:
+        value = refine_keyword_phrase(item)
+        if not is_good_keyword_phrase(value):
+            continue
+        key = value.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def split_job_names(text) -> list[str]:
+    if is_missing_like(text):
+        return []
+    return unique_refined_keywords([part for part in re.split(r",|/|;|\n|\|", str(text)) if refine_keyword_phrase(part)])
+
 
 def collect_prefixed_values(row: pd.Series, prefix: str) -> list[str]:
     values: list[str] = []
     for col in row.index:
         if str(col).startswith(prefix):
-            values.extend(split_lines(row[col]))
-    return unique_keep_order(values)
+            value = row.get(col)
+            if not is_missing_like(value):
+                values.extend([part for part in re.split(r",|/|;|\n", str(value)) if refine_keyword_phrase(part)])
+    return unique_refined_keywords(values)
 
 
+# =========================
+# 키워드 생성
+# =========================
+def extract_trait_keywords(row: pd.Series) -> list[str]:
+    source = f"{row.get('aptitude', '')}\n{row.get('summary', '')}"
+    output: list[str] = []
 
-def normalize_keyword_candidate(text: str) -> str:
-    text = normalize_whitespace(text)
-    text = text.replace("/", " ")
-    text = re.sub(r"\([^)]*\)", " ", text)
-    text = re.sub(r"\[[^\]]*\]", " ", text)
-    text = re.sub(r"[\"'“”‘’]", "", text)
-    text = re.sub(r"\s+", " ", text).strip(" ,;:-")
+    normalize_map = {
+        "문제 해결 능력": "문제해결능력",
+        "의사소통 능력": "의사소통능력",
+        "자료 분석 능력": "자료분석능력",
+        "수리 능력": "수리능력",
+        "공간지각력": "공간 지각력",
+    }
 
-    replacements = [
-        (r"\s*에 대한\s*", " "),
-        (r"\s*에 관한\s*", " "),
-        (r"\s*관련\s*", " "),
-        (r"\s*관련된\s*", " "),
-        (r"\s*및\s*", " "),
-    ]
-    for pattern, repl in replacements:
-        text = re.sub(pattern, repl, text)
+    for keyword in TRAIT_KEYWORDS:
+        if keyword in source:
+            output.append(normalize_map.get(keyword, keyword))
 
-    text = re.sub(r"\s+", " ", text).strip(" ,;:-")
-    return text
+    for line in split_lines(source):
+        for part in re.split(r",| 및 |/|·", line):
+            part = refine_keyword_phrase(part)
+            part = re.sub(r"^(남에 대한 )", "", part)
+            part = {
+                "정직": "정직성",
+                "신뢰": "신뢰성",
+                "배려": "배려심",
+                "협조": "협조성",
+                "혁신": "혁신성",
+            }.get(part, part)
+            if part in TRAIT_KEYWORDS or part in {"협조성", "배려심", "봉사심", "희생정신", "혁신성"}:
+                output.append(part)
 
-
-
-def is_valid_keyword_candidate(candidate: str) -> bool:
-    candidate = normalize_keyword_candidate(candidate)
-    if not candidate:
-        return False
-
-    if len(candidate) < 2 or len(candidate) > 24:
-        return False
-
-    lowered = candidate.lower()
-    if lowered in KEYWORD_STOPWORDS:
-        return False
-
-    tokens = [tok for tok in candidate.split() if tok]
-    if len(tokens) > 4:
-        return False
-
-    if any(tok.lower() in KEYWORD_STOPWORDS for tok in tokens):
-        return False
-    if any(tok in BAD_PHRASE_TOKENS for tok in tokens):
-        return False
-
-    # 조사/어미가 붙은 문장 조각 제거
-    bad_suffix = re.compile(r"(하는|하며|하고|하여|하므로|되는|있는|있는|대한|관련된|같은|수있는|수 있는)$")
-    if bad_suffix.search(candidate):
-        return False
-
-    # 동사/절 구조가 섞인 긴 구절 제거
-    if re.search(r"(할 수|낼 수|될 수|하므로|하기 때문에|할수)", candidate):
-        return False
-
-    if re.search(r"[가-힣]{2,}(를|을|은|는|이|가|에|의)$", candidate):
-        return False
-
-    return True
+    return unique_refined_keywords(output)
 
 
+def extract_action_keywords(row: pd.Series, limit: int = 8) -> list[str]:
+    summary = str(row.get("summary", ""))
+    output: list[str] = []
 
-def extract_keyword_candidates_regex(text: str) -> list[str]:
-    raw = normalize_whitespace(text)
-    if not raw:
-        return []
+    for line in split_lines(summary):
+        cleaned = refine_keyword_phrase(line)
+        for pattern, keyword in SPECIAL_PATTERNS:
+            if re.search(pattern, cleaned):
+                output.append(keyword)
 
-    candidates: list[str] = []
+    action_group = "|".join(re.escape(word) for word in ACTION_WORDS)
+    for line in split_lines(summary):
+        cleaned = refine_keyword_phrase(line)
+        for match in re.finditer(
+            rf"([가-힣A-Za-z0-9·/\s]{{2,18}}?)(?:을|를|에|의)?\s*({action_group})(?:하|한|할|하고|하며|한다|함|되|한다)?",
+            cleaned,
+        ):
+            obj = refine_keyword_phrase(match.group(1))
+            action = match.group(2)
+            obj = re.sub(
+                r"^(?:환자의|환자|사용자|기업이나 공공조직|기업|의사나 간호사의 지시에 따라)\s*",
+                "",
+                obj,
+            ).strip()
+            obj = re.sub(r"(?:업무|활동)$", "", obj).strip()
+            if len(obj) < 2:
+                continue
+            phrase = f"{obj} {action}".strip()
+            if is_good_keyword_phrase(phrase) and not re.match(r"^(의료|각종|관련|여러|다양한)\s", phrase):
+                output.append(phrase)
 
-    ending_group = "|".join(re.escape(item) for item in PREFERRED_KEYWORD_ENDINGS)
-    phrase_pattern = re.compile(
-        rf"(?:[가-힣A-Za-z0-9]+\s+){{0,2}}(?:{ending_group})"
-    )
-    for match in phrase_pattern.finditer(raw):
-        phrase = normalize_keyword_candidate(match.group(0))
-        if is_valid_keyword_candidate(phrase):
-            candidates.append(phrase)
+    output = unique_refined_keywords(output)
+    special_keywords = [keyword for _, keyword in SPECIAL_PATTERNS]
 
-    for single in PROTECTED_SINGLE_KEYWORDS:
-        if single in raw:
-            candidates.append(single)
+    def sort_key(value: str) -> tuple[int, int]:
+        score = 0
+        if value in special_keywords:
+            score += 8
+        if "·" in value:
+            score += 3
+        if any(action in value for action in ACTION_WORDS):
+            score += 2
+        if len(value) <= 12:
+            score += 1
+        return (-score, len(value))
 
-    return unique_keep_order(candidates)
-
-
-
-def extract_keyword_candidates_kiwi(text: str, kiwi: Kiwi | None) -> list[str]:
-    if kiwi is None:
-        return []
-
-    raw = normalize_whitespace(text)
-    if not raw:
-        return []
-
-    candidates: list[str] = []
-    for sentence in re.split(r"\n+", raw):
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-
-        try:
-            tokens = kiwi.tokenize(sentence)
-        except Exception:
-            continue
-
-        buffer: list[str] = []
-        for tok in tokens:
-            form = tok.form.strip()
-            tag = tok.tag
-            if tag in NOUN_TAGS and len(form) >= 1:
-                if form.lower() not in KEYWORD_STOPWORDS:
-                    buffer.append(form)
-            else:
-                if buffer:
-                    for n in range(1, min(4, len(buffer)) + 1):
-                        for start in range(0, len(buffer) - n + 1):
-                            phrase = " ".join(buffer[start:start + n])
-                            phrase = normalize_keyword_candidate(phrase)
-                            if is_valid_keyword_candidate(phrase):
-                                candidates.append(phrase)
-                    buffer = []
-        if buffer:
-            for n in range(1, min(4, len(buffer)) + 1):
-                for start in range(0, len(buffer) - n + 1):
-                    phrase = " ".join(buffer[start:start + n])
-                    phrase = normalize_keyword_candidate(phrase)
-                    if is_valid_keyword_candidate(phrase):
-                        candidates.append(phrase)
-
-    return unique_keep_order(candidates)
+    return sorted(output, key=sort_key)[:limit]
 
 
+def build_display_keywords(row: pd.Series, max_keywords: int = MAX_DISPLAY_KEYWORDS) -> list[str]:
+    action_keywords = extract_action_keywords(row, limit=8)
+    trait_keywords = extract_trait_keywords(row)
 
-def score_keyword_candidate(candidate: str, source_text: str) -> float:
-    score = 0.0
-    if candidate in PROTECTED_SINGLE_KEYWORDS:
-        score += 5.0
-    if any(candidate.endswith(end) for end in PREFERRED_KEYWORD_ENDINGS):
-        score += 6.0
-    if 2 <= len(candidate) <= 10:
-        score += 2.4
-    elif len(candidate) <= 16:
-        score += 1.2
-    if " " in candidate:
-        score += 1.0
-    if candidate in source_text:
-        score += 2.0
-    if re.search(r"[A-Za-z]", candidate):
-        score += 0.5
-    return score
+    output: list[str] = []
+    for keyword in action_keywords + trait_keywords:
+        if keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
 
+    for keyword in split_job_names(row.get("similarJob", "")) + collect_prefixed_values(row, MAJOR_PREFIX):
+        if keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
 
-
-def rank_keyword_candidates(
-    candidates: list[str],
-    document_embedding: np.ndarray,
-    model: SentenceTransformer,
-    source_text: str,
-    max_keywords: int = MAX_DISPLAY_KEYWORDS,
-) -> list[str]:
-    clean_candidates = []
-    seen = set()
-    for cand in candidates:
-        cand = normalize_keyword_candidate(cand)
-        if not is_valid_keyword_candidate(cand):
-            continue
-        key = cand.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        clean_candidates.append(cand)
-
-    if not clean_candidates:
-        return []
-
-    candidate_inputs = [f"query: {cand}" for cand in clean_candidates]
-    cand_emb = model.encode(
-        candidate_inputs,
-        batch_size=min(len(candidate_inputs), 32),
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    ).astype(np.float32)
-
-    semantic_scores = cand_emb @ document_embedding
-
-    scored: list[tuple[float, str]] = []
-    for cand, sem in zip(clean_candidates, semantic_scores):
-        score = float(sem) * 10.0 + score_keyword_candidate(cand, source_text)
-        scored.append((score, cand))
-
-    scored.sort(key=lambda x: (-x[0], len(x[1])))
-
-    selected: list[str] = []
-    for _, cand in scored:
-        if any(cand != kept and (cand in kept or kept in cand) for kept in selected):
-            continue
-        selected.append(cand)
-        if len(selected) >= max_keywords:
-            break
-    return selected
-
-
-
-def build_display_keywords(
-    row: pd.Series,
-    document_embedding: np.ndarray,
-    model: SentenceTransformer,
-    kiwi: Kiwi | None,
-    max_keywords: int = MAX_DISPLAY_KEYWORDS,
-) -> list[str]:
-    source_parts: list[str] = []
-    for col in KEYWORD_SOURCE_COLUMNS:
-        value = row.get(col, "")
-        if not is_missing_like(value):
-            source_parts.append(str(value))
-    source_text = "\n".join(source_parts)
-
-    if not clean_sentence(source_text):
-        return []
-
-    candidates: list[str] = []
-
-    # capacity 계열은 이미 의미 단위가 깔끔한 경우가 많으므로 우선 반영
-    for col in ["capacity_1", "capacity_all"]:
-        for line in split_lines(row.get(col, "")):
-            norm = normalize_keyword_candidate(line)
-            if is_valid_keyword_candidate(norm):
-                candidates.append(norm)
-
-    candidates.extend(extract_keyword_candidates_regex(source_text))
-    candidates.extend(extract_keyword_candidates_kiwi(source_text, kiwi))
-
-    # fallback: 적성/요약 라인에서 너무 긴 문장 제외 후 짧은 명사구만 추가
-    for col in ["aptitude", "summary"]:
-        for line in split_lines(row.get(col, "")):
-            line = normalize_keyword_candidate(line)
-            if 2 <= len(line) <= 16 and is_valid_keyword_candidate(line):
-                candidates.append(line)
-
-    return rank_keyword_candidates(
-        candidates=unique_keep_order(candidates),
-        document_embedding=document_embedding,
-        model=model,
-        source_text=source_text,
-        max_keywords=max_keywords,
-    )
-
+    return output
 
 
 def build_topic_tags(row: pd.Series, max_tags: int = MAX_TOPIC_TAGS) -> list[str]:
-    tags: list[str] = []
-    tags.extend(split_job_names(row.get("similarJob", "")))
-    tags.extend(collect_prefixed_values(row, MAJOR_PREFIX))
-    tags.extend(get_simple_topic_tokens(row.get("summary", "")))
-
-    clean_tags: list[str] = []
-    for tag in tags:
-        tag = normalize_keyword_candidate(tag)
-        if not tag:
-            continue
-        if len(tag) > 28:
-            continue
-        if tag.lower() in KEYWORD_STOPWORDS:
-            continue
-        clean_tags.append(tag)
-
-    clean_tags = unique_keep_order(clean_tags)
-    return clean_tags[:max_tags]
-
-
-
-def get_simple_topic_tokens(text) -> list[str]:
-    result: list[str] = []
-    for line in split_lines(text):
-        for part in re.split(r"[,/|·]", line):
-            part = normalize_keyword_candidate(part)
-            if 2 <= len(part) <= 16 and is_valid_keyword_candidate(part):
-                result.append(part)
-    return unique_keep_order(result)
+    return (split_job_names(row.get("similarJob", "")) + collect_prefixed_values(row, MAJOR_PREFIX))[:max_tags]
 
 
 # =========================
-# 임베딩용 문서 생성
+# 임베딩 문서 생성
 # =========================
 def build_document_text(row: pd.Series) -> str:
-    blocks: list[str] = []
+    labels = {
+        "summary": "직무 요약",
+        "similarJob": "유사 직업",
+        "aptitude": "적성",
+        "empway": "진출 경로",
+        "prepareway": "준비 방법",
+        "training": "훈련",
+        "certification": "자격",
+        "employment": "고용 전망",
+        "job_possibility": "발전 가능성",
+        "capacity_1": "핵심 역량",
+        "capacity_all": "전체 역량",
+    }
 
+    blocks: list[str] = []
     job = clean_sentence(row.get("job", ""))
     if job:
         blocks.append(f"직업명: {job}")
@@ -507,36 +382,10 @@ def build_document_text(row: pd.Series) -> str:
     for col in TEXT_COLUMNS:
         if col == "job":
             continue
-        value = row.get(col, "")
-        lines = split_lines(value)
+        lines = split_lines(row.get(col, ""))
         if not lines:
             continue
-
-        if col == "summary":
-            label = "직무 요약"
-        elif col == "similarJob":
-            label = "유사 직업"
-        elif col == "aptitude":
-            label = "적성"
-        elif col == "empway":
-            label = "진출 경로"
-        elif col == "prepareway":
-            label = "준비 방법"
-        elif col == "training":
-            label = "훈련"
-        elif col == "certification":
-            label = "자격"
-        elif col == "employment":
-            label = "고용 전망"
-        elif col == "job_possibility":
-            label = "발전 가능성"
-        elif col == "capacity_1":
-            label = "핵심 역량"
-        elif col == "capacity_all":
-            label = "전체 역량"
-        else:
-            label = col
-
+        label = labels.get(col, col)
         blocks.append(f"{label}: " + " | ".join(lines))
 
     majors = collect_prefixed_values(row, MAJOR_PREFIX)
@@ -551,7 +400,7 @@ def build_document_text(row: pd.Series) -> str:
 
 
 # =========================
-# 저장 및 실행
+# 실행
 # =========================
 def build_embeddings(
     input_file: Path = INPUT_FILE,
@@ -584,21 +433,10 @@ def build_embeddings(
     df = df[df["job"] != ""].reset_index(drop=True)
 
     df["embedding_text"] = df.apply(build_document_text, axis=1)
-
     input_texts = [f"passage: {text}" for text in df["embedding_text"].tolist()]
 
     print(f"[1/4] 모델 로드: {model_name}")
     model = SentenceTransformer(model_name)
-
-    kiwi = None
-    if Kiwi is not None:
-        try:
-            print("[1-1/4] Kiwi 로드")
-            kiwi = Kiwi()
-        except Exception:
-            kiwi = None
-    else:
-        print("[안내] kiwipiepy가 설치되어 있지 않아 형태소 분석 없이 키워드 보강을 진행합니다.")
 
     print(f"[2/4] 임베딩 생성 시작: {len(input_texts):,}건")
     embeddings = model.encode(
@@ -607,27 +445,16 @@ def build_embeddings(
         show_progress_bar=True,
         convert_to_numpy=True,
         normalize_embeddings=normalize_embeddings,
-    )
-
-    if embeddings.dtype != np.float32:
-        embeddings = embeddings.astype(np.float32)
+    ).astype(np.float32)
 
     print("[3/4] 키워드/주제 태그 생성")
-    display_keywords_list: list[list[str]] = []
-    topic_tags_list: list[list[str]] = []
-    for idx, row in df.iterrows():
-        doc_emb = embeddings[idx]
-        display_keywords = build_display_keywords(row, doc_emb, model, kiwi, max_keywords=MAX_DISPLAY_KEYWORDS)
-        topic_tags = build_topic_tags(row, max_tags=MAX_TOPIC_TAGS)
-        display_keywords_list.append(display_keywords)
-        topic_tags_list.append(topic_tags)
-
-    df["display_keywords"] = display_keywords_list
+    df["display_keywords"] = df.apply(build_display_keywords, axis=1)
     df["display_keywords_text"] = df["display_keywords"].map(lambda x: " | ".join(x))
-    df["display_keywords_json"] = df["display_keywords"].map(json.dumps)
-    df["topic_tags"] = topic_tags_list
+    df["display_keywords_json"] = df["display_keywords"].map(lambda x: json.dumps(x, ensure_ascii=False))
+
+    df["topic_tags"] = df.apply(build_topic_tags, axis=1)
     df["topic_tags_text"] = df["topic_tags"].map(lambda x: " | ".join(x))
-    df["topic_tags_json"] = df["topic_tags"].map(json.dumps)
+    df["topic_tags_json"] = df["topic_tags"].map(lambda x: json.dumps(x, ensure_ascii=False))
 
     print("[4/4] 파일 저장")
     np.save(output_dir / "career_jobs_embeddings.npy", embeddings)
@@ -646,14 +473,17 @@ def build_embeddings(
     ]
     meta_cols = [c for c in meta_priority_cols if c in df.columns]
 
-    df[meta_cols].to_parquet(output_dir / "career_jobs_embedding_meta.parquet", index=False)
-
     excel_df = df[meta_cols].copy()
-    # Excel에는 리스트 직접 저장이 불편하므로 문자열 컬럼 중심으로 보조 저장
     for list_col in ["display_keywords", "topic_tags"]:
         if list_col in excel_df.columns:
             excel_df[list_col] = excel_df[list_col].map(lambda x: " | ".join(x))
+
     excel_df.to_excel(output_dir / "career_jobs_embedding_meta.xlsx", index=False)
+
+    try:
+        df[meta_cols].to_parquet(output_dir / "career_jobs_embedding_meta.parquet", index=False)
+    except Exception:
+        print("[안내] pyarrow 또는 fastparquet이 없어 parquet 저장은 건너뛰었습니다. xlsx 메타 파일은 정상 저장되었습니다.")
 
     config = {
         "input_file": str(input_file),
@@ -665,8 +495,8 @@ def build_embeddings(
         "major_prefix": MAJOR_PREFIX,
         "contact_prefix": CONTACT_PREFIX,
         "text_columns": TEXT_COLUMNS,
-        "keyword_source_columns": KEYWORD_SOURCE_COLUMNS,
-        "has_kiwi": bool(kiwi is not None),
+        "keyword_source_columns": ["summary", "aptitude", "similarJob"] + [MAJOR_PREFIX + "*"],
+        "keyword_method": "rule_based_action_trait_v2",
         "max_display_keywords": MAX_DISPLAY_KEYWORDS,
         "max_topic_tags": MAX_TOPIC_TAGS,
     }
@@ -675,15 +505,11 @@ def build_embeddings(
 
     print(f"저장 완료: {output_dir}")
     print(f"임베딩 shape: {embeddings.shape}")
-    print("예시 키워드:")
-    preview_cols = [c for c in ["job", "display_keywords_text", "topic_tags_text"] if c in df.columns]
-    print(df[preview_cols].head(5).to_string(index=False))
+    preview_cols = [c for c in ["job", "display_keywords_text", "topic_tags_text"] if c in excel_df.columns]
+    print(excel_df[preview_cols].head(10).to_string(index=False))
     return df, embeddings
 
 
-# =========================
-# 간단 검색 예시
-# =========================
 def semantic_search(
     query: str,
     meta_df: pd.DataFrame,
@@ -715,4 +541,5 @@ if __name__ == "__main__":
     print("\n샘플 검색 결과")
     sample_query = "컴퓨터와 관련된 일"
     result = semantic_search(sample_query, df_meta, emb, top_k=5)
-    print(result[[c for c in ["job", "display_keywords_text", "semantic_score"] if c in result.columns]])
+    cols = [c for c in ["job", "display_keywords_text", "semantic_score"] if c in result.columns]
+    print(result[cols].to_string(index=False))
