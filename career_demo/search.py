@@ -431,10 +431,26 @@ def load_embedding_assets(
     for col in ["display_keywords", "display_keywords_text", "display_keywords_json"]:
         if col not in meta.columns:
             meta[col] = ""
+    for col in ["llm_keywords", "llm_keywords_text", "llm_keywords_json", "card_keywords", "card_keywords_text", "card_keywords_json"]:
+        if col not in meta.columns:
+            meta[col] = ""
     for col in ["topic_tags", "topic_tags_text", "topic_tags_json"]:
         if col not in meta.columns:
             meta[col] = ""
 
+    # LLM/ML로 사전 생성한 카드용 키워드가 있으면 최우선으로 사용한다.
+    # 없으면 기존 display_keywords를 fallback으로 사용한다.
+    meta["llm_keywords_list"] = meta.apply(
+        lambda row: parse_embedded_list(
+            row.get("llm_keywords_json")
+            or row.get("llm_keywords_text")
+            or row.get("llm_keywords")
+            or row.get("card_keywords_json")
+            or row.get("card_keywords_text")
+            or row.get("card_keywords")
+        ),
+        axis=1,
+    )
     meta["display_keywords_list"] = meta.apply(
         lambda row: parse_embedded_list(
             row.get("display_keywords_json") or row.get("display_keywords_text") or row.get("display_keywords")
@@ -642,8 +658,10 @@ def load_data(path: Path) -> pd.DataFrame:
         )
         meta_cols = [
             "embedding_key",
+            "llm_keywords_list",
             "display_keywords_list",
             "topic_tags_list",
+            "llm_keywords_text",
             "display_keywords_text",
             "topic_tags_text",
         ]
@@ -653,6 +671,11 @@ def load_data(path: Path) -> pd.DataFrame:
         )
         df = df.merge(meta[meta_cols], on="embedding_key", how="left")
         df.drop(columns=["embedding_key"], inplace=True)
+
+    if "llm_keywords_list" not in df.columns:
+        df["llm_keywords_list"] = [[] for _ in range(len(df))]
+    else:
+        df["llm_keywords_list"] = df["llm_keywords_list"].map(parse_embedded_list)
 
     if "display_keywords_list" not in df.columns:
         df["display_keywords_list"] = [[] for _ in range(len(df))]
@@ -2317,17 +2340,28 @@ def extract_action_keywords_from_row(row: pd.Series, limit: int = 8) -> list[str
 
 
 def derive_display_keywords_for_row(row: pd.Series, max_keywords: int = 10) -> list[str]:
+    output: list[str] = []
+
+    # 1순위: LLM/ML로 오프라인 생성한 검수형 카드 키워드.
+    # 런타임에서 새로 뽑지 않고 메타를 읽기만 하므로 배포 환경 부담이 없다.
+    for keyword in row.get("llm_keywords_list", []):
+        keyword = refine_keyword_phrase(str(keyword))
+        if is_good_keyword_phrase(keyword) and keyword not in output:
+            output.append(keyword)
+        if len(output) >= max_keywords:
+            return output
+
+    # 2순위: 규칙 기반 직무 행위 키워드.
     action_keywords = extract_action_keywords_from_row(row, limit=8)
     trait_keywords = extract_trait_keywords_from_row(row)
 
-    output: list[str] = []
     for keyword in action_keywords + trait_keywords:
         if keyword not in output:
             output.append(keyword)
         if len(output) >= max_keywords:
             return output
 
-    # meta 키워드는 보조로만 사용한다. 문장 조각이 섞여 있을 수 있으므로 필터링한다.
+    # 3순위: 기존 embedding meta 키워드. 문장 조각이 섞일 수 있으므로 필터링한다.
     for keyword in row.get("display_keywords_list", []):
         keyword = refine_keyword_phrase(str(keyword))
         if is_good_keyword_phrase(keyword) and keyword not in output:
@@ -2335,6 +2369,7 @@ def derive_display_keywords_for_row(row: pd.Series, max_keywords: int = 10) -> l
         if len(output) >= max_keywords:
             return output
 
+    # 4순위: 유사직업/전공 fallback.
     for keyword in row.get("similar_job_list", []) + row.get("major_list", []):
         keyword = refine_keyword_phrase(str(keyword))
         if is_good_keyword_phrase(keyword) and keyword not in output:
