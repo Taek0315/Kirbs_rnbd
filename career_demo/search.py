@@ -1421,7 +1421,7 @@ def inject_css() -> None:
             display:flex;
             flex-direction:column;
             transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-            overflow:hidden;
+            overflow:visible;
             box-sizing:border-box;
         }
         .result-card::before{
