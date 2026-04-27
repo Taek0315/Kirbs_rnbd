@@ -17,14 +17,14 @@ from math import ceil
 # 전산센터/Streamlit Cloud/로컬/iframe 배포 환경에서 Streamlit 기본 테마가
 # 브라우저 또는 서버 설정을 따라 바뀌지 않도록 Python 진입 시점에서도 한 번 더 고정한다.
 # 최종 기준은 .streamlit/config.toml이며, 아래 값은 config 누락 환경에 대한 안전장치다.
-os.environ.setdefault("STREAMLIT_THEME_BASE", "light")
-os.environ.setdefault("STREAMLIT_THEME_PRIMARY_COLOR", "#2563EB")
-os.environ.setdefault("STREAMLIT_THEME_BACKGROUND_COLOR", "#F5F7FB")
-os.environ.setdefault("STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR", "#FFFFFF")
-os.environ.setdefault("STREAMLIT_THEME_TEXT_COLOR", "#0F172A")
-os.environ.setdefault("STREAMLIT_THEME_FONT", "sans serif")
-os.environ.setdefault("STREAMLIT_CLIENT_TOOLBAR_MODE", "minimal")
-os.environ.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
+os.environ["STREAMLIT_THEME_BASE"] = "light"
+os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#2563EB"
+os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "#F5F7FB"
+os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#FFFFFF"
+os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "#0F172A"
+os.environ["STREAMLIT_THEME_FONT"] = "sans serif"
+os.environ["STREAMLIT_CLIENT_TOOLBAR_MODE"] = "minimal"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
 import numpy as np
 import pandas as pd
@@ -2103,6 +2103,110 @@ def inject_css() -> None:
             .result-card{ height:auto; min-height:0; max-height:none; }
             .job-summary, .tag-row{ height:auto; min-height:0; max-height:none; }
         }
+
+
+        /* ------------------------------------------------------------------
+           FINAL THEME OVERRIDE FOR COMPANY SERVER / IFRAME DEPLOYMENT
+           Streamlit의 form_submit_button은 버전에 따라 stButton이 아니라
+           stFormSubmitButton/baseButton-primaryFormSubmit으로 렌더링된다.
+           전산센터 서버에서 빨간 기본 primaryColor가 노출되던 원인을 이 블록에서 최종 차단한다.
+        ------------------------------------------------------------------ */
+        html,
+        body,
+        .stApp,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stAppViewContainer"] > .main,
+        .main,
+        .block-container {
+            background-color:#f5f7fb !important;
+            color:#0f172a !important;
+            color-scheme:only light !important;
+            forced-color-adjust:none !important;
+        }
+
+        /* 모든 Streamlit 버튼의 기본값을 먼저 라이트 톤으로 잠근다. */
+        .stButton > button,
+        [data-testid="stButton"] button,
+        [data-testid="stFormSubmitButton"] button,
+        button[data-testid="baseButton-secondary"],
+        button[data-testid="baseButton-secondaryFormSubmit"],
+        button[kind="secondary"],
+        button[kind="secondaryFormSubmit"] {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            -webkit-text-fill-color:#0f172a !important;
+            border:1px solid #cfd9e8 !important;
+            border-radius:14px !important;
+            box-shadow:0 4px 12px rgba(15,23,42,.035) !important;
+            text-shadow:none !important;
+            opacity:1 !important;
+        }
+
+        .stButton > button:hover:not(:disabled),
+        [data-testid="stButton"] button:hover:not(:disabled),
+        [data-testid="stFormSubmitButton"] button:hover:not(:disabled),
+        button[data-testid="baseButton-secondary"]:hover:not(:disabled),
+        button[data-testid="baseButton-secondaryFormSubmit"]:hover:not(:disabled),
+        button[kind="secondary"]:hover:not(:disabled),
+        button[kind="secondaryFormSubmit"]:hover:not(:disabled) {
+            background:#eff6ff !important;
+            color:#1d4ed8 !important;
+            -webkit-text-fill-color:#1d4ed8 !important;
+            border-color:#93c5fd !important;
+            box-shadow:0 8px 18px rgba(37,99,235,.10) !important;
+        }
+
+        /* primary / primaryFormSubmit: Streamlit 기본 빨강(#FF4B4B) 차단 */
+        .stButton > button[kind="primary"],
+        .stButton > button[kind="primaryFormSubmit"],
+        [data-testid="stButton"] button[kind="primary"],
+        [data-testid="stButton"] button[kind="primaryFormSubmit"],
+        [data-testid="stFormSubmitButton"] button[kind="primary"],
+        [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"],
+        button[data-testid="baseButton-primary"],
+        button[data-testid="baseButton-primaryFormSubmit"],
+        button[kind="primary"],
+        button[kind="primaryFormSubmit"] {
+            background:linear-gradient(135deg, #173b74 0%, #2563eb 100%) !important;
+            color:#ffffff !important;
+            -webkit-text-fill-color:#ffffff !important;
+            border:0 !important;
+            border-radius:14px !important;
+            box-shadow:0 10px 24px rgba(37,99,235,.22) !important;
+            text-shadow:none !important;
+            opacity:1 !important;
+        }
+
+        .stButton > button[kind="primary"]:hover:not(:disabled),
+        .stButton > button[kind="primaryFormSubmit"]:hover:not(:disabled),
+        [data-testid="stButton"] button[kind="primary"]:hover:not(:disabled),
+        [data-testid="stButton"] button[kind="primaryFormSubmit"]:hover:not(:disabled),
+        [data-testid="stFormSubmitButton"] button[kind="primary"]:hover:not(:disabled),
+        [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"]:hover:not(:disabled),
+        button[data-testid="baseButton-primary"]:hover:not(:disabled),
+        button[data-testid="baseButton-primaryFormSubmit"]:hover:not(:disabled),
+        button[kind="primary"]:hover:not(:disabled),
+        button[kind="primaryFormSubmit"]:hover:not(:disabled) {
+            background:linear-gradient(135deg, #122e5d 0%, #1d4ed8 100%) !important;
+            color:#ffffff !important;
+            -webkit-text-fill-color:#ffffff !important;
+            border:0 !important;
+            box-shadow:0 12px 28px rgba(37,99,235,.28) !important;
+        }
+
+        .stButton > button:disabled,
+        [data-testid="stButton"] button:disabled,
+        [data-testid="stFormSubmitButton"] button:disabled,
+        button[data-testid^="baseButton-"]:disabled,
+        button[kind]:disabled {
+            background:#f8fafc !important;
+            color:#94a3b8 !important;
+            -webkit-text-fill-color:#94a3b8 !important;
+            border:1px solid #e2e8f0 !important;
+            box-shadow:none !important;
+            opacity:1 !important;
+        }
+
         </style>
         """
     )
