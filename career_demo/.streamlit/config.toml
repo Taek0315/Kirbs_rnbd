@@ -1,7 +1,19 @@
+# Streamlit theme lock
+# 목적: 로컬, Streamlit Cloud, 전산센터 서버, iframe 배포 환경에서 동일한 라이트 테마를 사용한다.
+
 [theme]
 base = "light"
-primaryColor = "#2F80ED"
+primaryColor = "#2563EB"
 backgroundColor = "#F5F7FB"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#1F2937"
+textColor = "#0F172A"
 font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true

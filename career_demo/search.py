@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import html
 import time
 import re
@@ -9,6 +10,21 @@ import textwrap
 from collections import Counter
 from difflib import SequenceMatcher
 from math import ceil
+
+# -----------------------------------------------------------------------------
+# Runtime theme lock
+# -----------------------------------------------------------------------------
+# 전산센터/Streamlit Cloud/로컬/iframe 배포 환경에서 Streamlit 기본 테마가
+# 브라우저 또는 서버 설정을 따라 바뀌지 않도록 Python 진입 시점에서도 한 번 더 고정한다.
+# 최종 기준은 .streamlit/config.toml이며, 아래 값은 config 누락 환경에 대한 안전장치다.
+os.environ.setdefault("STREAMLIT_THEME_BASE", "light")
+os.environ.setdefault("STREAMLIT_THEME_PRIMARY_COLOR", "#2563EB")
+os.environ.setdefault("STREAMLIT_THEME_BACKGROUND_COLOR", "#F5F7FB")
+os.environ.setdefault("STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR", "#FFFFFF")
+os.environ.setdefault("STREAMLIT_THEME_TEXT_COLOR", "#0F172A")
+os.environ.setdefault("STREAMLIT_THEME_FONT", "sans serif")
+os.environ.setdefault("STREAMLIT_CLIENT_TOOLBAR_MODE", "minimal")
+os.environ.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
 
 import numpy as np
 import pandas as pd
@@ -27,6 +43,8 @@ st.set_page_config(
     page_title="AI 직업 탐색 리포트",
     page_icon="🔎",
     layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={},
 )
 
 SEARCH_COLUMNS = [
@@ -1018,14 +1036,34 @@ def inject_css() -> None:
             --shadow-strong:0 18px 40px rgba(37,99,235,.10);
             --radius:20px;
             --container:1280px;
-            color-scheme: light !important;
+            color-scheme: only light !important;
+        }
+
+        /*
+        배포 환경별 색상 흔들림 방지 핵심 영역
+        - Streamlit theme: .streamlit/config.toml에서 1차 고정
+        - Browser/OS dark mode: color-scheme, accent-color, forced-color-adjust로 2차 차단
+        - Streamlit BaseWeb input/select/popover: 실제 렌더링 DOM까지 직접 색상 고정
+        */
+        html {
+            background:#f5f7fb !important;
+            color:#0f172a !important;
+            color-scheme: only light !important;
+            forced-color-adjust: none !important;
+            accent-color:#2563eb !important;
+        }
+
+        *, *::before, *::after {
+            box-sizing:border-box;
+            forced-color-adjust:none !important;
         }
 
         html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] > .main {
             color: var(--text) !important;
             font-family: "Pretendard", "Noto Sans KR", sans-serif;
             background-color: var(--bg) !important;
-            color-scheme: light !important;
+            color-scheme: only light !important;
+            forced-color-adjust:none !important;
         }
 
         header[data-testid="stHeader"],
@@ -1056,7 +1094,15 @@ def inject_css() -> None:
                 radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 20%),
                 linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%) !important;
             color: var(--text) !important;
-            color-scheme: light !important;
+            color-scheme: only light !important;
+            forced-color-adjust:none !important;
+        }
+
+        div[data-testid="stVerticalBlock"],
+        div[data-testid="stHorizontalBlock"],
+        section[data-testid="stSidebar"],
+        section[data-testid="stSidebar"] * {
+            color-scheme: only light !important;
         }
 
         div[data-baseweb="input"],
@@ -1066,7 +1112,66 @@ def inject_css() -> None:
         div[data-baseweb="popover"] *,
         input,
         textarea {
-            color-scheme: light !important;
+            color-scheme: only light !important;
+            forced-color-adjust:none !important;
+        }
+
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"],
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="textarea"],
+        input,
+        textarea,
+        [data-testid="stTextInput"] input,
+        [data-testid="stTextArea"] textarea,
+        [data-testid="stNumberInput"] input {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            -webkit-text-fill-color:#0f172a !important;
+            border-color:#cfd9e8 !important;
+            caret-color:#2563eb !important;
+            box-shadow:none !important;
+        }
+
+        input::placeholder,
+        textarea::placeholder,
+        [data-testid="stTextInput"] input::placeholder,
+        [data-testid="stTextArea"] textarea::placeholder {
+            color:#94a3b8 !important;
+            -webkit-text-fill-color:#94a3b8 !important;
+            opacity:1 !important;
+        }
+
+        label,
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] *,
+        .stMarkdown,
+        .stMarkdown p,
+        .stCaptionContainer,
+        .stCaptionContainer * {
+            color:#0f172a !important;
+        }
+
+        div[data-baseweb="tag"] {
+            background:#eff6ff !important;
+            color:#1d4ed8 !important;
+            border:1px solid #bfdbfe !important;
+        }
+
+        div[data-baseweb="tag"] span,
+        div[data-baseweb="tag"] svg {
+            color:#1d4ed8 !important;
+            fill:#1d4ed8 !important;
+        }
+
+        div[data-testid="stAlert"] {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            border:1px solid #d8e2f0 !important;
+        }
+
+        div[data-testid="stAlert"] * {
+            color:#0f172a !important;
         }
 
         div[data-baseweb="popover"] [role="dialog"],
@@ -1090,6 +1195,58 @@ def inject_css() -> None:
         div[data-baseweb="popover"] [role="option"]:hover,
         ul[role="listbox"] li:hover {
             background: #eff6ff !important;
+        }
+
+        button,
+        [data-testid="stButton"] button,
+        [data-testid="stDownloadButton"] button,
+        [data-testid="baseButton-secondary"],
+        [data-testid="baseButton-primary"] {
+            color-scheme: only light !important;
+            forced-color-adjust:none !important;
+        }
+
+        [data-testid="stButton"] button:not(:disabled),
+        [data-testid="stDownloadButton"] button:not(:disabled) {
+            background:#ffffff !important;
+            color:#0f172a !important;
+            border:1px solid #cfd9e8 !important;
+            box-shadow:0 4px 12px rgba(15,23,42,.035) !important;
+        }
+
+        [data-testid="stButton"] button:hover:not(:disabled),
+        [data-testid="stDownloadButton"] button:hover:not(:disabled) {
+            background:#eff6ff !important;
+            color:#1d4ed8 !important;
+            border-color:#93c5fd !important;
+        }
+
+        [data-testid="stButton"] button:disabled,
+        [data-testid="stDownloadButton"] button:disabled {
+            background:#f8fafc !important;
+            color:#94a3b8 !important;
+            border:1px solid #e2e8f0 !important;
+            opacity:1 !important;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"] {
+                background:#f5f7fb !important;
+                color:#0f172a !important;
+                color-scheme: only light !important;
+            }
+
+            div[data-baseweb="input"],
+            div[data-baseweb="base-input"],
+            div[data-baseweb="select"] > div,
+            div[data-baseweb="textarea"],
+            input,
+            textarea {
+                background:#ffffff !important;
+                color:#0f172a !important;
+                -webkit-text-fill-color:#0f172a !important;
+                border-color:#cfd9e8 !important;
+            }
         }
 
         .block-container{
