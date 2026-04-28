@@ -2086,8 +2086,23 @@ def inject_css() -> None:
             min-height:44px !important;
             font-weight:700 !important;
         }
-        .stButton > button[kind="primary"]{
+        .stButton > button[kind="primary"],
+        [data-testid="stFormSubmitButton"] button,
+        button[data-testid="baseButton-primaryFormSubmit"],
+        button[kind="primaryFormSubmit"],
+        div[data-testid="stFormSubmitButton"] > button{
             background:linear-gradient(135deg, #173b74 0%, #2563eb 100%) !important;
+            color:#ffffff !important;
+            border:none !important;
+            border-radius:14px !important;
+            min-height:44px !important;
+            font-weight:800 !important;
+            box-shadow:none !important;
+        }
+        [data-testid="stFormSubmitButton"] button:hover,
+        button[data-testid="baseButton-primaryFormSubmit"]:hover,
+        button[kind="primaryFormSubmit"]:hover{
+            background:linear-gradient(135deg, #0f2a54 0%, #1d4ed8 100%) !important;
             color:#ffffff !important;
             border:none !important;
         }
@@ -2103,110 +2118,6 @@ def inject_css() -> None:
             .result-card{ height:auto; min-height:0; max-height:none; }
             .job-summary, .tag-row{ height:auto; min-height:0; max-height:none; }
         }
-
-
-        /* ------------------------------------------------------------------
-           FINAL THEME OVERRIDE FOR COMPANY SERVER / IFRAME DEPLOYMENT
-           Streamlit의 form_submit_button은 버전에 따라 stButton이 아니라
-           stFormSubmitButton/baseButton-primaryFormSubmit으로 렌더링된다.
-           전산센터 서버에서 빨간 기본 primaryColor가 노출되던 원인을 이 블록에서 최종 차단한다.
-        ------------------------------------------------------------------ */
-        html,
-        body,
-        .stApp,
-        [data-testid="stAppViewContainer"],
-        [data-testid="stAppViewContainer"] > .main,
-        .main,
-        .block-container {
-            background-color:#f5f7fb !important;
-            color:#0f172a !important;
-            color-scheme:only light !important;
-            forced-color-adjust:none !important;
-        }
-
-        /* 모든 Streamlit 버튼의 기본값을 먼저 라이트 톤으로 잠근다. */
-        .stButton > button,
-        [data-testid="stButton"] button,
-        [data-testid="stFormSubmitButton"] button,
-        button[data-testid="baseButton-secondary"],
-        button[data-testid="baseButton-secondaryFormSubmit"],
-        button[kind="secondary"],
-        button[kind="secondaryFormSubmit"] {
-            background:#ffffff !important;
-            color:#0f172a !important;
-            -webkit-text-fill-color:#0f172a !important;
-            border:1px solid #cfd9e8 !important;
-            border-radius:14px !important;
-            box-shadow:0 4px 12px rgba(15,23,42,.035) !important;
-            text-shadow:none !important;
-            opacity:1 !important;
-        }
-
-        .stButton > button:hover:not(:disabled),
-        [data-testid="stButton"] button:hover:not(:disabled),
-        [data-testid="stFormSubmitButton"] button:hover:not(:disabled),
-        button[data-testid="baseButton-secondary"]:hover:not(:disabled),
-        button[data-testid="baseButton-secondaryFormSubmit"]:hover:not(:disabled),
-        button[kind="secondary"]:hover:not(:disabled),
-        button[kind="secondaryFormSubmit"]:hover:not(:disabled) {
-            background:#eff6ff !important;
-            color:#1d4ed8 !important;
-            -webkit-text-fill-color:#1d4ed8 !important;
-            border-color:#93c5fd !important;
-            box-shadow:0 8px 18px rgba(37,99,235,.10) !important;
-        }
-
-        /* primary / primaryFormSubmit: Streamlit 기본 빨강(#FF4B4B) 차단 */
-        .stButton > button[kind="primary"],
-        .stButton > button[kind="primaryFormSubmit"],
-        [data-testid="stButton"] button[kind="primary"],
-        [data-testid="stButton"] button[kind="primaryFormSubmit"],
-        [data-testid="stFormSubmitButton"] button[kind="primary"],
-        [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"],
-        button[data-testid="baseButton-primary"],
-        button[data-testid="baseButton-primaryFormSubmit"],
-        button[kind="primary"],
-        button[kind="primaryFormSubmit"] {
-            background:linear-gradient(135deg, #173b74 0%, #2563eb 100%) !important;
-            color:#ffffff !important;
-            -webkit-text-fill-color:#ffffff !important;
-            border:0 !important;
-            border-radius:14px !important;
-            box-shadow:0 10px 24px rgba(37,99,235,.22) !important;
-            text-shadow:none !important;
-            opacity:1 !important;
-        }
-
-        .stButton > button[kind="primary"]:hover:not(:disabled),
-        .stButton > button[kind="primaryFormSubmit"]:hover:not(:disabled),
-        [data-testid="stButton"] button[kind="primary"]:hover:not(:disabled),
-        [data-testid="stButton"] button[kind="primaryFormSubmit"]:hover:not(:disabled),
-        [data-testid="stFormSubmitButton"] button[kind="primary"]:hover:not(:disabled),
-        [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"]:hover:not(:disabled),
-        button[data-testid="baseButton-primary"]:hover:not(:disabled),
-        button[data-testid="baseButton-primaryFormSubmit"]:hover:not(:disabled),
-        button[kind="primary"]:hover:not(:disabled),
-        button[kind="primaryFormSubmit"]:hover:not(:disabled) {
-            background:linear-gradient(135deg, #122e5d 0%, #1d4ed8 100%) !important;
-            color:#ffffff !important;
-            -webkit-text-fill-color:#ffffff !important;
-            border:0 !important;
-            box-shadow:0 12px 28px rgba(37,99,235,.28) !important;
-        }
-
-        .stButton > button:disabled,
-        [data-testid="stButton"] button:disabled,
-        [data-testid="stFormSubmitButton"] button:disabled,
-        button[data-testid^="baseButton-"]:disabled,
-        button[kind]:disabled {
-            background:#f8fafc !important;
-            color:#94a3b8 !important;
-            -webkit-text-fill-color:#94a3b8 !important;
-            border:1px solid #e2e8f0 !important;
-            box-shadow:none !important;
-            opacity:1 !important;
-        }
-
         </style>
         """
     )
@@ -3220,22 +3131,11 @@ def render_main_page(df: pd.DataFrame) -> None:
             placeholder="예: 데이터 분석을 하면서 사람과도 소통하는 직업",
             key="search_input",
         )
-        col_submit, col_reset = st.columns([0.82, 0.18], gap="small")
-        with col_submit:
-            submitted = st.form_submit_button("AI 탐색 시작", use_container_width=True, type="primary")
-        with col_reset:
-            reset_clicked = st.form_submit_button("초기화", use_container_width=True)
+        submitted = st.form_submit_button("AI 탐색 시작", use_container_width=True, type="primary")
 
     if submitted:
         st.session_state.committed_query = st.session_state.get("search_input", "").strip()
-        st.session_state.trigger_ai_search = True
-        st.session_state.page_number = 1
-        rerun_app()
-
-    if reset_clicked:
-        st.session_state.search_input = ""
-        st.session_state.committed_query = ""
-        st.session_state.trigger_ai_search = False
+        st.session_state.trigger_ai_search = bool(st.session_state.committed_query)
         st.session_state.page_number = 1
         rerun_app()
 
