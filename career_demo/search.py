@@ -10,6 +10,12 @@ import textwrap
 from collections import Counter
 from difflib import SequenceMatcher
 from math import ceil
+import warnings
+
+# 로컬 Anaconda 환경의 선택 가속 패키지(numexpr/bottleneck) 버전 경고는 앱 실행을 막지 않으므로
+# 화면/로그 노이즈를 줄이기 위해 숨긴다. 근본 해결은 패키지 업데이트다.
+warnings.filterwarnings("ignore", message=r"Pandas requires version .* of \'numexpr\'.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=r"Pandas requires version .* of \'bottleneck\'.*", category=UserWarning)
 
 # -----------------------------------------------------------------------------
 # Runtime theme lock
@@ -101,16 +107,48 @@ def rerun_app() -> None:
 
 
 def is_missing_like(value) -> bool:
+    """값이 결측/공백에 해당하는지 안전하게 판정한다.
+
+    pd.isna(np.array([]))처럼 배열형 객체에 바로 bool()을 적용하면
+    Python/NumPy/Pandas 버전에 따라 DeprecationWarning 또는 오류가 발생할 수 있으므로
+    스칼라, 문자열, 배열형을 분리해서 처리한다.
+    """
     if value is None:
         return True
+
     if isinstance(value, str):
         stripped = value.strip()
-        return stripped == "" or stripped.lower() == "nan"
-    try:
-        return bool(pd.isna(value))
-    except Exception:
+        return stripped == "" or stripped.lower() in {"nan", "none", "null"}
+
+    if isinstance(value, np.ndarray):
+        if value.size == 0:
+            return True
+        if value.size == 1:
+            try:
+                return bool(pd.isna(value.item()))
+            except Exception:
+                return False
         return False
 
+    if isinstance(value, (list, tuple, set)):
+        return len(value) == 0
+
+    if isinstance(value, (pd.Series, pd.Index)):
+        if len(value) == 0:
+            return True
+        try:
+            return bool(value.isna().all())
+        except Exception:
+            return False
+
+    try:
+        result = pd.isna(value)
+        if isinstance(result, (np.ndarray, list, tuple, pd.Series, pd.Index)):
+            arr = np.asarray(result)
+            return bool(arr.size > 0 and arr.all())
+        return bool(result)
+    except Exception:
+        return False
 
 def normalize_whitespace(text: str) -> str:
     text = str(text)
@@ -2572,8 +2610,12 @@ def render_result_card(row: pd.Series, delay_ms: int = 0) -> None:
     tags_html = "".join([f'<span class="tag-chip">{html.escape(tag)}</span>' for tag in tags])
 
     salary_label = "정보 없음"
-    if row.get("salary_amount") is not None and not pd.isna(row.get("salary_amount")):
-        salary_label = f"{int(row['salary_amount']):,}만원"
+    salary_amount = row.get("salary_amount")
+    if not is_missing_like(salary_amount):
+        try:
+            salary_label = f"{int(float(salary_amount)):,}만원"
+        except (TypeError, ValueError):
+            salary_label = html.escape(str(salary_amount))
 
     summary = shorten_text(row.get("summary", ""), 130)
     if not summary:
