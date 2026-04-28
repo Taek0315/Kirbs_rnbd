@@ -12,8 +12,6 @@ from difflib import SequenceMatcher
 from math import ceil
 import warnings
 
-# 로컬 Anaconda 환경의 선택 가속 패키지(numexpr/bottleneck) 버전 경고는 앱 실행을 막지 않으므로
-# 화면/로그 노이즈를 줄이기 위해 숨긴다. 근본 해결은 패키지 업데이트다.
 warnings.filterwarnings("ignore", message=r"Pandas requires version .* of \'numexpr\'.*", category=UserWarning)
 warnings.filterwarnings("ignore", message=r"Pandas requires version .* of \'bottleneck\'.*", category=UserWarning)
 
