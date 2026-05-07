@@ -5,7 +5,7 @@ KIRBS+ 인지 미니게임 3과제 버전
 구성
 - Trail 연결 과제: 무작위 숫자 원형 노드 3단계 연결
 - Gaze 방향 판단 과제: 시선 방향 판단 + 반응속도
-- Flanker 화살표 과제: 선택적 주의 + 간섭 억제
+- Flanker 캐릭터 과제: 선택적 주의 + 간섭 억제
 
 핵심 원칙
 - 무료 배포용으로 과제 수와 난도를 낮추고, 게임형 진행감을 강화함
@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.3_layout_fix"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.4_gaze_blink_flanker_character"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -470,7 +470,7 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 # ──────────────────────────────────────────────────────────────────────────────
 # Streamlit JS Component 생성
 # ──────────────────────────────────────────────────────────────────────────────
-COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v13"
+COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v14"
 COMPONENT_DIR = Path(tempfile.gettempdir()) / COMPONENT_NAME
 
 
@@ -720,6 +720,126 @@ button { font-family: inherit; }
 .mouth { position:absolute; width: 46px; height: 18px; border-bottom: 5px solid rgba(15,39,71,.62); border-radius: 50%; bottom: 43px; left:50%; transform:translateX(-50%); }
 .direction-label { color:#fff; font-weight:900; font-size:18px; }
 
+.mascot-wrap.blinking { animation: blinkBounce .34s ease; }
+@keyframes blinkBounce { 0% { transform: translateY(0) scale(1); } 45% { transform: translateY(5px) scale(.985); } 100% { transform: translateY(0) scale(1); } }
+.eye.closed {
+  height: 18px;
+  border-radius: 999px;
+  background: #edf6ff;
+  border-color: #cfe2f5;
+  margin-top: 16px;
+  box-shadow: inset 0 2px 5px rgba(15,39,71,.10);
+}
+.eye.closed::after {
+  content:"";
+  position:absolute;
+  left:8px;
+  right:8px;
+  top:7px;
+  height:4px;
+  border-radius:999px;
+  background:#183356;
+  opacity:.72;
+}
+.eye.closed .pupil { display:none; }
+.blink-ripple {
+  position:absolute;
+  inset: -12px;
+  border-radius: 58px;
+  border: 2px solid rgba(255,224,138,.48);
+  opacity:0;
+  animation: rippleOut .42s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes rippleOut { 0% { transform: scale(.92); opacity:.8; } 100% { transform: scale(1.08); opacity:0; } }
+.transition-label {
+  color:#ffeeb8;
+  font-size:15px;
+  font-weight:950;
+  padding:8px 13px;
+  border-radius:999px;
+  border:1px solid rgba(255,224,138,.30);
+  background:rgba(255,224,138,.10);
+}
+.dir-btn:disabled, .choice-btn:disabled { opacity:.52; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
+
+.flanker-scene { display:flex; flex-direction:column; align-items:center; gap: 14px; }
+.flanker-lineup {
+  width: min(100%, 680px);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap: 12px;
+  margin: 4px auto 2px;
+  padding: 16px 10px 8px;
+}
+.flanker-bot {
+  position: relative;
+  width: 92px;
+  height: 112px;
+  border-radius: 30px 34px 28px 28px;
+  background:
+    radial-gradient(circle at 30% 17%, rgba(255,255,255,.92) 0 8%, transparent 9%),
+    linear-gradient(145deg, #63a8ff 0%, #2b6cb0 54%, #174675 100%);
+  border: 2px solid rgba(174,212,255,.56);
+  box-shadow: 0 16px 32px rgba(79,156,255,.20), inset 0 -10px 22px rgba(2,8,23,.22);
+  transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+  flex: 0 0 auto;
+}
+.flanker-bot.dir-left { transform: scaleX(-1); }
+.flanker-bot.dir-right { transform: scaleX(1); }
+.flanker-bot.target {
+  width: 104px;
+  height: 126px;
+  border-color: rgba(255,224,138,.98);
+  box-shadow: 0 0 0 7px rgba(255,224,138,.10), 0 22px 40px rgba(255,224,138,.15), inset 0 -10px 22px rgba(2,8,23,.22);
+  filter: saturate(1.08);
+}
+.flanker-bot.target.dir-left { transform: scaleX(-1) scale(1.02); }
+.flanker-bot.target.dir-right { transform: scaleX(1) scale(1.02); }
+.flanker-bot.dim { opacity:.82; filter:saturate(.82); }
+.bot-ear { position:absolute; width:24px; height:24px; border-radius:9px; top:-10px; background:#1d5fa8; border:2px solid rgba(255,255,255,.16); }
+.bot-ear.one { left: 17px; transform:rotate(-13deg); }
+.bot-ear.two { right: 18px; transform:rotate(11deg); }
+.bot-face {
+  position:absolute;
+  left: 16px;
+  right: 16px;
+  top: 30px;
+  height: 52px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #f8fbff, #dfeeff);
+  box-shadow: inset 0 3px 10px rgba(15,39,71,.10);
+}
+.flanker-bot.target .bot-face { top: 34px; height: 58px; border-radius: 22px; }
+.bot-eye { position:absolute; width:14px; height:14px; border-radius:999px; top:17px; background:#14345d; box-shadow: 18px 0 0 #14345d; }
+.bot-eye { right: 19px; }
+.flanker-bot.target .bot-eye { top:20px; right:22px; width:16px; height:16px; box-shadow: 21px 0 0 #14345d; }
+.bot-nose {
+  position:absolute;
+  right:-19px;
+  top: 48px;
+  width:0;
+  height:0;
+  border-top: 13px solid transparent;
+  border-bottom: 13px solid transparent;
+  border-left: 22px solid #eaf4ff;
+  filter: drop-shadow(0 4px 5px rgba(2,8,23,.22));
+}
+.flanker-bot.target .bot-nose { right:-22px; top:55px; border-top-width:15px; border-bottom-width:15px; border-left-width:26px; border-left-color:#ffe08a; }
+.bot-jet {
+  position:absolute;
+  left: 22px;
+  right: 22px;
+  bottom: -7px;
+  height: 13px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, rgba(86,227,154,.75), rgba(79,156,255,.72));
+  opacity:.78;
+}
+.flanker-instruction { color: var(--muted); text-align:center; line-height:1.55; }
+.flanker-instruction strong { color:#ffeeb8; }
+
 .done-panel { text-align:center; max-width: 680px; margin: 0 auto; }
 .done-title { font-size: clamp(30px, 5vw, 48px); font-weight:950; margin-bottom: 12px; }
 .done-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
@@ -733,6 +853,17 @@ button { font-family: inherit; }
   .trail-board { height: 500px; border-radius: 20px; }
   .trail-node { width: 50px; height: 50px; font-size: 18px; }
   .choice-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flanker-lineup { gap: 7px; padding-left: 0; padding-right: 0; }
+  .flanker-bot { width: 58px; height: 76px; border-radius: 22px; }
+  .flanker-bot.target { width: 66px; height: 86px; }
+  .bot-ear { width: 17px; height: 17px; top: -8px; }
+  .bot-face { left: 10px; right: 10px; top: 20px; height: 38px; border-radius: 15px; }
+  .flanker-bot.target .bot-face { top: 23px; height: 42px; border-radius: 16px; }
+  .bot-eye { width: 9px; height: 9px; top: 14px; right: 13px; box-shadow: 12px 0 0 #14345d; }
+  .flanker-bot.target .bot-eye { width: 10px; height: 10px; top: 15px; right: 15px; box-shadow: 14px 0 0 #14345d; }
+  .bot-nose { right:-12px; top:33px; border-top-width:9px; border-bottom-width:9px; border-left-width:14px; }
+  .flanker-bot.target .bot-nose { right:-14px; top:38px; border-top-width:10px; border-bottom-width:10px; border-left-width:16px; }
+  .bot-jet { left:15px; right:15px; bottom:-5px; height:9px; }
   .mission-row, .status-grid, .done-grid { grid-template-columns: 1fr; }
   .mascot-wrap { width: 200px; height: 200px; }
   .face-panel { width: 154px; height: 108px; }
@@ -785,7 +916,7 @@ let state = {
 const tasks = [
   {key:'trail', title:'Trail 연결 챌린지', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 숫자 원을 단계별 규칙에 맞춰 연결합니다.', icon:'🧭'},
   {key:'gaze', title:'시선 포착 챌린지', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
-  {key:'flanker', title:'화살표 집중 챌린지', sub:'선택적 주의 · 간섭 억제', desc:'양옆 화살표는 무시하고 가운데 화살표의 방향만 판단합니다.', icon:'↔️'}
+  {key:'flanker', title:'캐릭터 집중 챌린지', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
 ];
 
 function setHeight(){
@@ -812,8 +943,8 @@ function taskProgress(){
   const ts = state.taskState[k] || {};
   if (k === 'trail') {
     const seqLen = ts.seq ? ts.seq.length : 1;
-    const stageBase = ts.stage === 2 ? 0.5 : 0;
-    return stageBase + ((ts.index || 0) / seqLen) * 0.5;
+    const stage = ts.stage || 1;
+    return ((stage - 1) / 3) + (((ts.index || 0) / seqLen) / 3);
   }
   return (ts.index || 0) / (ts.trials ? ts.trials.length : 1);
 }
@@ -841,13 +972,23 @@ function headerHtml(){
     <div class="progress"><span style="--w:${p}%"></span></div>
   </div>`;
 }
+function taskMissionHtml(key){
+  if(key === 'trail'){
+    return `${taskMissionHtml(t.key)}`;
+  }
+  if(key === 'gaze'){
+    return `<div class="mission-row"><div class="mission"><strong>눈 깜빡 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
+  }
+  return `<div class="mission-row"><div class="mission"><strong>캐릭터 방향</strong><span>가운데 캐릭터가 바라보는 방향만 판단합니다.</span></div><div class="mission"><strong>간섭 억제</strong><span>양옆 캐릭터의 방향은 무시해야 합니다.</span></div><div class="mission"><strong>집중 콤보</strong><span>연속 정답이면 XP와 콤보가 올라갑니다.</span></div></div>`;
+}
+
 function render(){
   if (state.phase === 'done') { renderDone(); return; }
   root.innerHTML = headerHtml() + `<div class="card game-board"><div class="game-inner" id="game"></div></div>`;
   const game = document.getElementById('game');
   if (state.phase === 'start') {
     const t = task();
-    game.innerHTML = `<div class="start-panel"><div class="start-icon">${t.icon}</div><div class="start-title">${t.title}</div><div class="start-copy">${t.desc}<br>정확도를 우선하고, 익숙해지면 빠르게 반응해 주세요.</div><div class="mission-row"><div class="mission"><strong>3단계 Trail</strong><span>순차, 짝수-홀수, 역순 규칙으로 진행합니다.</span></div><div class="mission"><strong>부분 힌트</strong><span>각 단계의 시작 2개만 힌트로 표시됩니다.</span></div><div class="mission"><strong>경로 연결</strong><span>정답 클릭마다 선이 이어집니다.</span></div></div><button class="primary-btn" onclick="startCurrentTask()">미션 시작</button></div>`;
+    game.innerHTML = `<div class="start-panel"><div class="start-icon">${t.icon}</div><div class="start-title">${t.title}</div><div class="start-copy">${t.desc}<br>정확도를 우선하고, 익숙해지면 빠르게 반응해 주세요.</div>${taskMissionHtml(t.key)}<button class="primary-btn" onclick="startCurrentTask()">미션 시작</button></div>`;
   } else {
     const k = task().key;
     if (k==='trail') renderTrail(game);
@@ -1015,11 +1156,11 @@ function trailClick(value, el){
   render();
 }
 
-// Gaze: 짧은 20시행, 네 방향 균형 배치
+// Gaze: 짧은 20시행, 네 방향 균형 배치 + 전환 시 눈 깜빡 기믹
 function initGaze(){
   const dirs=['up','down','left','right'];
   const trials=shuffle([...dirs,...dirs,...dirs,...dirs,...dirs]);
-  state.taskState.gaze = {trials, index:0, onset:performance.now()};
+  state.taskState.gaze = {trials, index:0, onset:performance.now(), transitioning:false, blinkStart:null};
 }
 function dirKo(d){ return {up:'위',down:'아래',left:'왼쪽',right:'오른쪽'}[d]; }
 function arrowLabel(d){ return {up:'↑',down:'↓',left:'←',right:'→'}[d]; }
@@ -1027,51 +1168,73 @@ function pupil(d){ return {up:['0px','-12px'],down:['0px','12px'],left:['-12px',
 function renderGaze(game){
   const ts=state.taskState.gaze, d=ts.trials[ts.index];
   if(!d) { completeTask(); return; }
-  const [px,py] = pupil(d);
-  if(!ts.onset) ts.onset=performance.now();
-  game.innerHTML = `<div class="gaze-scene"><div class="mascot-wrap"><div class="ear left"></div><div class="ear right"></div><div class="face-panel"><div class="eye"><span class="pupil" style="--px:${px};--py:${py}"></span></div><div class="eye"><span class="pupil" style="--px:${px};--py:${py}"></span></div></div><div class="mouth"></div></div><div class="direction-label">KIRBIE의 시선 방향은?</div><div class="choice-row four">${['up','down','left','right'].map(x=>`<button class="dir-btn" onclick="gazeAnswer('${x}')">${arrowLabel(x)} ${dirKo(x)}</button>`).join('')}</div><div class="score-strip"><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
+  const transitioning = !!ts.transitioning;
+  const [px,py] = transitioning ? ['0px','0px'] : pupil(d);
+  if(!transitioning && !ts.onset) ts.onset=performance.now();
+  const eyeClass = transitioning ? 'eye closed' : 'eye';
+  const mascotClass = transitioning ? 'mascot-wrap blinking' : 'mascot-wrap';
+  const label = transitioning ? '<span class="transition-label">눈 깜빡 · 다음 시선 준비</span>' : 'KIRBIE의 시선 방향은?';
+  const disabled = transitioning ? 'disabled' : '';
+  game.innerHTML = `<div class="gaze-scene"><div class="${mascotClass}">${transitioning ? '<div class="blink-ripple"></div>' : ''}<div class="ear left"></div><div class="ear right"></div><div class="face-panel"><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div></div><div class="mouth"></div></div><div class="direction-label">${label}</div><div class="choice-row four">${['up','down','left','right'].map(x=>`<button class="dir-btn" ${disabled} onclick="gazeAnswer('${x}')">${arrowLabel(x)} ${dirKo(x)}</button>`).join('')}</div><div class="score-strip"><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function gazeAnswer(resp){
-  const ts=state.taskState.gaze, d=ts.trials[ts.index], now=performance.now();
+  const ts=state.taskState.gaze;
+  if(ts.transitioning) return;
+  const d=ts.trials[ts.index], now=performance.now();
   const rt = now-ts.onset;
   const correct = resp === d;
   updateGlobalXp(correct, rt);
-  state.records.push({task:'gaze', trial:ts.index+1, target:d, response:resp, correct, rt_ms:round(rt,1)});
-  state.feedback = correct ? '시선 포착!' : `정답은 ${dirKo(d)}`; state.feedbackClass = correct ? 'ok' : 'bad';
-  ts.index += 1; ts.onset=performance.now();
+  state.records.push({task:'gaze', trial:ts.index+1, target:d, response:resp, correct, rt_ms:round(rt,1), transition:'blink_after_response'});
+  state.feedback = correct ? '시선 포착!' : `정답은 ${dirKo(d)}`;
+  state.feedbackClass = correct ? 'ok' : 'bad';
+  ts.index += 1;
   if(ts.index >= ts.trials.length) { completeTask(); return; }
+  ts.transitioning = true;
+  ts.onset = null;
   render();
+  window.setTimeout(()=>{
+    const currentTs = state.taskState.gaze;
+    if(!currentTs || state.phase !== 'play' || task().key !== 'gaze') return;
+    currentTs.transitioning = false;
+    currentTs.onset = performance.now();
+    state.feedback = '새 시선이 열렸습니다';
+    state.feedbackClass = 'ok';
+    render();
+  }, 360);
 }
 
-// Flanker: 22시행, congruent 8 + incongruent 14. 너무 길지 않지만 오답이 나기 쉬운 구성
+// Flanker: 22시행, congruent 8 + incongruent 14. 캐릭터 방향 판단형으로 구성
 function initFlanker(){
   const trials=[];
   for(let i=0;i<8;i++){
     const target = Math.random()<.5 ? 'left' : 'right';
-    const center = target==='left'?'←':'→';
-    trials.push({level:1, condition:'congruent', stimulus:center+center+center+center+center, correct:target});
+    trials.push({level:1, condition:'congruent', center:target, flank:target, pattern:[target,target,target,target,target], correct:target});
   }
   for(let i=0;i<14;i++){
     const target = Math.random()<.5 ? 'left' : 'right';
-    const center = target==='left'?'←':'→';
-    const flank = target==='left'?'→':'←';
-    trials.push({level:2, condition:'incongruent', stimulus:flank+flank+center+flank+flank, correct:target});
+    const flank = target==='left'?'right':'left';
+    trials.push({level:2, condition:'incongruent', center:target, flank, pattern:[flank,flank,target,flank,flank], correct:target});
   }
   state.taskState.flanker = {trials:shuffle(trials), index:0, onset:performance.now()};
+}
+function flankerBotHtml(dir, idx){
+  const cls = `flanker-bot dir-${dir} ${idx===2 ? 'target' : 'dim'}`;
+  return `<div class="${cls}" aria-label="${idx===2 ? '가운데' : '주변'} 캐릭터 ${dirKo(dir)} 방향"><span class="bot-ear one"></span><span class="bot-ear two"></span><span class="bot-face"><span class="bot-eye"></span></span><span class="bot-nose"></span><span class="bot-jet"></span></div>`;
 }
 function renderFlanker(game){
   const ts=state.taskState.flanker, tr=ts.trials[ts.index];
   if(!tr){ completeTask(); return; }
   if(!ts.onset) ts.onset=performance.now();
-  game.innerHTML = `<div class="stimulus small">${tr.stimulus}</div><div class="copy" style="text-align:center;margin-top:16px;">가운데 화살표 방향만 선택하세요.</div><div class="choice-row"><button class="choice-btn" onclick="flankerAnswer('left')">← 왼쪽</button><button class="choice-btn" onclick="flankerAnswer('right')">오른쪽 →</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div>`;
+  const bots = tr.pattern.map((dir, idx)=>flankerBotHtml(dir, idx)).join('');
+  game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction"><strong>가운데 캐릭터</strong>가 바라보는 방향만 선택하세요.<br>양옆 캐릭터의 방향은 방해 정보입니다.</div><div class="choice-row"><button class="choice-btn" onclick="flankerAnswer('left')">← 왼쪽</button><button class="choice-btn" onclick="flankerAnswer('right')">오른쪽 →</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function flankerAnswer(resp){
   const ts=state.taskState.flanker, tr=ts.trials[ts.index], now=performance.now();
   const rt = now-ts.onset;
   const correct = resp === tr.correct;
   updateGlobalXp(correct, rt);
-  state.records.push({task:'flanker', trial:ts.index+1, level:tr.level, condition:tr.condition, stimulus:tr.stimulus, correct_response:tr.correct, response:resp, correct, rt_ms:round(rt,1)});
-  state.feedback = correct ? '정답!' : '중앙 방향만 보세요'; state.feedbackClass = correct ? 'ok' : 'bad';
+  state.records.push({task:'flanker', trial:ts.index+1, level:tr.level, condition:tr.condition, stimulus:tr.pattern.join('-'), center_direction:tr.center, flank_direction:tr.flank, correct_response:tr.correct, response:resp, correct, rt_ms:round(rt,1)});
+  state.feedback = correct ? '중앙 캐릭터 포착!' : '가운데 캐릭터 방향만 보세요'; state.feedbackClass = correct ? 'ok' : 'bad';
   ts.index += 1; ts.onset=performance.now();
   if(ts.index >= ts.trials.length) { completeTask(); return; }
   render();
@@ -1082,6 +1245,7 @@ document.addEventListener('keydown', (e)=>{
   const k=task().key;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
   if(k==='gaze'){
+    if(state.taskState.gaze && state.taskState.gaze.transitioning) return;
     const map={ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'};
     if(map[e.key]) gazeAnswer(map[e.key]);
   }
@@ -1149,7 +1313,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.2_trail_3stage',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.4_gaze_blink_flanker_character',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
@@ -1215,7 +1379,7 @@ def page_intro() -> None:
           <div class="k-grid">
             <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 챌린지</div><div class="k-mini-copy">무작위 위치의 숫자 원을 3단계 규칙에 맞춰 연결합니다.</div></div>
             <div class="k-mini"><div class="k-mini-title">🤖 시선 포착 챌린지</div><div class="k-mini-copy">캐릭터 눈동자의 방향을 빠르게 판단합니다.</div></div>
-            <div class="k-mini"><div class="k-mini-title">↔️ 화살표 집중 챌린지</div><div class="k-mini-copy">중앙 화살표에 집중해 간섭 정보를 억제합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🎯 캐릭터 집중 챌린지</div><div class="k-mini-copy">가운데 캐릭터의 방향에 집중해 주변 간섭 정보를 억제합니다.</div></div>
           </div>
         </section>
         <section class="k-card">
@@ -1497,7 +1661,7 @@ def page_result(dev_mode: bool = False) -> None:
     rows = [
         ("Trail 연결", trail.get("score"), f"총 {fmt(trail.get('total_sec'), '초')}", f"오류 {trail.get('errors', '-')}") ,
         ("시선 방향", gaze.get("score"), f"정확률 {fmt_pct(gaze.get('accuracy'))}", f"중앙 RT {fmt(gaze.get('median_rt_ms'), 'ms')}") ,
-        ("Flanker", flanker.get("score"), f"정확률 {fmt_pct(flanker.get('accuracy'))}", f"간섭 {fmt(flanker.get('interference_ms'), 'ms')}") ,
+        ("캐릭터 Flanker", flanker.get("score"), f"정확률 {fmt_pct(flanker.get('accuracy'))}", f"간섭 {fmt(flanker.get('interference_ms'), 'ms')}") ,
     ]
     table_rows = "".join(
         f"<tr><td>{name}</td><td>{fmt(score)}점</td><td>{a}</td><td>{b}</td><td>{score_label(score)}</td></tr>"
