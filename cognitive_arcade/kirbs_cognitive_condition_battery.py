@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.7_gaze_style_flanker_blink"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -230,15 +230,21 @@ def inject_css() -> None:
   --content-max-width: 920px;
 }
 
-html, body, .stApp {
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+  background-color: #06101f !important;
   background:
     radial-gradient(circle at top left, rgba(79,156,255,.10), transparent 32%),
     radial-gradient(circle at bottom right, rgba(86,227,154,.06), transparent 34%),
     linear-gradient(180deg, #06101f 0%, #071225 100%) !important;
   color: var(--text) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif !important;
   letter-spacing: -0.01em;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
+* { box-sizing: border-box; }
+.stApp * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif !important; }
 
 .block-container {
   max-width: var(--content-max-width) !important;
@@ -386,6 +392,14 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
   border-color: rgba(123,183,255,.95) !important;
   box-shadow: 0 0 0 3px rgba(79,156,255,.18) !important;
 }
+div[data-testid="stTextInput"] input:-webkit-autofill,
+div[data-testid="stTextInput"] input:-webkit-autofill:hover,
+div[data-testid="stTextInput"] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text) !important;
+  box-shadow: 0 0 0 1000px var(--surface-3) inset !important;
+  caret-color: var(--text) !important;
+  transition: background-color 9999s ease-out 0s !important;
+}
 div[data-testid="stSelectbox"] [data-baseweb="select"] span,
 div[data-testid="stSelectbox"] [data-baseweb="select"] div,
 div[data-testid="stSelectbox"] [data-baseweb="select"] input,
@@ -470,7 +484,7 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 # ──────────────────────────────────────────────────────────────────────────────
 # Streamlit JS Component 생성
 # ──────────────────────────────────────────────────────────────────────────────
-COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v17"
+COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v18"
 COMPONENT_DIR = Path(tempfile.gettempdir()) / COMPONENT_NAME
 
 
@@ -504,14 +518,19 @@ COMPONENT_HTML = r"""
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  min-width: 0;
+  background-color: #06101f;
   background:
     radial-gradient(circle at top left, rgba(79,156,255,.08), transparent 32%),
     radial-gradient(circle at bottom right, rgba(86,227,154,.05), transparent 34%),
     linear-gradient(180deg, #06101f 0%, #071225 100%);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
   letter-spacing: -0.01em;
   overflow: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 button { font-family: inherit; }
 .app {
@@ -561,12 +580,17 @@ button { font-family: inherit; }
 .game-board {
   min-height: 430px;
   display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center;
+  background-color: #0b1a33;
   background:
     radial-gradient(circle at top right, rgba(86,227,154,.07), transparent 30%),
     radial-gradient(circle at bottom left, rgba(183,140,255,.06), transparent 28%),
     linear-gradient(180deg, rgba(16,40,76,.72), rgba(11,26,51,.90));
   border-color: rgba(96,165,250,.34);
   position: relative; overflow: hidden;
+}
+.game-board.task-flanker {
+  min-height: 430px;
+  height: 430px;
 }
 .game-board::before {
   content:""; position:absolute; inset:0;
@@ -763,15 +787,26 @@ button { font-family: inherit; }
 }
 .dir-btn:disabled, .choice-btn:disabled { opacity:.52; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
 
-.flanker-scene { display:flex; flex-direction:column; align-items:center; gap: 14px; }
+.flanker-scene {
+  width: 100%;
+  height: 364px;
+  min-height: 364px;
+  display:grid;
+  grid-template-rows: 140px 56px 58px 34px 28px;
+  row-gap: 12px;
+  align-items:center;
+  justify-items:center;
+}
 .flanker-lineup {
   width: min(100%, 690px);
+  height: 140px;
+  min-height: 140px;
   display:flex;
   align-items:center;
   justify-content:center;
   gap: 14px;
-  margin: 2px auto 2px;
-  padding: 14px 8px 8px;
+  margin: 0 auto;
+  padding: 18px 8px 10px;
 }
 .flanker-mini {
   position: relative;
@@ -863,8 +898,22 @@ button { font-family: inherit; }
   animation: rippleOut .42s ease-out forwards;
   pointer-events:none;
 }
-.flanker-instruction { color: var(--muted); text-align:center; line-height:1.55; }
+.flanker-instruction {
+  width: min(100%, 680px);
+  min-height: 56px;
+  height: 56px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color: var(--muted);
+  text-align:center;
+  line-height:1.55;
+}
 .flanker-instruction strong { color:#ffeeb8; }
+.flanker-scene .choice-row { margin: 0 auto; }
+.flanker-scene .score-strip { margin: 0; min-height: 34px; align-items:center; }
+.flanker-scene .feedback { min-height: 28px; height: 28px; display:flex; align-items:center; justify-content:center; }
 
 .done-panel { text-align:center; max-width: 680px; margin: 0 auto; }
 .done-title { font-size: clamp(30px, 5vw, 48px); font-weight:950; margin-bottom: 12px; }
@@ -876,10 +925,14 @@ button { font-family: inherit; }
 @media (max-width: 720px) {
   .card { padding: 20px; border-radius: 20px; }
   .game-board { min-height: 0; }
+  .game-board.task-flanker { min-height: 470px; height: 470px; }
   .trail-board { height: 500px; border-radius: 20px; }
   .trail-node { width: 50px; height: 50px; font-size: 18px; }
   .choice-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .flanker-lineup { gap: 7px; padding-left: 0; padding-right: 0; }
+  .flanker-scene { height: 424px; min-height: 424px; grid-template-rows: 96px 64px 138px 64px 30px; row-gap: 8px; }
+  .flanker-lineup { height: 96px; min-height: 96px; gap: 7px; padding-left: 0; padding-right: 0; }
+  .flanker-instruction { min-height: 64px; height: 64px; font-size: 13px; }
+  .flanker-scene .choice-row { width: min(100%, 420px); }
   .flanker-mini { width: 62px; height: 62px; border-radius: 18px; }
   .mini-ear { width: 15px; height: 15px; top: -7px; border-radius: 6px; }
   .mini-ear.one { left: 11px; }
@@ -905,6 +958,8 @@ const Streamlit = {
 };
 
 const root = document.getElementById('root');
+let stableFrameHeight = 0;
+let lastFrameWidth = 0;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
 const median = arr => {
@@ -947,8 +1002,16 @@ const tasks = [
 function setHeight(){
   setTimeout(()=>{
     const rect = root.getBoundingClientRect();
-    const h = Math.max(20, Math.ceil(rect.height) + 2);
-    Streamlit.setFrameHeight(h);
+    const currentWidth = Math.round(window.innerWidth || rect.width || 0);
+    if (Math.abs(currentWidth - lastFrameWidth) > 24) {
+      stableFrameHeight = 0;
+      lastFrameWidth = currentWidth;
+    }
+    const measuredHeight = Math.max(20, Math.ceil(rect.height) + 4);
+    const lockDuringTask = state.phase !== 'done';
+    const targetHeight = lockDuringTask ? Math.max(stableFrameHeight, measuredHeight) : measuredHeight;
+    if (lockDuringTask) stableFrameHeight = targetHeight;
+    Streamlit.setFrameHeight(targetHeight);
   }, 40);
 }
 function task(){ return tasks[state.taskIndex]; }
@@ -1012,7 +1075,8 @@ function taskMissionHtml(key){
 
 function render(){
   if (state.phase === 'done') { renderDone(); return; }
-  root.innerHTML = headerHtml() + `<div class="card game-board"><div class="game-inner" id="game"></div></div>`;
+  const currentTaskKey = task().key;
+  root.innerHTML = headerHtml() + `<div class="card game-board task-${currentTaskKey}"><div class="game-inner" id="game"></div></div>`;
   const game = document.getElementById('game');
   if (state.phase === 'start') {
     const t = task();
@@ -1366,7 +1430,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.7_gaze_style_flanker_blink',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
