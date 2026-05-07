@@ -3,7 +3,7 @@
 KIRBS+ 인지 미니게임 3과제 버전
 
 구성
-- Trail 연결 과제: 순차 탐색 + 전환
+- Trail 연결 과제: 무작위 원형 노드 순차 연결 + 전환
 - Gaze 방향 판단 과제: 시선 방향 판단 + 반응속도
 - Flanker 화살표 과제: 선택적 주의 + 간섭 억제
 
@@ -51,8 +51,8 @@ KST = timezone(timedelta(hours=9))
 
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
-EXAM_SUBTITLE = "처리속도 · 주의전환 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.0"
+EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.1_trail_nodes"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -556,12 +556,79 @@ button { font-family: inherit; }
 .primary-btn { min-width: 220px; padding: 15px 24px; font-size: 17px; margin-top: 18px; }
 .ghost-btn { padding: 12px 18px; background: var(--surface3); box-shadow:none; }
 
-.trail-grid { width: min(100%, 680px); margin: 0 auto; display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.tile { height: 76px; font-size: 28px; background: linear-gradient(180deg, #123563, #0f2b52); }
-.tile.done { opacity: .42; background: rgba(86,227,154,.10); color: #baf8d4; border-color: rgba(86,227,154,.40); transform: scale(.96); }
-.tile.wrong { animation: wrong .22s ease; border-color: var(--red); }
-@keyframes wrong { 0%,100% { transform: translateX(0); } 35% { transform: translateX(-5px); } 70% { transform: translateX(5px); } }
+.trail-board {
+  position: relative;
+  width: min(100%, 700px);
+  height: 420px;
+  margin: 0 auto;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 20%, rgba(79,156,255,.14), transparent 26%),
+    radial-gradient(circle at 76% 72%, rgba(86,227,154,.12), transparent 28%),
+    linear-gradient(180deg, rgba(7,18,37,.64), rgba(16,40,76,.52));
+  border: 1px solid rgba(96,165,250,.26);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 16px 36px rgba(2,8,23,.18);
+}
+.trail-board::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(123,183,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(123,183,255,.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events:none;
+}
+.trail-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+.trail-line {
+  stroke: url(#trailGrad);
+  stroke-width: 7;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 7px rgba(86,227,154,.26));
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: drawLine .28s ease-out forwards;
+}
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
+.trail-node {
+  position:absolute;
+  width: 58px;
+  height: 58px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  z-index: 2;
+  border: 2px solid rgba(123,183,255,.72);
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.95) 0 9%, transparent 10%),
+    linear-gradient(180deg, #1e66b2, #123968);
+  color:#fff;
+  font-size: 21px;
+  font-weight: 950;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  box-shadow: 0 12px 24px rgba(79,156,255,.22), inset 0 -8px 18px rgba(2,8,23,.22);
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.trail-node:hover { transform: translate(-50%, -50%) scale(1.06); border-color: rgba(255,255,255,.88); box-shadow: 0 16px 30px rgba(79,156,255,.30), inset 0 -8px 18px rgba(2,8,23,.22); }
+.trail-node.done {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.96) 0 9%, transparent 10%),
+    linear-gradient(180deg, #45d689, #1b8b59);
+  border-color: rgba(186,248,212,.86);
+  color:#062416;
+  transform: translate(-50%, -50%) scale(.88);
+  opacity:.82;
+}
+.trail-node.current {
+  border-color: rgba(255,224,138,.96);
+  box-shadow: 0 0 0 6px rgba(255,224,138,.10), 0 16px 32px rgba(255,224,138,.18), inset 0 -8px 18px rgba(2,8,23,.22);
+}
+.trail-node.wrong { animation: wrongNode .24s ease; border-color: var(--red); }
+@keyframes wrongNode { 0%,100% { transform: translate(-50%, -50%); } 35% { transform: translate(calc(-50% - 6px), -50%); } 70% { transform: translate(calc(-50% + 6px), -50%); } }
 .target-chip { display:inline-flex; align-items:center; justify-content:center; min-width: 88px; padding: 10px 14px; border-radius:999px; background:rgba(86,227,154,.13); border:1px solid rgba(86,227,154,.32); color:#c8ffe4; font-weight:950; }
+.trail-guide { color: var(--muted2); font-size: 13px; line-height: 1.5; text-align:center; margin: 10px 0 14px; }
 
 .stimulus { font-size: clamp(78px, 18vw, 142px); font-weight: 950; line-height:1; text-align:center; color:#fff; text-shadow: 0 12px 28px rgba(2,8,23,.30); }
 .stimulus.small { font-size: clamp(54px, 12vw, 90px); letter-spacing: .06em; }
@@ -620,8 +687,8 @@ button { font-family: inherit; }
 @media (max-width: 720px) {
   .card { padding: 20px; border-radius: 20px; }
   .game-board { min-height: 560px; }
-  .trail-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  .tile { height: 66px; font-size: 24px; }
+  .trail-board { height: 500px; border-radius: 20px; }
+  .trail-node { width: 52px; height: 52px; font-size: 19px; }
   .choice-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mission-row, .status-grid, .done-grid { grid-template-columns: 1fr; }
   .mascot-wrap { width: 200px; height: 200px; }
@@ -673,7 +740,7 @@ let state = {
 };
 
 const tasks = [
-  {key:'trail', title:'Trail 연결 챌린지', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'숫자 순서와 숫자-글자 교대 순서를 찾아 누릅니다.', icon:'🧭'},
+  {key:'trail', title:'Trail 연결 챌린지', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 원을 순서대로 눌러 경로를 연결합니다.', icon:'🧭'},
   {key:'gaze', title:'시선 포착 챌린지', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
   {key:'flanker', title:'화살표 집중 챌린지', sub:'선택적 주의 · 간섭 억제', desc:'양옆 화살표는 무시하고 가운데 화살표의 방향만 판단합니다.', icon:'↔️'}
 ];
@@ -767,21 +834,81 @@ function startCurrentTask(){
   render();
 }
 
-// Trail: 1단계는 1~8, 2단계는 1-가-2-나-3-다-4-라-5-마로 구성해 진입 장벽을 낮춤
-function initTrail(){
-  const seq1 = Array.from({length:8}, (_,i)=>String(i+1));
+// Trail: 원형 노드를 무작위 좌표에 배치하고, 정답 클릭 시 직선 연결 애니메이션을 표시함
+function buildTrailSequence(stage){
+  if(stage === 1) return Array.from({length:8}, (_,i)=>String(i+1));
   const letters=['가','나','다','라','마'];
-  const seq2=[];
-  for(let i=1;i<=5;i++){ seq2.push(String(i)); seq2.push(letters[i-1]); }
-  const now=performance.now();
-  state.taskState.trail = {stage:1, seq1, seq2, seq:seq1, board:shuffle(seq1), index:0, stageStart:now, last:now, errors:0, stageTimes:{}};
+  const seq=[];
+  for(let i=1;i<=5;i++){ seq.push(String(i)); seq.push(letters[i-1]); }
+  return seq;
+}
+function getTrailCanvasSize(){
+  const fallbackWidth = Math.min(700, Math.max(320, window.innerWidth - 46));
+  const measuredWidth = root && root.clientWidth ? root.clientWidth - 6 : fallbackWidth;
+  const canvasW = Math.round(clamp(Math.min(700, measuredWidth), 300, 700));
+  const canvasH = window.innerWidth <= 720 ? 500 : 420;
+  return {canvasW, canvasH};
+}
+function generateTrailNodes(seq, canvasW, canvasH){
+  const nodeSize = window.innerWidth <= 720 ? 52 : 58;
+  const margin = Math.max(34, nodeSize * .78);
+  const minDist = nodeSize + (seq.length >= 10 ? 17 : 22);
+  const nodes = [];
+  for(const label of seq){
+    let placed = false;
+    for(let attempt=0; attempt<1200; attempt++){
+      const x = margin + Math.random() * (canvasW - margin*2);
+      const y = margin + Math.random() * (canvasH - margin*2);
+      const ok = nodes.every(n => Math.hypot(n.x - x, n.y - y) >= minDist);
+      if(ok){ nodes.push({label, x:round(x,1), y:round(y,1)}); placed = true; break; }
+    }
+    if(!placed){
+      const cols = canvasW < 420 ? 3 : 4;
+      const rows = Math.ceil(seq.length / cols);
+      const idx = nodes.length;
+      const cellW = (canvasW - margin*2) / cols;
+      const cellH = (canvasH - margin*2) / rows;
+      const jitterX = (Math.random() - .5) * Math.min(18, cellW*.18);
+      const jitterY = (Math.random() - .5) * Math.min(18, cellH*.18);
+      nodes.push({label, x:round(margin + (idx % cols + .5) * cellW + jitterX,1), y:round(margin + (Math.floor(idx / cols) + .5) * cellH + jitterY,1)});
+    }
+  }
+  return shuffle(nodes);
+}
+function resetTrailStage(stage){
+  const seq = buildTrailSequence(stage);
+  const now = performance.now();
+  const {canvasW, canvasH} = getTrailCanvasSize();
+  return {stage, seq, canvasW, canvasH, nodes:generateTrailNodes(seq, canvasW, canvasH), index:0, stageStart:now, last:now, errors:0, stageTimes:{}};
+}
+function initTrail(){
+  state.taskState.trail = resetTrailStage(1);
 }
 function renderTrail(game){
   const ts = state.taskState.trail;
   const target = ts.seq[ts.index];
+  const nodeByLabel = Object.fromEntries(ts.nodes.map(n => [n.label, n]));
+  const completedLabels = ts.seq.slice(0, ts.index);
+  const lines = [];
+  for(let i=1; i<completedLabels.length; i++){
+    const a = nodeByLabel[completedLabels[i-1]];
+    const b = nodeByLabel[completedLabels[i]];
+    if(a && b){ lines.push(`<line class="trail-line" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" style="animation-delay:${Math.min(i*24, 160)}ms"></line>`); }
+  }
   game.innerHTML = `
-    <div style="text-align:center;margin-bottom:16px;"><span class="target-chip">다음: ${target}</span></div>
-    <div class="trail-grid">${ts.board.map(x=>`<button class="tile ${ts.seq.slice(0,ts.index).includes(x)?'done':''}" onclick="trailClick('${x}', this)">${x}</button>`).join('')}</div>
+    <div style="text-align:center;margin-bottom:8px;"><span class="target-chip">다음 원: ${target}</span></div>
+    <div class="trail-guide">원은 매번 다른 위치에 나타납니다. 겹치지 않는 원을 순서대로 눌러 선을 완성하세요.</div>
+    <div class="trail-board">
+      <svg class="trail-svg" viewBox="0 0 ${ts.canvasW} ${ts.canvasH}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="trailGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#4f9cff"/><stop offset="100%" stop-color="#56e39a"/></linearGradient></defs>
+        ${lines.join('')}
+      </svg>
+      ${ts.nodes.map(n => {
+        const done = completedLabels.includes(n.label);
+        const current = n.label === target;
+        return `<button class="trail-node ${done ? 'done' : ''} ${current ? 'current' : ''}" style="left:${(n.x/ts.canvasW)*100}%; top:${(n.y/ts.canvasH)*100}%;" onclick="trailClick('${n.label}', this)" aria-label="${n.label} 원">${n.label}</button>`;
+      }).join('')}
+    </div>
     <div class="score-strip"><span class="score-chip">레벨 ${ts.stage} / 2</span><span class="score-chip">오류 ${ts.errors}</span><span class="score-chip good">콤보 ${state.combo}</span></div>
     <div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div>`;
 }
@@ -791,22 +918,32 @@ function trailClick(value, el){
   const now = performance.now();
   const correct = value === target;
   const delta = now - ts.last;
-  state.records.push({task:'trail', stage:ts.stage, target, response:value, order:ts.index+1, rt_ms:round(now-ts.stageStart,1), delta_ms:round(delta,1), correct});
+  const clickedNode = ts.nodes.find(n => n.label === value) || null;
+  state.records.push({
+    task:'trail', stage:ts.stage, target, response:value, order:ts.index+1,
+    node_x: clickedNode ? clickedNode.x : null, node_y: clickedNode ? clickedNode.y : null,
+    rt_ms:round(now-ts.stageStart,1), delta_ms:round(delta,1), correct
+  });
   ts.last = now;
   updateGlobalXp(correct, delta);
   if(correct){
     ts.index += 1;
-    state.feedback = '좋아요!'; state.feedbackClass = 'ok';
+    state.feedback = ts.index >= 2 ? '경로 연결!' : '좋아요!';
+    state.feedbackClass = 'ok';
     if(ts.index >= ts.seq.length){
       ts.stageTimes[`stage_${ts.stage}_ms`] = round(now-ts.stageStart,1);
       if(ts.stage === 1){
-        ts.stage = 2; ts.seq = ts.seq2; ts.board = shuffle(ts.seq2); ts.index = 0; ts.stageStart = performance.now(); ts.last = performance.now();
+        const prevTimes = {...ts.stageTimes};
+        state.taskState.trail = resetTrailStage(2);
+        state.taskState.trail.stageTimes = prevTimes;
+        state.taskState.trail.errors = ts.errors;
         state.feedback = '전환 레벨 시작!'; state.feedbackClass = 'ok';
       } else { completeTask(); return; }
     }
   } else {
     ts.errors += 1;
-    state.feedback = '순서를 다시 확인하세요'; state.feedbackClass = 'bad';
+    state.feedback = `다음 원은 ${target}입니다`;
+    state.feedbackClass = 'bad';
     if(el){ el.classList.add('wrong'); setTimeout(()=>el.classList.remove('wrong'), 240); }
   }
   render();
@@ -944,7 +1081,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.0',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.1_trail_nodes',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
@@ -1003,12 +1140,12 @@ def page_intro() -> None:
           <span class="k-badge">Cognitive Arcade</span>
           <span class="k-badge">3 Mini Games</span>
           <h1 class="k-title">{EXAM_TITLE}</h1>
-          <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>짧고 간편한 3개의 미니게임을 통해 현재의 처리속도, 주의전환, 시선 판단, 간섭 억제 경향을 확인합니다.</p>
+          <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>짧고 간편한 3개의 미니게임을 통해 현재의 처리속도, 시각 탐색, 시선 판단, 간섭 억제 경향을 확인합니다.</p>
         </section>
         <section class="k-card">
           <h2 class="k-title-md">검사 구성</h2>
           <div class="k-grid">
-            <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 챌린지</div><div class="k-mini-copy">순서 찾기와 숫자-글자 전환을 짧게 수행합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 챌린지</div><div class="k-mini-copy">무작위 위치의 원을 순서대로 눌러 경로를 연결합니다.</div></div>
             <div class="k-mini"><div class="k-mini-title">🤖 시선 포착 챌린지</div><div class="k-mini-copy">캐릭터 눈동자의 방향을 빠르게 판단합니다.</div></div>
             <div class="k-mini"><div class="k-mini-title">↔️ 화살표 집중 챌린지</div><div class="k-mini-copy">중앙 화살표에 집중해 간섭 정보를 억제합니다.</div></div>
           </div>
