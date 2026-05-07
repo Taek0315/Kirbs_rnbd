@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.4_gaze_blink_flanker_character"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.5_trail_fix_gaze_blink_flanker_character"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -470,7 +470,7 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 # ──────────────────────────────────────────────────────────────────────────────
 # Streamlit JS Component 생성
 # ──────────────────────────────────────────────────────────────────────────────
-COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v14"
+COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v15"
 COMPONENT_DIR = Path(tempfile.gettempdir()) / COMPONENT_NAME
 
 
@@ -974,12 +974,15 @@ function headerHtml(){
 }
 function taskMissionHtml(key){
   if(key === 'trail'){
-    return `${taskMissionHtml(t.key)}`;
+    return `<div class="mission-row"><div class="mission"><strong>랜덤 숫자 원</strong><span>숫자 원이 매 단계 겹치지 않게 무작위 위치에 나타납니다.</span></div><div class="mission"><strong>3단계 규칙</strong><span>1~10 순서, 짝수 후 홀수, 12~1 역순으로 진행합니다.</span></div><div class="mission"><strong>힌트 제한</strong><span>처음 2개만 표시되고, 이후 숫자는 직접 찾아 연결합니다.</span></div></div>`;
   }
   if(key === 'gaze'){
     return `<div class="mission-row"><div class="mission"><strong>눈 깜빡 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
   }
-  return `<div class="mission-row"><div class="mission"><strong>캐릭터 방향</strong><span>가운데 캐릭터가 바라보는 방향만 판단합니다.</span></div><div class="mission"><strong>간섭 억제</strong><span>양옆 캐릭터의 방향은 무시해야 합니다.</span></div><div class="mission"><strong>집중 콤보</strong><span>연속 정답이면 XP와 콤보가 올라갑니다.</span></div></div>`;
+  if(key === 'flanker'){
+    return `<div class="mission-row"><div class="mission"><strong>캐릭터 방향</strong><span>가운데 캐릭터가 바라보는 방향만 판단합니다.</span></div><div class="mission"><strong>간섭 억제</strong><span>양옆 캐릭터의 방향은 무시해야 합니다.</span></div><div class="mission"><strong>집중 콤보</strong><span>연속 정답이면 XP와 콤보가 올라갑니다.</span></div></div>`;
+  }
+  return ``;
 }
 
 function render(){
@@ -1313,7 +1316,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.4_gaze_blink_flanker_character',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.5_trail_fix_gaze_blink_flanker_character',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
