@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-KIRBS+ 인지 능력 미니게임 배터리 v5 - 단일 py 버전
+KIRBS+ 인지 검사 테스트
 
 구성
 - Trail 연결 과제
@@ -41,7 +41,7 @@ import streamlit.components.v1 as components
 # 기본 설정
 # ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="KIRBS+ 인지 능력 검사",
+    page_title="KIRBS+ 인지 능력 테스트",
     page_icon="🧠",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -50,7 +50,7 @@ st.set_page_config(
 KST = timezone(timedelta(hours=9))
 
 EXAM_NAME = "KIRBS_COGNITIVE_TASK_BATTERY"
-EXAM_TITLE = "KIRBS+ 인지 능력 미니게임 검사"
+EXAM_TITLE = "KIRBS+ 인지 향상 게임"
 EXAM_SUBTITLE = "처리속도 · 작업기억 · 주의전환 · 억제통제"
 EXAM_VERSION = "streamlit_component_v5.0"
 
