@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.5_trail_fix_gaze_blink_flanker_character"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.6_equal_flanker_stimulus"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -470,7 +470,7 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 # ──────────────────────────────────────────────────────────────────────────────
 # Streamlit JS Component 생성
 # ──────────────────────────────────────────────────────────────────────────────
-COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v15"
+COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v16"
 COMPONENT_DIR = Path(tempfile.gettempdir()) / COMPONENT_NAME
 
 
@@ -788,16 +788,7 @@ button { font-family: inherit; }
 }
 .flanker-bot.dir-left { transform: scaleX(-1); }
 .flanker-bot.dir-right { transform: scaleX(1); }
-.flanker-bot.target {
-  width: 104px;
-  height: 126px;
-  border-color: rgba(255,224,138,.98);
-  box-shadow: 0 0 0 7px rgba(255,224,138,.10), 0 22px 40px rgba(255,224,138,.15), inset 0 -10px 22px rgba(2,8,23,.22);
-  filter: saturate(1.08);
-}
-.flanker-bot.target.dir-left { transform: scaleX(-1) scale(1.02); }
-.flanker-bot.target.dir-right { transform: scaleX(1) scale(1.02); }
-.flanker-bot.dim { opacity:.82; filter:saturate(.82); }
+/* Flanker는 가운데 자극을 시각적으로 강조하지 않는다. 다섯 캐릭터는 동일 크기·색·테두리·그림자 강도를 유지한다. */
 .bot-ear { position:absolute; width:24px; height:24px; border-radius:9px; top:-10px; background:#1d5fa8; border:2px solid rgba(255,255,255,.16); }
 .bot-ear.one { left: 17px; transform:rotate(-13deg); }
 .bot-ear.two { right: 18px; transform:rotate(11deg); }
@@ -811,10 +802,8 @@ button { font-family: inherit; }
   background: linear-gradient(180deg, #f8fbff, #dfeeff);
   box-shadow: inset 0 3px 10px rgba(15,39,71,.10);
 }
-.flanker-bot.target .bot-face { top: 34px; height: 58px; border-radius: 22px; }
 .bot-eye { position:absolute; width:14px; height:14px; border-radius:999px; top:17px; background:#14345d; box-shadow: 18px 0 0 #14345d; }
 .bot-eye { right: 19px; }
-.flanker-bot.target .bot-eye { top:20px; right:22px; width:16px; height:16px; box-shadow: 21px 0 0 #14345d; }
 .bot-nose {
   position:absolute;
   right:-19px;
@@ -826,7 +815,6 @@ button { font-family: inherit; }
   border-left: 22px solid #eaf4ff;
   filter: drop-shadow(0 4px 5px rgba(2,8,23,.22));
 }
-.flanker-bot.target .bot-nose { right:-22px; top:55px; border-top-width:15px; border-bottom-width:15px; border-left-width:26px; border-left-color:#ffe08a; }
 .bot-jet {
   position:absolute;
   left: 22px;
@@ -855,14 +843,10 @@ button { font-family: inherit; }
   .choice-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .flanker-lineup { gap: 7px; padding-left: 0; padding-right: 0; }
   .flanker-bot { width: 58px; height: 76px; border-radius: 22px; }
-  .flanker-bot.target { width: 66px; height: 86px; }
   .bot-ear { width: 17px; height: 17px; top: -8px; }
   .bot-face { left: 10px; right: 10px; top: 20px; height: 38px; border-radius: 15px; }
-  .flanker-bot.target .bot-face { top: 23px; height: 42px; border-radius: 16px; }
   .bot-eye { width: 9px; height: 9px; top: 14px; right: 13px; box-shadow: 12px 0 0 #14345d; }
-  .flanker-bot.target .bot-eye { width: 10px; height: 10px; top: 15px; right: 15px; box-shadow: 14px 0 0 #14345d; }
   .bot-nose { right:-12px; top:33px; border-top-width:9px; border-bottom-width:9px; border-left-width:14px; }
-  .flanker-bot.target .bot-nose { right:-14px; top:38px; border-top-width:10px; border-bottom-width:10px; border-left-width:16px; }
   .bot-jet { left:15px; right:15px; bottom:-5px; height:9px; }
   .mission-row, .status-grid, .done-grid { grid-template-columns: 1fr; }
   .mascot-wrap { width: 200px; height: 200px; }
@@ -980,7 +964,7 @@ function taskMissionHtml(key){
     return `<div class="mission-row"><div class="mission"><strong>눈 깜빡 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
   }
   if(key === 'flanker'){
-    return `<div class="mission-row"><div class="mission"><strong>캐릭터 방향</strong><span>가운데 캐릭터가 바라보는 방향만 판단합니다.</span></div><div class="mission"><strong>간섭 억제</strong><span>양옆 캐릭터의 방향은 무시해야 합니다.</span></div><div class="mission"><strong>집중 콤보</strong><span>연속 정답이면 XP와 콤보가 올라갑니다.</span></div></div>`;
+    return `<div class="mission-row"><div class="mission"><strong>동일 강도 자극</strong><span>다섯 캐릭터는 크기·색·효과가 동일하게 제시됩니다.</span></div><div class="mission"><strong>중앙 위치 판단</strong><span>시각적 강조 없이 가운데 위치의 방향만 판단합니다.</span></div><div class="mission"><strong>집중 콤보</strong><span>연속 정답이면 XP와 콤보가 올라갑니다.</span></div></div>`;
   }
   return ``;
 }
@@ -1221,15 +1205,16 @@ function initFlanker(){
   state.taskState.flanker = {trials:shuffle(trials), index:0, onset:performance.now()};
 }
 function flankerBotHtml(dir, idx){
-  const cls = `flanker-bot dir-${dir} ${idx===2 ? 'target' : 'dim'}`;
-  return `<div class="${cls}" aria-label="${idx===2 ? '가운데' : '주변'} 캐릭터 ${dirKo(dir)} 방향"><span class="bot-ear one"></span><span class="bot-ear two"></span><span class="bot-face"><span class="bot-eye"></span></span><span class="bot-nose"></span><span class="bot-jet"></span></div>`;
+  const cls = `flanker-bot dir-${dir}`;
+  const pos = idx === 2 ? '가운데' : `${idx + 1}번째`;
+  return `<div class="${cls}" data-pos="${idx}" aria-label="${pos} 캐릭터 ${dirKo(dir)} 방향"><span class="bot-ear one"></span><span class="bot-ear two"></span><span class="bot-face"><span class="bot-eye"></span></span><span class="bot-nose"></span><span class="bot-jet"></span></div>`;
 }
 function renderFlanker(game){
   const ts=state.taskState.flanker, tr=ts.trials[ts.index];
   if(!tr){ completeTask(); return; }
   if(!ts.onset) ts.onset=performance.now();
   const bots = tr.pattern.map((dir, idx)=>flankerBotHtml(dir, idx)).join('');
-  game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction"><strong>가운데 캐릭터</strong>가 바라보는 방향만 선택하세요.<br>양옆 캐릭터의 방향은 방해 정보입니다.</div><div class="choice-row"><button class="choice-btn" onclick="flankerAnswer('left')">← 왼쪽</button><button class="choice-btn" onclick="flankerAnswer('right')">오른쪽 →</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
+  game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction"><strong>다섯 캐릭터는 모두 동일하게 표시됩니다.</strong><br>시각적 강조 없이 가운데 위치의 캐릭터 방향만 선택하세요.</div><div class="choice-row"><button class="choice-btn" onclick="flankerAnswer('left')">← 왼쪽</button><button class="choice-btn" onclick="flankerAnswer('right')">오른쪽 →</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function flankerAnswer(resp){
   const ts=state.taskState.flanker, tr=ts.trials[ts.index], now=performance.now();
@@ -1237,7 +1222,7 @@ function flankerAnswer(resp){
   const correct = resp === tr.correct;
   updateGlobalXp(correct, rt);
   state.records.push({task:'flanker', trial:ts.index+1, level:tr.level, condition:tr.condition, stimulus:tr.pattern.join('-'), center_direction:tr.center, flank_direction:tr.flank, correct_response:tr.correct, response:resp, correct, rt_ms:round(rt,1)});
-  state.feedback = correct ? '중앙 캐릭터 포착!' : '가운데 캐릭터 방향만 보세요'; state.feedbackClass = correct ? 'ok' : 'bad';
+  state.feedback = correct ? '중앙 위치 포착!' : '시각적 강조 없이 가운데 위치만 보세요'; state.feedbackClass = correct ? 'ok' : 'bad';
   ts.index += 1; ts.onset=performance.now();
   if(ts.index >= ts.trials.length) { completeTask(); return; }
   render();
@@ -1316,7 +1301,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.5_trail_fix_gaze_blink_flanker_character',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.6_equal_flanker_stimulus',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
