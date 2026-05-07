@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 미니게임"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.2_trail_3stage"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.3_layout_fix"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
@@ -336,20 +336,24 @@ div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] * {
   -webkit-text-fill-color: var(--text) !important;
 }
 
+/* 입력창 하단 잘림 방지: Streamlit/BaseWeb 래퍼와 실제 input을 모두 같은 높이로 고정 */
 div[data-testid="stTextInput"],
 div[data-testid="stSelectbox"] {
-  margin-bottom: 12px !important;
+  margin-bottom: 18px !important;
   overflow: visible !important;
 }
-
-div[data-testid="stTextInput"] input,
-div[data-testid="stTextInput"] textarea,
+div[data-testid="stTextInput"] > div,
+div[data-testid="stSelectbox"] > div {
+  overflow: visible !important;
+}
+div[data-testid="stTextInput"] div[data-baseweb="input"],
+div[data-testid="stTextInput"] div[data-baseweb="base-input"],
 div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
-  min-height: 54px !important;
-  height: 54px !important;
-  line-height: 52px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  min-height: 56px !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
   background: var(--surface-3) !important;
   color: var(--text) !important;
   border: 1px solid rgba(96,165,250,.52) !important;
@@ -358,13 +362,26 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
   overflow: visible !important;
   -webkit-text-fill-color: var(--text) !important;
 }
-
-div[data-testid="stTextInput"] input {
-  padding-left: 14px !important;
-  padding-right: 14px !important;
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextInput"] textarea {
+  min-height: 54px !important;
+  height: 54px !important;
+  line-height: normal !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  padding: 0 16px 1px 16px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  -webkit-text-fill-color: var(--text) !important;
+  font-weight: 700 !important;
 }
 div[data-testid="stTextInput"] input::placeholder { color: var(--muted-2) !important; opacity: 1 !important; }
-div[data-testid="stTextInput"] input:focus,
+div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within,
 div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
   border-color: rgba(123,183,255,.95) !important;
   box-shadow: 0 0 0 3px rgba(79,156,255,.18) !important;
@@ -453,7 +470,7 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 # ──────────────────────────────────────────────────────────────────────────────
 # Streamlit JS Component 생성
 # ──────────────────────────────────────────────────────────────────────────────
-COMPONENT_NAME = "kirbs_cog_arcade_3tasks"
+COMPONENT_NAME = "kirbs_cog_arcade_3tasks_v13"
 COMPONENT_DIR = Path(tempfile.gettempdir()) / COMPONENT_NAME
 
 
@@ -487,16 +504,24 @@ COMPONENT_HTML = r"""
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent;
+  background:
+    radial-gradient(circle at top left, rgba(79,156,255,.08), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(86,227,154,.05), transparent 34%),
+    linear-gradient(180deg, #06101f 0%, #071225 100%);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   letter-spacing: -0.01em;
+  overflow: hidden;
 }
 button { font-family: inherit; }
 .app {
   width: 100%;
   min-height: 0;
   padding: 0 2px 0;
+  background:
+    radial-gradient(circle at top left, rgba(79,156,255,.08), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(86,227,154,.05), transparent 34%),
+    linear-gradient(180deg, #06101f 0%, #071225 100%);
 }
 .card {
   background: linear-gradient(180deg, rgba(255,255,255,.020), rgba(255,255,255,.006)), var(--surface);
@@ -763,7 +788,13 @@ const tasks = [
   {key:'flanker', title:'화살표 집중 챌린지', sub:'선택적 주의 · 간섭 억제', desc:'양옆 화살표는 무시하고 가운데 화살표의 방향만 판단합니다.', icon:'↔️'}
 ];
 
-function setHeight(){ setTimeout(()=>Streamlit.setFrameHeight(document.documentElement.scrollHeight + 2), 40); }
+function setHeight(){
+  setTimeout(()=>{
+    const rect = root.getBoundingClientRect();
+    const h = Math.max(20, Math.ceil(rect.height) + 2);
+    Streamlit.setFrameHeight(h);
+  }, 40);
+}
 function task(){ return tasks[state.taskIndex]; }
 function updateGlobalXp(correct, rtMs=null){
   if(correct){
