@@ -240,8 +240,8 @@ def build_result_section_html(
                 <div class="score-kicker">현재 총점</div>
                 <p class="score-big">{total}<span class="score-unit">점</span></p>
             </div>
-            <p class="result-summary">{subtitle}</p>
         </div>
+        <p class="result-summary">{subtitle}</p>
         <p class="result-highlight-line">{summary}</p>
         {bullet_graph_html}
         <div class="note-box result-detail-box">
@@ -1831,8 +1831,8 @@ def main() -> None:
 # ENABLE_DB_INSERT=false 에서는 DB insert 미실행, DB import/호출은 하단 배치.
 # -----------------------------------------------------------------------------
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "true")
-    return str(raw).strip().lower() != "false"
+    raw = os.getenv("ENABLE_DB_INSERT", "false")
+    return str(raw).strip().lower() == "true"
 
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
