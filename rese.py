@@ -1831,8 +1831,8 @@ def main() -> None:
 # ENABLE_DB_INSERT=false 에서는 DB insert 미실행, DB import/호출은 하단 배치.
 # -----------------------------------------------------------------------------
 def _is_db_insert_enabled() -> bool:
-    raw = os.getenv("ENABLE_DB_INSERT", "false")
-    return str(raw).strip().lower() == "true"
+    raw = os.getenv("ENABLE_DB_INSERT", "true")
+    return str(raw).strip().lower() != "false"
 
 
 ENABLE_DB_INSERT = _is_db_insert_enabled()
