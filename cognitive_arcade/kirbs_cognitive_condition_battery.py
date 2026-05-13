@@ -50,7 +50,7 @@ st.set_page_config(
 KST = timezone(timedelta(hours=9))
 
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
-EXAM_TITLE = "KIRBS+ 인지 미니게임"
+EXAM_TITLE = "KIRBS+ 인지 능력 테스트"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
 EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme"
 
