@@ -1068,7 +1068,7 @@ function taskMissionHtml(key){
     return `<div class="mission-row"><div class="mission"><strong>응시 방향 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
   }
   if(key === 'flanker'){
-    return `<div class="mission-row"><div class="mission"><strong>눈동자만 판단</strong><span>화살표 없이 캐릭터 눈동자 방향만 제시됩니다.</span></div><div class="mission"><strong>중앙 위치 판단</strong><span>다섯 캐릭터 중 가운데 위치의 시선만 선택합니다.</span></div><div class="mission"><strong>눈 깜빡 전환</strong><span>시행이 바뀔 때 캐릭터들이 눈을 감았다가 뜹니다.</span></div></div>`;
+    return `<div class="mission-row"><div class="mission"><strong>응시 방향 판단</strong><span>목표 캐릭터의 눈동자 방향을 판단합나다.</span></div><div class="mission"><strong>중앙 목표 캐릭터</strong><span>다섯 캐릭터 중 중앙 캐릭터의 시선에만 집중합니다.</span></div><div class="mission"><strong>눈 깜빡 전환</strong><span>시행이 바뀔 때 캐릭터들이 눈을 감았다가 뜹니다.</span></div></div>`;
   }
   return ``;
 }
@@ -1328,7 +1328,7 @@ function renderFlanker(game){
   const bots = tr.pattern.map((dir, idx)=>flankerBotHtml(dir, idx, transitioning)).join('');
   const guide = transitioning
     ? '<span class="transition-label">눈 깜빡 · 다음 캐릭터 준비</span>'
-    : '<strong>화살표 없이 눈동자 방향만 제시됩니다.</strong><br>다섯 캐릭터 중 가운데 위치의 시선 방향만 선택하세요.';
+    : '<strong>눈동자 방향에 집중해주세요.</strong><br>';
   game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction">${guide}</div><div class="choice-row"><button class="choice-btn" ${disabled} onclick="flankerAnswer('left')">왼쪽</button><button class="choice-btn" ${disabled} onclick="flankerAnswer('right')">오른쪽</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function flankerAnswer(resp){
@@ -1350,7 +1350,7 @@ function flankerAnswer(resp){
     if(!currentTs || state.phase !== 'play' || task().key !== 'flanker') return;
     currentTs.transitioning = false;
     currentTs.onset = performance.now();
-    state.feedback = '새 캐릭터 시선이 열렸습니다';
+    state.feedback = '캐릭터가 바라보는 방향이 변경되었습니다.';
     state.feedbackClass = 'ok';
     render();
   }, 360);
