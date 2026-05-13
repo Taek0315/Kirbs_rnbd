@@ -650,6 +650,62 @@ div[role="listbox"]::-webkit-scrollbar-thumb {
   border: 1px solid #FFFFFF;
 }
 
+/* selectbox 전체를 명시적으로 light mode로 고정 */
+div[data-testid="stSelectbox"],
+div[data-testid="stSelectbox"] * {
+  color-scheme: light !important;
+}
+
+/* 닫힌 selectbox 필드 배경/테두리 유지 */
+div[data-testid="stSelectbox"] [data-baseweb="select"],
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+div[data-testid="stSelectbox"] [role="combobox"] {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+  opacity: 1 !important;
+}
+
+/* 선택된 값 텍스트가 span이 아닌 div/combobox/aria-live로 렌더링되는 경우까지 강제 */
+div[data-testid="stSelectbox"] [data-baseweb="select"] *,
+div[data-testid="stSelectbox"] [role="combobox"],
+div[data-testid="stSelectbox"] [role="combobox"] *,
+div[data-testid="stSelectbox"] [aria-live],
+div[data-testid="stSelectbox"] [aria-live] *,
+div[data-testid="stSelectbox"] span,
+div[data-testid="stSelectbox"] p {
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+  opacity: 1 !important;
+}
+
+/* 화살표 아이콘도 배포 환경별 색상 반전 방지 */
+div[data-testid="stSelectbox"] svg,
+div[data-testid="stSelectbox"] svg * {
+  color: #0F172A !important;
+  fill: #0F172A !important;
+  stroke: #0F172A !important;
+  opacity: 1 !important;
+}
+
+/* selectbox 내부 검색/선택 input 보정 */
+div[data-testid="stSelectbox"] input {
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+  caret-color: transparent !important;
+  opacity: 1 !important;
+  background: transparent !important;
+}
+
+/* 빈 option placeholder는 기존처럼 안 보이게 유지 */
+div[data-testid="stSelectbox"] input::placeholder {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  opacity: 0 !important;
+}
+
+
 div[data-baseweb="popover"] [role="option"],
 div[role="option"] {
   background: transparent !important;
