@@ -1489,12 +1489,12 @@ def page_intro() -> None:
           <span class="k-badge">Cognitive Arcade</span>
           <span class="k-badge">3 Mini Games</span>
           <h1 class="k-title">{EXAM_TITLE}</h1>
-          <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>짧고 간편한 3개의 미니게임을 통해 현재의 처리속도, 시각 탐색, 시선 판단, 간섭 억제 경향을 확인합니다.</p>
+          <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>간편한 3개의 게임 형태의 검사를 통해 처리속도, 주의 집중, 간섭 억제 경향을 확인합니다.</p>
         </section>
         <section class="k-card">
           <h2 class="k-title-md">검사 구성</h2>
           <div class="k-grid">
-            <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 과제</div><div class="k-mini-copy">무작위 위치의 원을 규칙에 맞춰 연결합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🧭 순서 연결 과제</div><div class="k-mini-copy">무작위 위치의 원을 규칙에 맞춰 연결합니다.</div></div>
             <div class="k-mini"><div class="k-mini-title">🤖 시선 포착 과제</div><div class="k-mini-copy">캐릭터 바라보는 방향을 빠르게 판단합니다.</div></div>
             <div class="k-mini"><div class="k-mini-title">🎯 목표 캐릭터 집중 과제</div><div class="k-mini-copy">가운데 캐릭터가 바라보는 방향을 빠르게 판단 합니다.</div></div>
           </div>
