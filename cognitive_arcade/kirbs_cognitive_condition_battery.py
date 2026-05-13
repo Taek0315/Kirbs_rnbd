@@ -1062,7 +1062,7 @@ function headerHtml(){
 }
 function taskMissionHtml(key){
   if(key === 'trail'){
-    return `<div class="mission-row"><div class="mission"><strong>랜덤 숫자 원</strong><span>숫자 원이 매 단계 겹치지 않게 무작위 위치에 나타납니다.</span></div><div class="mission"><strong>3단계 규칙</strong><span>1~10 순서, 짝수 후 홀수, 12~1 역순으로 진행합니다.</span></div><div class="mission"><strong>힌트 제한</strong><span>처음 2개만 표시되고, 이후 숫자는 직접 찾아 연결합니다.</span></div></div>`;
+    return `<div class="mission-row"><div class="mission"><strong>랜덤 원 순서 맞추기</strong><span>타깃 원이 매 단계 무작위 위치에 나타납니다.</span></div><div class="mission"><strong>3단계 규칙</strong><span>1~10 순서, 짝수 후 홀수, 12~1 역순으로 진행합니다.</span></div><div class="mission"><strong>힌트</strong><span>처음 2개는 찾아야할 타겟이 표시 됩니다.</span></div></div>`;
   }
   if(key === 'gaze'){
     return `<div class="mission-row"><div class="mission"><strong>눈 깜빡 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
