@@ -241,7 +241,7 @@ def build_result_section_html(
                 <p class="score-big">{total}<span class="score-unit">점</span></p>
             </div>
         </div>
-        <p class="result-summary">{subtitle}</p>
+        <p class="result-highlight-line">{subtitle}</p>
         <p class="result-highlight-line">{summary}</p>
         {bullet_graph_html}
         <div class="note-box result-detail-box">
