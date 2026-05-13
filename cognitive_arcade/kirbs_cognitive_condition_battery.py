@@ -1523,7 +1523,7 @@ def page_intro() -> None:
         unsafe_allow_html=True,
     )
     consent = st.checkbox(
-        "검사 목적, 비진단적 성격, 반응시간 측정 방식에 대한 안내를 받았으며, 개인정보 데이터 활용에 동의합니다.",
+        "검사 목적, 비진단적 성격, 반응시간 측정 방식에 대한 안내를 받았으며, 개인정보 활용에 동의합니다.",
         value=bool(st.session_state.meta.get("consent")),
     )
     st.session_state.meta["consent"] = consent
