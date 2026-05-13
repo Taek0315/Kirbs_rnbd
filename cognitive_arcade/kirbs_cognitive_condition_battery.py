@@ -995,8 +995,8 @@ let state = {
 
 const tasks = [
   {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 원을 단계별 규칙에 맞춰 순서대로 연결합니다.', icon:'🧭'},
-  {key:'gaze', title:'시선 포착 과제', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
-  {key:'flanker', title:'캐릭터 집중 과제', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
+  {key:'gaze', title:'시선 포착 과제', sub:'응시 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
+  {key:'flanker', title:'목표 캐릭터 집중 과제', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
 ];
 
 function setHeight(){
@@ -1065,7 +1065,7 @@ function taskMissionHtml(key){
     return `<div class="mission-row"><div class="mission"><strong>랜덤 원 순서 맞추기</strong><span>타깃 원이 매 단계 무작위 위치에 나타납니다.</span></div><div class="mission"><strong>3단계 규칙</strong><span>1~10 순서, 짝수 후 홀수, 12~1 역순으로 진행합니다.</span></div><div class="mission"><strong>힌트</strong><span>처음 2개는 찾아야할 타겟이 표시 됩니다.</span></div></div>`;
   }
   if(key === 'gaze'){
-    return `<div class="mission-row"><div class="mission"><strong>눈 깜빡 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
+    return `<div class="mission-row"><div class="mission"><strong>응시 방향 전환</strong><span>시선이 바뀔 때 캐릭터가 눈을 감았다가 뜹니다.</span></div><div class="mission"><strong>방향 판단</strong><span>눈동자가 향하는 방향을 빠르게 선택합니다.</span></div><div class="mission"><strong>반응속도</strong><span>눈을 뜬 뒤부터 반응시간을 기록합니다.</span></div></div>`;
   }
   if(key === 'flanker'){
     return `<div class="mission-row"><div class="mission"><strong>눈동자만 판단</strong><span>화살표 없이 캐릭터 눈동자 방향만 제시됩니다.</span></div><div class="mission"><strong>중앙 위치 판단</strong><span>다섯 캐릭터 중 가운데 위치의 시선만 선택합니다.</span></div><div class="mission"><strong>눈 깜빡 전환</strong><span>시행이 바뀔 때 캐릭터들이 눈을 감았다가 뜹니다.</span></div></div>`;
