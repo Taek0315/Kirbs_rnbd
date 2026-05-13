@@ -1768,9 +1768,9 @@ def page_result(dev_mode: bool = False) -> None:
     flanker = summaries.get("flanker", {})
 
     rows = [
-        ("Trail 연결", trail.get("score"), f"총 {fmt(trail.get('total_sec'), '초')}", f"오류 {trail.get('errors', '-')}") ,
-        ("시선 방향", gaze.get("score"), f"정확률 {fmt_pct(gaze.get('accuracy'))}", f"중앙 RT {fmt(gaze.get('median_rt_ms'), 'ms')}") ,
-        ("캐릭터 Flanker", flanker.get("score"), f"정확률 {fmt_pct(flanker.get('accuracy'))}", f"간섭 {fmt(flanker.get('interference_ms'), 'ms')}") ,
+        ("Trail 연결 테스트", trail.get("score"), f"총 {fmt(trail.get('total_sec'), '초')}", f"오류 {trail.get('errors', '-')}") ,
+        ("시선 방향 테스트", gaze.get("score"), f"정확률 {fmt_pct(gaze.get('accuracy'))}", f"중앙 RT {fmt(gaze.get('median_rt_ms'), 'ms')}") ,
+        ("목표 캐릭터 시선 방향 테스트", flanker.get("score"), f"정확률 {fmt_pct(flanker.get('accuracy'))}", f"간섭 {fmt(flanker.get('interference_ms'), 'ms')}") ,
     ]
     table_rows = "".join(
         f"<tr><td>{name}</td><td>{fmt(score)}점</td><td>{a}</td><td>{b}</td><td>{score_label(score)}</td></tr>"
