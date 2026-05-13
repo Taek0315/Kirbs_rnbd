@@ -1618,8 +1618,10 @@ def page_task() -> None:
     st.markdown(
         """
         <section class="k-card">
-          <span class="k-badge">주의력 테스트</span>
-          <h1 class="k-title-md">주의력 미션 진행</h1>
+          <span class="k-badge">주의 집중</span>
+          <span class="k-badge">주의 전환</span>
+          <span class="k-badge">주의 억제</span>
+          <h1 class="k-title-md">인지 능력 테스트</h1>
           <p class="k-text">키보드와 마우스 모두 사용할 수 있습니다. 모든 미션 완료 즉시 결과 화면으로 자동 전환됩니다.</p>
         </section>
         """,
