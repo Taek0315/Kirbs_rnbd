@@ -994,9 +994,9 @@ let state = {
 };
 
 const tasks = [
-  {key:'trail', title:'Trail 연결 챌린지', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 숫자 원을 단계별 규칙에 맞춰 연결합니다.', icon:'🧭'},
-  {key:'gaze', title:'시선 포착 챌린지', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
-  {key:'flanker', title:'캐릭터 집중 챌린지', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
+  {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 숫자 원을 단계별 규칙에 맞춰 연결합니다.', icon:'🧭'},
+  {key:'gaze', title:'시선 포착 과제', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
+  {key:'flanker', title:'캐릭터 집중 과제', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
 ];
 
 function setHeight(){
@@ -1494,9 +1494,9 @@ def page_intro() -> None:
         <section class="k-card">
           <h2 class="k-title-md">검사 구성</h2>
           <div class="k-grid">
-            <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 챌린지</div><div class="k-mini-copy">무작위 위치의 숫자 원을 3단계 규칙에 맞춰 연결합니다.</div></div>
-            <div class="k-mini"><div class="k-mini-title">🤖 시선 포착 챌린지</div><div class="k-mini-copy">캐릭터 눈동자의 방향을 빠르게 판단합니다.</div></div>
-            <div class="k-mini"><div class="k-mini-title">🎯 캐릭터 집중 챌린지</div><div class="k-mini-copy">가운데 캐릭터의 방향에 집중해 주변 간섭 정보를 억제합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🧭 Trail 연결 과제</div><div class="k-mini-copy">무작위 위치의 원을 규칙에 맞춰 연결합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🤖 시선 포착 과제</div><div class="k-mini-copy">캐릭터 바라보는 방향을 빠르게 판단합니다.</div></div>
+            <div class="k-mini"><div class="k-mini-title">🎯 목표 캐릭터 집중 과제</div><div class="k-mini-copy">가운데 캐릭터가 바라보는 방향을 빠르게 판단 합니다.</div></div>
           </div>
         </section>
         <section class="k-card">
