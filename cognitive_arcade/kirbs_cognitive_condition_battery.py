@@ -1784,21 +1784,18 @@ def page_result(dev_mode: bool = False) -> None:
             <thead><tr><th>과제</th><th>환산점수</th><th>주요 지표 1</th><th>주요 지표 2</th><th>해석</th></tr></thead>
             <tbody>{table_rows}</tbody>
           </table>
-          <div class="k-note" style="margin-top:12px;">점수는 정답률과 반응시간을 결합해 산출했습니다. 현재 기준값은 규준자료가 아닌 내부 임시 기준이며, 실제 상품화 전 표본 데이터로 재보정해야 합니다.</div>
+          <div class="k-note" style="margin-top:12px;">점수는 정답률과 반응시간 두 점수를 환산하여 산출됩니다.</div>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    c1, c2 = st.columns(2, gap="medium")
+    c1, = st.columns(2, gap="medium")
     with c1:
         if st.button("검사 다시하기", type="primary", use_container_width=True):
             reset_all()
             st.rerun()
-    with c2:
-        if st.button("처음으로", use_container_width=True):
-            reset_all()
-            st.rerun()
+    
 
     if dev_mode:
         with st.expander("dev=1 DB exam_data"):
