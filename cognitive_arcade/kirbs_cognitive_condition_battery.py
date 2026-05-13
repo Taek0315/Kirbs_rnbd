@@ -1500,7 +1500,7 @@ def page_intro() -> None:
           </div>
         </section>
         <section class="k-card">
-          <h2 class="k-title-md">진행 전 안내</h2>
+          <h2 class="k-title-md">안내 사항</h2>
           <ul class="k-list k-text">
             <li>이 검사는 의학적·임상적 진단을 제공하지 않는 비진단적 인지 과제입니다.</li>
             <li>주의력의 3요소인 주의 집중, 전환, 억제를 테스트하기 위해 제작되었습니다.</li>
@@ -1523,7 +1523,7 @@ def page_intro() -> None:
         unsafe_allow_html=True,
     )
     consent = st.checkbox(
-        "검사 목적, 비진단적 성격, 반응시간 측정 방식에 대한 안내를 받았으며, 비식별 데이터 활용에 동의합니다.",
+        "검사 목적, 비진단적 성격, 반응시간 측정 방식에 대한 안내를 받았으며, 개인정보 데이터 활용에 동의합니다.",
         value=bool(st.session_state.meta.get("consent")),
     )
     st.session_state.meta["consent"] = consent
