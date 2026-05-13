@@ -994,7 +994,7 @@ let state = {
 };
 
 const tasks = [
-  {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 숫자 원을 단계별 규칙에 맞춰 연결합니다.', icon:'🧭'},
+  {key:'trail', title:'Trail 연결 과제', sub:'시각 탐색 · 처리속도 · 주의전환', desc:'무작위로 나타나는 원을 단계별 규칙에 맞춰 순서대로 연결합니다.', icon:'🧭'},
   {key:'gaze', title:'시선 포착 과제', sub:'시선 방향 판단 · 반응속도', desc:'KIRBIE의 눈동자가 바라보는 방향을 빠르게 선택합니다.', icon:'🤖'},
   {key:'flanker', title:'캐릭터 집중 과제', sub:'선택적 주의 · 간섭 억제', desc:'양옆 캐릭터는 무시하고 가운데 캐릭터가 바라보는 방향만 판단합니다.', icon:'🎯'}
 ];
