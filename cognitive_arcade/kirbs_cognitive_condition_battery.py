@@ -55,7 +55,7 @@ EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제
 EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
-GENDER_OPTIONS = ["남성", "여성", "기타", "응답하지 않음"]
+GENDER_OPTIONS = ["남성", "여성", "기타"]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
