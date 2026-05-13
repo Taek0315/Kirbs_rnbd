@@ -1141,7 +1141,7 @@ def inject_css() -> None:
         }
 
         .score-big {
-            font-size: clamp(52px, 9vw, 78px);
+            font-size: clamp(52px, 9vw, 78px) !important;
             line-height: 0.95;
             font-weight: 900;
             color: #0f2747;
