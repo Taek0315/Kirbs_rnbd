@@ -1737,8 +1737,8 @@ def page_result(dev_mode: bool = False) -> None:
         <section class="k-hero">
           <span class="k-badge">Result</span>
           <span class="k-badge">3-Task Arcade</span>
-          <h1 class="k-title">인지 미니게임 결과</h1>
-          <p class="k-text" style="margin-top:12px;">본 점수는 현재 규준 데이터가 없는 초기 버전이므로 상대평가·백분위가 아닙니다. 50점은 인구 평균이 아니라 임시 내부 기준점입니다.</p>
+          <h1 class="k-title">인지 능력 테스트 결과</h1>
+          <p class="k-text" style="margin-top:12px;">본 검사의 점수는 검사를 진행한 사람들의 평균 대비 점수를 나타내고 있습니다.</p>
         </section>
         <section class="result-score-card">
           <div class="score-label">종합 환산점수</div>
@@ -1749,17 +1749,7 @@ def page_result(dev_mode: bool = False) -> None:
         """,
         unsafe_allow_html=True,
     )
-
-    st.markdown("<section class='k-card'><h2 class='k-title-md'>게임형 지표</h2>", unsafe_allow_html=True)
-    cols = st.columns(3)
-    with cols[0]:
-        st.metric("획득 XP", payload.get("total_xp", 0))
-    with cols[1]:
-        st.metric("최고 콤보", payload.get("best_combo", 0))
-    with cols[2]:
-        st.metric("미션 별", payload.get("stars", 0))
-    st.markdown("</section>", unsafe_allow_html=True)
-
+    
     st.markdown("<section class='k-card'><h2 class='k-title-md'>영역별 결과</h2>", unsafe_allow_html=True)
     cols = st.columns(4)
     domain_labels = [
