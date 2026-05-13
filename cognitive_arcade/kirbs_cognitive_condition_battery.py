@@ -1790,11 +1790,10 @@ def page_result(dev_mode: bool = False) -> None:
         unsafe_allow_html=True,
     )
 
-    c1, = st.columns(2, gap="medium")
-    with c1:
-        if st.button("검사 다시하기", type="primary", use_container_width=True):
-            reset_all()
-            st.rerun()
+    
+    if st.button("검사 다시하기", type="primary", use_container_width=True):
+        reset_all()
+        st.rerun()
     
 
     if dev_mode:
