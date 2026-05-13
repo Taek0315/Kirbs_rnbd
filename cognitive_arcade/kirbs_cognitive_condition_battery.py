@@ -1638,28 +1638,28 @@ def score_label(score: Optional[float]) -> str:
     if score is None:
         return "산출 불가"
     if score >= 65:
-        return "강점"
+        return "우수"
     if score >= 55:
-        return "양호"
+        return "평균 이상"
     if score >= 45:
-        return "기준 범위"
+        return "평균 범위"
     if score >= 35:
-        return "관찰 필요"
+        return "평균 이하"
     return "주의"
 
 
 def score_desc(score: Optional[float]) -> str:
     if score is None:
-        return "응답 데이터가 충분하지 않아 산출하지 못했습니다."
+        return "응답 데이터가 충분하지 않아 산출하지 못했습니다. 재검사를 진행해주세요."
     if score >= 65:
-        return "정확성과 반응속도가 내부 기준점보다 높은 편으로 산출되었습니다."
+        return "정확성과 반응속도가 기준보다 우수한 편으로 나타났습니다."
     if score >= 55:
-        return "정확성과 반응속도가 내부 기준점보다 다소 안정적으로 산출되었습니다."
+        return "정확성과 반응속도가 평균 이상 수준으로 나타났습니다."
     if score >= 45:
-        return "정확성과 반응속도가 임시 내부 기준점 주변으로 산출되었습니다."
+        return "정확성과 반응속도가 평균 수준으로 나타났습니다."
     if score >= 35:
-        return "정확도 또는 반응속도 중 일부 지표에서 관찰이 필요한 범위로 산출되었습니다."
-    return "정확도 저하나 반응시간 지연이 상대적으로 크게 반영되었습니다."
+        return "정확도 또는 반응속도 중 일부 지표에서 평균 이하의 수준이 관찰 되었습니다."
+    return "정확도 저하나 반응시간 지연이 있는 것으로 보입니다."
 
 
 def fmt(v: Any, suffix: str = "") -> str:

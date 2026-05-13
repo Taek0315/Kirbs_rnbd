@@ -235,7 +235,7 @@ def build_result_section_html(
             </div>
             <div class="result-label-chip">✓ {level}</div>
         </div>
-        <div class="score-hero">
+        <div class="score-hero score-hero-vertical">
             <div class="score-stack">
                 <div class="score-kicker">현재 총점</div>
                 <p class="score-big">{total}<span class="score-unit">점</span></p>
@@ -1506,7 +1506,7 @@ def page_intro() -> None:
                 {privacy_html}
             </div>
             <div class="privacy-note">
-                아래 항목에 동의하시면 검사 시작 버튼이 활성화되며, 기존 동의 및 시작 시각 기록 로직은 동일하게 적용됩니다.
+                아래 항목에 동의하시면 검사 시작 버튼이 활성화됩니다.
             </div>
         </section>
         """,
