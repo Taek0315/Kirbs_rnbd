@@ -267,6 +267,7 @@ header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu, footer, di
   box-shadow: var(--shadow);
   padding: 24px;
   margin-bottom: 16px;
+  margin-top: 16px;
 }
 .k-hero {
   background:
