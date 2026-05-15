@@ -464,11 +464,103 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
 .score-desc { color: var(--muted); font-size: 14px; line-height: 1.65; margin-top: 8px; }
 .meter { height: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(148,163,184,.22); border-radius: 999px; overflow: hidden; margin-top: 12px; }
 .meter > span { display:block; height:100%; background: linear-gradient(90deg, #3b82f6, #56e39a); width: var(--w); }
-.task-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
-.task-table th { color: var(--muted-2); font-size: 12px; text-align: left; padding: 0 10px; }
-.task-table td { background: rgba(16,40,76,.78); color: var(--text); padding: 12px 10px; border-top: 1px solid rgba(96,165,250,.22); border-bottom: 1px solid rgba(96,165,250,.22); }
-.task-table td:first-child { border-left: 1px solid rgba(96,165,250,.22); border-radius: 14px 0 0 14px; font-weight: 850; }
-.task-table td:last-child { border-right: 1px solid rgba(96,165,250,.22); border-radius: 0 14px 14px 0; }
+.result-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 14px;
+  padding-bottom: 2px;
+}
+.result-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  table-layout: fixed;
+}
+.result-table th {
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  padding: 0 12px 2px;
+  font-weight: 900;
+}
+.result-table td {
+  background: linear-gradient(180deg, rgba(20,48,88,.90), rgba(13,33,64,.92));
+  color: var(--text);
+  padding: 14px 12px;
+  border-top: 1px solid rgba(96,165,250,.24);
+  border-bottom: 1px solid rgba(96,165,250,.24);
+  vertical-align: middle;
+}
+.result-table td:first-child {
+  border-left: 1px solid rgba(96,165,250,.24);
+  border-radius: 16px 0 0 16px;
+}
+.result-table td:last-child {
+  border-right: 1px solid rgba(96,165,250,.24);
+  border-radius: 0 16px 16px 0;
+}
+.result-task-name {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+.result-task-sub {
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+.result-metric-main {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.result-metric-sub {
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 5px;
+}
+.result-bar {
+  width: 100%;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(148,163,184,.20);
+}
+.result-bar > span {
+  display: block;
+  height: 100%;
+  width: var(--w);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #56e39a);
+}
+.result-label-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 66px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #c8ffe4;
+  background: rgba(86,227,154,.11);
+  border: 1px solid rgba(86,227,154,.28);
+  font-size: 13px;
+  font-weight: 950;
+}
+.result-help-note {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
 
 @media (max-width: 720px) {
   .block-container { padding-left: .8rem !important; padding-right: .8rem !important; }
@@ -1644,6 +1736,103 @@ def fmt_pct(raw_prop: Optional[float]) -> str:
     return f"{raw_prop * 100:.1f}%"
 
 
+def clamp_num(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def as_float(value: Any) -> Optional[float]:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def task_accuracy_from_records(records: list, task_key: str, fallback: Optional[float] = None) -> Optional[float]:
+    task_records = [r for r in records if isinstance(r, dict) and r.get("task") == task_key]
+    if not task_records:
+        return fallback
+    total = len(task_records)
+    correct = sum(1 for r in task_records if bool(r.get("correct")))
+    return correct / total if total else fallback
+
+
+def rt_position_percent(task_key: str, summary: Dict[str, Any]) -> Optional[float]:
+    # 50% = 현재 내부 기준 RT/수행시간, 높을수록 기준보다 빠른 수행
+    if task_key == "trail":
+        observed = as_float(summary.get("total_sec"))
+        reference = 58.0
+    elif task_key == "gaze":
+        observed = as_float(summary.get("median_rt_ms"))
+        reference = 820.0
+    elif task_key == "flanker":
+        observed = as_float(summary.get("median_rt_ms"))
+        reference = 860.0
+    else:
+        return None
+    if observed is None or observed <= 0:
+        return None
+    position = 50 + ((reference - observed) / reference) * 50
+    return round(clamp_num(position, 1, 99), 1)
+
+
+def rt_position_desc(rt_pos: Optional[float]) -> str:
+    if rt_pos is None:
+        return "산출 불가"
+    if rt_pos >= 65:
+        return "평균보다 빠름"
+    if rt_pos >= 45:
+        return "평균 수준"
+    return "평균보다 느림"
+
+
+def accuracy_desc(acc: Optional[float]) -> str:
+    if acc is None:
+        return "산출 불가"
+    if acc >= 0.90:
+        return "높은 정확도"
+    if acc >= 0.75:
+        return "보통 정확도"
+    return "낮은 정확도"
+
+
+def percent_bar(value: Optional[float]) -> str:
+    if value is None:
+        return "0"
+    return f"{clamp_num(float(value), 0, 100):.1f}"
+
+
+def build_result_row(task_name: str, task_sub: str, score: Optional[float], accuracy: Optional[float], rt_pos: Optional[float]) -> str:
+    score_bar = percent_bar(score)
+    acc_bar = percent_bar(None if accuracy is None else accuracy * 100)
+    rt_bar = percent_bar(rt_pos)
+    return f'''
+        <tr>
+          <td>
+            <div class="result-task-name">{task_name}</div>
+            <div class="result-task-sub">{task_sub}</div>
+          </td>
+          <td>
+            <div class="result-metric-main">{fmt(score)}점</div>
+            <div class="result-metric-sub">{score_label(score)}</div>
+            <div class="result-bar" style="--w:{score_bar}%"><span></span></div>
+          </td>
+          <td>
+            <div class="result-metric-main">{fmt_pct(accuracy)}</div>
+            <div class="result-metric-sub">{accuracy_desc(accuracy)}</div>
+            <div class="result-bar" style="--w:{acc_bar}%"><span></span></div>
+          </td>
+          <td>
+            <div class="result-metric-main">{fmt(rt_pos, '%')}</div>
+            <div class="result-metric-sub">{rt_position_desc(rt_pos)}</div>
+            <div class="result-bar" style="--w:{rt_bar}%"><span></span></div>
+          </td>
+          <td><span class="result-label-pill">{score_label(score)}</span></td>
+        </tr>
+    '''
+
+
 def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
     meta_col = {
         "consent": st.session_state.meta.get("consent"),
@@ -1661,6 +1850,14 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
         "domains_b64": to_b64_json(payload.get("domains", {})),
         "task_set": ";".join(payload.get("task_set", [])),
     }
+    records = payload.get("records", []) or []
+    summaries = payload.get("summaries", {}) or {}
+    trail_summary = summaries.get("trail", {}) or {}
+    gaze_summary = summaries.get("gaze", {}) or {}
+    flanker_summary = summaries.get("flanker", {}) or {}
+    trail_accuracy = task_accuracy_from_records(records, "trail")
+    gaze_accuracy = as_float(gaze_summary.get("accuracy"))
+    flanker_accuracy = as_float(flanker_summary.get("accuracy"))
     result_col = {
         "overall_score": payload.get("overall_score"),
         "overall_label": score_label(payload.get("overall_score")),
@@ -1668,6 +1865,12 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
         "attention_shift": (payload.get("domains", {}) or {}).get("attention_shift"),
         "social_attention": (payload.get("domains", {}) or {}).get("social_attention"),
         "interference_control": (payload.get("domains", {}) or {}).get("interference_control"),
+        "trail_accuracy_pct": round(trail_accuracy * 100, 1) if trail_accuracy is not None else None,
+        "gaze_accuracy_pct": round(gaze_accuracy * 100, 1) if gaze_accuracy is not None else None,
+        "flanker_accuracy_pct": round(flanker_accuracy * 100, 1) if flanker_accuracy is not None else None,
+        "trail_rt_position_pct": rt_position_percent("trail", trail_summary),
+        "gaze_rt_position_pct": rt_position_percent("gaze", gaze_summary),
+        "flanker_rt_position_pct": rt_position_percent("flanker", flanker_summary),
         "scoring_note": payload.get("scoring_note", ""),
     }
     return {
@@ -1731,24 +1934,55 @@ def page_result(dev_mode: bool = False) -> None:
     gaze = summaries.get("gaze", {})
     flanker = summaries.get("flanker", {})
 
-    rows = [
-        ("Trail 연결 테스트", trail.get("score"), f"총 {fmt(trail.get('total_sec'), '초')}", f"오류 {trail.get('errors', '-')}") ,
-        ("시선 방향 테스트", gaze.get("score"), f"정확률 {fmt_pct(gaze.get('accuracy'))}", f"중앙 RT {fmt(gaze.get('median_rt_ms'), 'ms')}") ,
-        ("목표 캐릭터 시선 방향 테스트", flanker.get("score"), f"정확률 {fmt_pct(flanker.get('accuracy'))}", f"간섭 {fmt(flanker.get('interference_ms'), 'ms')}") ,
-    ]
-    table_rows = "".join(
-        f"<tr><td>{name}</td><td>{fmt(score)}점</td><td>{a}</td><td>{b}</td><td>{score_label(score)}</td></tr>"
-        for name, score, a, b in rows
-    )
+    records = payload.get("records", []) or []
+    trail_accuracy = task_accuracy_from_records(records, "trail")
+    gaze_accuracy = as_float(gaze.get("accuracy"))
+    flanker_accuracy = as_float(flanker.get("accuracy"))
+
+    table_rows = "".join([
+        build_result_row(
+            "Trail 연결 테스트",
+            "시각 탐색 · 주의전환",
+            trail.get("score"),
+            trail_accuracy,
+            rt_position_percent("trail", trail),
+        ),
+        build_result_row(
+            "시선 방향 테스트",
+            "시선 판단 · 반응속도",
+            gaze.get("score"),
+            gaze_accuracy,
+            rt_position_percent("gaze", gaze),
+        ),
+        build_result_row(
+            "목표 캐릭터 시선 방향 테스트",
+            "선택적 주의 · 간섭 억제",
+            flanker.get("score"),
+            flanker_accuracy,
+            rt_position_percent("flanker", flanker),
+        ),
+    ])
     st.markdown(
         f"""
         <section class="k-card">
           <h2 class="k-title-md">과제별 결과</h2>
-          <table class="task-table">
-            <thead><tr><th>과제</th><th>환산점수</th><th>주요 지표 1</th><th>주요 지표 2</th><th>해석</th></tr></thead>
-            <tbody>{table_rows}</tbody>
-          </table>
-          <div class="k-note" style="margin-top:12px;">점수는 정답률과 반응시간 두 점수를 환산하여 산출됩니다.</div>
+          <div class="result-table-wrap">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th style="width:28%;">과제</th>
+                  <th style="width:18%;">환산점수</th>
+                  <th style="width:18%;">정답률</th>
+                  <th style="width:20%;">RT 위치<br><span style="font-weight:700;">평균 대비</span></th>
+                  <th style="width:16%;">해석</th>
+                </tr>
+              </thead>
+              <tbody>{table_rows}</tbody>
+            </table>
+          </div>
+          <div class="k-note result-help-note">
+            정답률은 전체 응답 중 정답 비율입니다. RT 위치는 현재 내부 기준 반응시간을 50%로 두고 환산한 평균 대비 반응속도 지표이며, 높을수록 기준보다 빠른 수행을 의미합니다.
+          </div>
         </section>
         """,
         unsafe_allow_html=True,
