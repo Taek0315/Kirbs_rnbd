@@ -918,7 +918,7 @@ button { font-family: inherit; }
 
 .done-panel { text-align:center; max-width: 680px; margin: 0 auto; }
 .done-title { font-size: clamp(30px, 5vw, 48px); font-weight:950; margin-bottom: 12px; }
-.done-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.done-grid { display:grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 18px auto 0; max-width: 260px; }
 .done-mini { background:rgba(16,40,76,.72); border:1px solid rgba(96,165,250,.26); border-radius:18px; padding:14px; }
 .done-mini strong { display:block; color:#fff; font-size: 24px; margin-bottom: 4px; }
 .done-mini span { color: var(--muted); font-size: 12px; }
@@ -985,10 +985,6 @@ let state = {
   summaries: {},
   overall: null,
   domains: {},
-  combo: 0,
-  bestCombo: 0,
-  totalXp: 0,
-  stars: 0,
   feedback: '',
   feedbackClass: '',
   taskState: {}
@@ -1016,17 +1012,6 @@ function setHeight(){
   }, 40);
 }
 function task(){ return tasks[state.taskIndex]; }
-function updateGlobalXp(correct, rtMs=null){
-  if(correct){
-    state.combo += 1;
-    state.bestCombo = Math.max(state.bestCombo, state.combo);
-    const speedBonus = rtMs ? clamp(Math.round((900-rtMs)/90), 0, 5) : 0;
-    state.totalXp += 10 + Math.min(state.combo, 10) + speedBonus;
-  } else {
-    state.combo = 0;
-    state.totalXp = Math.max(0, state.totalXp - 2);
-  }
-}
 function taskProgress(){
   const k = task().key;
   const ts = state.taskState[k] || {};
@@ -1052,12 +1037,7 @@ function headerHtml(){
       </div>
       <div class="note">반응시간은 브라우저 내부 시간<br>performance.now() 기준으로 기록됩니다.</div>
     </div>
-    <div class="status-grid">
-      <div class="status"><span>XP</span><strong>${state.totalXp}</strong></div>
-      <div class="status"><span>현재 콤보</span><strong>${state.combo}</strong></div>
-      <div class="status"><span>최고 콤보</span><strong>${state.bestCombo}</strong></div>
-      <div class="status"><span>진행률</span><strong>${p}%</strong></div>
-    </div>
+    <div class="progress-row"><span>진행률</span><strong>${p}%</strong></div>
     <div class="progress"><span style="--w:${p}%"></span></div>
   </div>`;
 }
@@ -1095,21 +1075,18 @@ function nextTask(){
   state.phase = 'start';
   state.feedback = '';
   state.feedbackClass = '';
-  state.combo = 0;
   if (state.taskIndex >= tasks.length) finishAll();
   else render();
 }
 function completeTask(){
   const k = task().key;
   state.summaries[k] = summarizeTask(k);
-  state.stars += starFromScore(state.summaries[k].score);
   nextTask();
 }
 function startCurrentTask(){
   state.phase = 'play';
   state.feedback = '';
   state.feedbackClass = '';
-  state.combo = 0;
   const k = task().key;
   if (k==='trail') initTrail();
   if (k==='gaze') initGaze();
@@ -1207,7 +1184,7 @@ function renderTrail(game){
         return `<button class="trail-node ${done ? 'done' : ''} ${current ? 'current' : ''}" style="left:${(n.x/ts.canvasW)*100}%; top:${(n.y/ts.canvasH)*100}%;" onclick="trailClick('${n.label}', this)" aria-label="${n.label} 원">${n.label}</button>`;
       }).join('')}
     </div>
-    <div class="score-strip"><span class="score-chip">레벨 ${ts.stage} / 3</span><span class="score-chip">오류 ${ts.errors}</span><span class="score-chip good">콤보 ${state.combo}</span></div>
+    <div class="score-strip"><span class="score-chip">레벨 ${ts.stage} / 3</span><span class="score-chip">오류 ${ts.errors}</span></div>
     <div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div>`;
 }
 function trailClick(value, el){
@@ -1223,7 +1200,6 @@ function trailClick(value, el){
     rt_ms:round(now-ts.stageStart,1), delta_ms:round(delta,1), correct
   });
   ts.last = now;
-  updateGlobalXp(correct, delta);
   if(correct){
     ts.index += 1;
     state.feedback = ts.index >= 2 ? '경로 연결!' : '좋아요!';
@@ -1268,7 +1244,7 @@ function renderGaze(game){
   const mascotClass = transitioning ? 'mascot-wrap blinking' : 'mascot-wrap';
   const label = transitioning ? '<span class="transition-label">눈 깜빡 · 다음 시선 준비</span>' : 'KIRBIE의 시선 방향은?';
   const disabled = transitioning ? 'disabled' : '';
-  game.innerHTML = `<div class="gaze-scene"><div class="${mascotClass}">${transitioning ? '<div class="blink-ripple"></div>' : ''}<div class="ear left"></div><div class="ear right"></div><div class="face-panel"><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div></div><div class="mouth"></div></div><div class="direction-label">${label}</div><div class="choice-row four">${['up','down','left','right'].map(x=>`<button class="dir-btn" ${disabled} onclick="gazeAnswer('${x}')">${arrowLabel(x)} ${dirKo(x)}</button>`).join('')}</div><div class="score-strip"><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
+  game.innerHTML = `<div class="gaze-scene"><div class="${mascotClass}">${transitioning ? '<div class="blink-ripple"></div>' : ''}<div class="ear left"></div><div class="ear right"></div><div class="face-panel"><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div><div class="${eyeClass}"><span class="pupil" style="--px:${px};--py:${py}"></span></div></div><div class="mouth"></div></div><div class="direction-label">${label}</div><div class="choice-row four">${['up','down','left','right'].map(x=>`<button class="dir-btn" ${disabled} onclick="gazeAnswer('${x}')">${arrowLabel(x)} ${dirKo(x)}</button>`).join('')}</div><div class="score-strip"><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function gazeAnswer(resp){
   const ts=state.taskState.gaze;
@@ -1276,7 +1252,6 @@ function gazeAnswer(resp){
   const d=ts.trials[ts.index], now=performance.now();
   const rt = now-ts.onset;
   const correct = resp === d;
-  updateGlobalXp(correct, rt);
   state.records.push({task:'gaze', trial:ts.index+1, target:d, response:resp, correct, rt_ms:round(rt,1), transition:'blink_after_response'});
   state.feedback = correct ? '시선 포착!' : `정답은 ${dirKo(d)}`;
   state.feedbackClass = correct ? 'ok' : 'bad';
@@ -1330,7 +1305,7 @@ function renderFlanker(game){
   const guide = transitioning
     ? '<span class="transition-label">눈 깜빡 · 다음 캐릭터 준비</span>'
     : '<strong>눈동자 방향에 집중해주세요.</strong><br>';
-  game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction">${guide}</div><div class="choice-row"><button class="choice-btn" ${disabled} onclick="flankerAnswer('left')">왼쪽</button><button class="choice-btn" ${disabled} onclick="flankerAnswer('right')">오른쪽</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip good">콤보 ${state.combo}</span><span class="score-chip gold">XP ${state.totalXp}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
+  game.innerHTML = `<div class="flanker-scene"><div class="flanker-lineup">${bots}</div><div class="flanker-instruction">${guide}</div><div class="choice-row"><button class="choice-btn" ${disabled} onclick="flankerAnswer('left')">왼쪽</button><button class="choice-btn" ${disabled} onclick="flankerAnswer('right')">오른쪽</button></div><div class="score-strip"><span class="score-chip">레벨 ${tr.level}</span><span class="score-chip">${ts.index+1} / ${ts.trials.length}</span></div><div class="feedback ${state.feedbackClass}">${state.feedback || '&nbsp;'}</div></div>`;
 }
 function flankerAnswer(resp){
   const ts=state.taskState.flanker;
@@ -1338,7 +1313,6 @@ function flankerAnswer(resp){
   const tr=ts.trials[ts.index], now=performance.now();
   const rt = now-ts.onset;
   const correct = resp === tr.correct;
-  updateGlobalXp(correct, rt);
   state.records.push({task:'flanker', trial:ts.index+1, level:tr.level, condition:tr.condition, stimulus:tr.pattern.join('-'), center_direction:tr.center, flank_direction:tr.flank, correct_response:tr.correct, response:resp, correct, rt_ms:round(rt,1), transition:'blink_after_response'});
   state.feedback = correct ? '중앙 시선 포착!' : '가운데 위치의 눈동자만 보세요'; state.feedbackClass = correct ? 'ok' : 'bad';
   ts.index += 1;
@@ -1412,12 +1386,6 @@ function summarizeTask(k){
   }
   return {};
 }
-function starFromScore(score){
-  if(score === null || score === undefined) return 0;
-  if(score >= 68) return 3;
-  if(score >= 55) return 2;
-  return 1;
-}
 function finishAll(){
   state.finishedAt = new Date().toISOString();
   const s=state.summaries;
@@ -1437,9 +1405,6 @@ function finishAll(){
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
     task_set: ['trail','gaze','flanker'],
     removed_tasks: ['nback','go_nogo'],
-    total_xp: state.totalXp,
-    best_combo: state.bestCombo,
-    stars: state.stars,
     summaries: state.summaries,
     domains: state.domains,
     overall_score: state.overall,
@@ -1449,7 +1414,7 @@ function finishAll(){
   renderDone();
 }
 function renderDone(){
-  root.innerHTML = `<div class="card game-board"><div class="game-inner"><div class="done-panel"><div class="start-icon">🏁</div><div class="done-title">미션 완료!</div><div class="start-copy">응답 기록을 Streamlit 결과 화면으로 전달했습니다.<br>결과 화면으로 자동 전환됩니다.</div><div class="done-grid"><div class="done-mini"><strong>${state.overall ?? '-'}</strong><span>종합 환산점수</span></div><div class="done-mini"><strong>${state.totalXp}</strong><span>획득 XP</span></div><div class="done-mini"><strong>${state.stars}</strong><span>미션 별</span></div></div></div></div></div>`;
+  root.innerHTML = `<div class="card game-board"><div class="game-inner"><div class="done-panel"><div class="start-icon">🏁</div><div class="done-title">미션 완료!</div><div class="start-copy">응답 기록을 Streamlit 결과 화면으로 전달했습니다.<br>결과 화면으로 자동 전환됩니다.</div><div class="done-grid"><div class="done-mini"><strong>${state.overall ?? '-'}</strong><span>종합 환산점수</span></div></div></div></div></div>`;
   setHeight();
 }
 
@@ -1690,11 +1655,11 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
     }
     examinee_col = dict(st.session_state.examinee)
     answers_col = {
-    "raw_payload_b64": to_b64_json(payload),
-    "records_b64": to_b64_json(payload.get("records", [])),
-    "summaries_b64": to_b64_json(payload.get("summaries", {})),
-    "domains_b64": to_b64_json(payload.get("domains", {})),
-    "task_set": ";".join(payload.get("task_set", [])),
+        "raw_payload_b64": to_b64_json(payload),
+        "records_b64": to_b64_json(payload.get("records", [])),
+        "summaries_b64": to_b64_json(payload.get("summaries", {})),
+        "domains_b64": to_b64_json(payload.get("domains", {})),
+        "task_set": ";".join(payload.get("task_set", [])),
     }
     result_col = {
         "overall_score": payload.get("overall_score"),
@@ -1703,9 +1668,6 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
         "attention_shift": (payload.get("domains", {}) or {}).get("attention_shift"),
         "social_attention": (payload.get("domains", {}) or {}).get("social_attention"),
         "interference_control": (payload.get("domains", {}) or {}).get("interference_control"),
-        "total_xp": payload.get("total_xp"),
-        "best_combo": payload.get("best_combo"),
-        "stars": payload.get("stars"),
         "scoring_note": payload.get("scoring_note", ""),
     }
     return {
