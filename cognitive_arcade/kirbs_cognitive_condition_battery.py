@@ -1807,30 +1807,31 @@ def build_result_row(task_name: str, task_sub: str, score: Optional[float], accu
     score_bar = percent_bar(score)
     acc_bar = percent_bar(None if accuracy is None else accuracy * 100)
     rt_bar = percent_bar(rt_pos)
-    return f'''
-        <tr>
-          <td>
-            <div class="result-task-name">{task_name}</div>
-            <div class="result-task-sub">{task_sub}</div>
-          </td>
-          <td>
-            <div class="result-metric-main">{fmt(score)}점</div>
-            <div class="result-metric-sub">{score_label(score)}</div>
-            <div class="result-bar" style="--w:{score_bar}%"><span></span></div>
-          </td>
-          <td>
-            <div class="result-metric-main">{fmt_pct(accuracy)}</div>
-            <div class="result-metric-sub">{accuracy_desc(accuracy)}</div>
-            <div class="result-bar" style="--w:{acc_bar}%"><span></span></div>
-          </td>
-          <td>
-            <div class="result-metric-main">{fmt(rt_pos, '%')}</div>
-            <div class="result-metric-sub">{rt_position_desc(rt_pos)}</div>
-            <div class="result-bar" style="--w:{rt_bar}%"><span></span></div>
-          </td>
-          <td><span class="result-label-pill">{score_label(score)}</span></td>
-        </tr>
-    '''
+
+    return (
+        f'<tr>'
+        f'<td>'
+        f'<div class="result-task-name">{task_name}</div>'
+        f'<div class="result-task-sub">{task_sub}</div>'
+        f'</td>'
+        f'<td>'
+        f'<div class="result-metric-main">{fmt(score, "점")}</div>'
+        f'<div class="result-metric-sub">{score_label(score)}</div>'
+        f'<div class="result-bar" style="--w:{score_bar}%"><span></span></div>'
+        f'</td>'
+        f'<td>'
+        f'<div class="result-metric-main">{fmt_pct(accuracy)}</div>'
+        f'<div class="result-metric-sub">{accuracy_desc(accuracy)}</div>'
+        f'<div class="result-bar" style="--w:{acc_bar}%"><span></span></div>'
+        f'</td>'
+        f'<td>'
+        f'<div class="result-metric-main">{fmt(rt_pos, "%")}</div>'
+        f'<div class="result-metric-sub">{rt_position_desc(rt_pos)}</div>'
+        f'<div class="result-bar" style="--w:{rt_bar}%"><span></span></div>'
+        f'</td>'
+        f'<td><span class="result-label-pill">{score_label(score)}</span></td>'
+        f'</tr>'
+    )
 
 
 def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
