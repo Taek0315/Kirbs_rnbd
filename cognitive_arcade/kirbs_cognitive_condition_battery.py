@@ -1690,10 +1690,11 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
     }
     examinee_col = dict(st.session_state.examinee)
     answers_col = {
-        "records_b64": to_b64_json(payload.get("records", [])),
-        "summaries_b64": to_b64_json(payload.get("summaries", {})),
-        "domains_b64": to_b64_json(payload.get("domains", {})),
-        "task_set": ";".join(payload.get("task_set", [])),
+    "raw_payload_b64": to_b64_json(payload),
+    "records_b64": to_b64_json(payload.get("records", [])),
+    "summaries_b64": to_b64_json(payload.get("summaries", {})),
+    "domains_b64": to_b64_json(payload.get("domains", {})),
+    "task_set": ";".join(payload.get("task_set", [])),
     }
     result_col = {
         "overall_score": payload.get("overall_score"),
