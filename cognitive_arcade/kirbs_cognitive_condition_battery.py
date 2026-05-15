@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
 EXAM_TITLE = "KIRBS+ 인지 능력 테스트"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
-EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme"
+EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.9_result_dashboard_no_domain_section"
 
 REGION_OPTIONS = ["수도권", "충청권", "강원권", "전라권", "경상권", "제주도"]
 GENDER_OPTIONS = ["남성", "여성", "기타"]
@@ -562,11 +562,221 @@ div[role="option"]:hover, div[role="option"][aria-selected="true"] { background:
   line-height: 1.65;
 }
 
+.result-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr) minmax(0, 0.95fr);
+  gap: 14px;
+  margin: 16px 0;
+}
+.result-summary-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 178px;
+  border-radius: 24px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(86,227,154,.16), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.009)),
+    var(--surface);
+  border: 1px solid rgba(96,165,250,.34);
+  box-shadow: var(--shadow);
+}
+.result-summary-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -60px -70px auto;
+  width: 170px;
+  height: 170px;
+  border-radius: 999px;
+  background: rgba(79,156,255,.10);
+  pointer-events: none;
+}
+.result-summary-card.primary {
+  border-color: rgba(123,183,255,.58);
+  background:
+    radial-gradient(circle at 92% 10%, rgba(86,227,154,.20), transparent 34%),
+    radial-gradient(circle at 10% 100%, rgba(79,156,255,.20), transparent 40%),
+    linear-gradient(180deg, rgba(255,255,255,.040), rgba(255,255,255,.010)),
+    var(--surface);
+}
+.result-card-label {
+  position: relative;
+  z-index: 1;
+  color: var(--primary-2);
+  font-size: 13px;
+  font-weight: 950;
+  margin-bottom: 10px;
+}
+.result-card-value {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(255,100,70,.28);
+}
+.result-card-caption {
+  position: relative;
+  z-index: 1;
+  min-height: 38px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin-top: 11px;
+}
+.result-card-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  min-width: 64px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #c8ffe4;
+  background: rgba(86,227,154,.11);
+  border: 1px solid rgba(86,227,154,.28);
+  font-size: 12px;
+  font-weight: 950;
+}
+.result-card-meter {
+  position: relative;
+  z-index: 1;
+  height: 10px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(148,163,184,.22);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.result-card-meter > span {
+  display:block;
+  height:100%;
+  width: var(--w);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #56e39a);
+}
+.result-task-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.result-task-card {
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(79,156,255,.13), transparent 34%),
+    linear-gradient(180deg, rgba(20,48,88,.94), rgba(13,33,64,.96));
+  border: 1px solid rgba(96,165,250,.30);
+  padding: 18px;
+  box-shadow: 0 14px 30px rgba(2,8,23,.18);
+}
+.result-task-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:14px;
+}
+.result-task-title {
+  color:#fff;
+  font-size:16px;
+  font-weight:950;
+  line-height:1.35;
+}
+.result-task-desc {
+  color:var(--muted-2);
+  font-size:12px;
+  line-height:1.45;
+  margin-top:5px;
+}
+.result-rank-pill {
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:7px 11px;
+  border-radius:999px;
+  color:#c8ffe4;
+  background:rgba(86,227,154,.11);
+  border:1px solid rgba(86,227,154,.28);
+  font-size:12px;
+  font-weight:950;
+}
+.result-submetric {
+  padding: 11px 0;
+  border-top: 1px solid rgba(148,163,184,.18);
+}
+.result-submetric:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.result-submetric-row {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+}
+.result-submetric-label {
+  color:var(--muted-2);
+  font-size:12px;
+  font-weight:850;
+}
+.result-submetric-value {
+  color:#fff;
+  font-size:20px;
+  font-weight:950;
+  letter-spacing:-0.03em;
+}
+.result-submetric-caption {
+  color:var(--muted-2);
+  font-size:12px;
+  line-height:1.45;
+  margin-top:4px;
+}
+.result-mini-bar {
+  width:100%;
+  height:7px;
+  margin-top:8px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(148,163,184,.18);
+}
+.result-mini-bar > span {
+  display:block;
+  height:100%;
+  width:var(--w);
+  border-radius:999px;
+  background:linear-gradient(90deg,#3b82f6,#56e39a);
+}
+.result-section-title-row {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:4px;
+}
+.result-section-sub {
+  color:var(--muted-2);
+  font-size:13px;
+  line-height:1.55;
+}
+
+@media (max-width: 920px) {
+  .result-dashboard { grid-template-columns: 1fr; }
+  .result-task-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 720px) {
   .block-container { padding-left: .8rem !important; padding-right: .8rem !important; }
   .k-card, .k-hero { padding: 20px; border-radius: 20px; }
   .k-grid { grid-template-columns: 1fr; }
   .score-big { font-size: 46px; }
+  .result-dashboard { gap: 12px; }
+  .result-summary-card { min-height: 0; padding: 18px; border-radius: 20px; }
+  .result-card-value { font-size: 42px; }
+  .result-task-card { border-radius: 18px; padding: 16px; }
 }
 </style>
         """,
@@ -1491,7 +1701,7 @@ function finishAll(){
   state.phase = 'done';
   const payload = {
     exam_name: 'KIRBS_COGNITIVE_ARCADE_3TASKS',
-    exam_version: 'streamlit_component_arcade_3tasks_v1.8_fixed_flanker_height_stable_theme',
+    exam_version: 'streamlit_component_arcade_3tasks_v1.9_result_dashboard_no_domain_section',
     started_at: state.startedAt,
     finished_at: state.finishedAt,
     scoring_note: 'criterion-referenced transformed score; 50 = temporary internal reference point, not population percentile',
@@ -1803,34 +2013,101 @@ def percent_bar(value: Optional[float]) -> str:
     return f"{clamp_num(float(value), 0, 100):.1f}"
 
 
-def build_result_row(task_name: str, task_sub: str, score: Optional[float], accuracy: Optional[float], rt_pos: Optional[float]) -> str:
-    score_bar = percent_bar(score)
-    acc_bar = percent_bar(None if accuracy is None else accuracy * 100)
-    rt_bar = percent_bar(rt_pos)
 
+def mean_optional(values: list) -> Optional[float]:
+    nums = [float(v) for v in values if v is not None]
+    if not nums:
+        return None
+    return sum(nums) / len(nums)
+
+
+def fmt_pct100(value: Optional[float]) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):.1f}%"
+
+
+def overall_accuracy_percent(trail_accuracy: Optional[float], gaze_accuracy: Optional[float], flanker_accuracy: Optional[float]) -> Optional[float]:
+    value = mean_optional([
+        None if trail_accuracy is None else trail_accuracy * 100,
+        None if gaze_accuracy is None else gaze_accuracy * 100,
+        None if flanker_accuracy is None else flanker_accuracy * 100,
+    ])
+    return round(value, 1) if value is not None else None
+
+
+def overall_rt_position_percent(trail_rt: Optional[float], gaze_rt: Optional[float], flanker_rt: Optional[float]) -> Optional[float]:
+    value = mean_optional([trail_rt, gaze_rt, flanker_rt])
+    return round(value, 1) if value is not None else None
+
+
+def metric_caption_for_score(score: Optional[float]) -> str:
+    return score_desc(score)
+
+
+def metric_caption_for_accuracy(acc_pct: Optional[float]) -> str:
+    if acc_pct is None:
+        return "정답률을 산출할 수 없습니다."
+    if acc_pct >= 90:
+        return "전반적으로 높은 정확도를 보였습니다."
+    if acc_pct >= 75:
+        return "전반적으로 보통 이상의 정확도를 보였습니다."
+    return "정답률이 낮아 결과 해석에 주의가 필요합니다."
+
+
+def metric_caption_for_rt(rt_pct: Optional[float]) -> str:
+    if rt_pct is None:
+        return "반응속도 위치를 산출할 수 없습니다."
+    if rt_pct >= 65:
+        return "내부 기준보다 빠른 반응속도입니다."
+    if rt_pct >= 45:
+        return "내부 기준과 유사한 반응속도입니다."
+    return "내부 기준보다 느린 반응속도입니다."
+
+
+def build_summary_metric_card(title: str, value: Optional[float], suffix: str, caption: str, bar_value: Optional[float], tag: Optional[str] = None, primary: bool = False) -> str:
+    card_class = "result-summary-card primary" if primary else "result-summary-card"
+    bar = percent_bar(bar_value)
+    display = fmt(value, suffix) if suffix == "점" else fmt_pct100(value)
+    tag_html = f'<div class="result-card-tag">{tag}</div>' if tag else ""
     return (
-        f'<tr>'
-        f'<td>'
-        f'<div class="result-task-name">{task_name}</div>'
-        f'<div class="result-task-sub">{task_sub}</div>'
-        f'</td>'
-        f'<td>'
-        f'<div class="result-metric-main">{fmt(score, "점")}</div>'
-        f'<div class="result-metric-sub">{score_label(score)}</div>'
-        f'<div class="result-bar" style="--w:{score_bar}%"><span></span></div>'
-        f'</td>'
-        f'<td>'
-        f'<div class="result-metric-main">{fmt_pct(accuracy)}</div>'
-        f'<div class="result-metric-sub">{accuracy_desc(accuracy)}</div>'
-        f'<div class="result-bar" style="--w:{acc_bar}%"><span></span></div>'
-        f'</td>'
-        f'<td>'
-        f'<div class="result-metric-main">{fmt(rt_pos, "%")}</div>'
-        f'<div class="result-metric-sub">{rt_position_desc(rt_pos)}</div>'
-        f'<div class="result-bar" style="--w:{rt_bar}%"><span></span></div>'
-        f'</td>'
-        f'<td><span class="result-label-pill">{score_label(score)}</span></td>'
-        f'</tr>'
+        f'<div class="{card_class}">'
+        f'<div class="result-card-label">{title}</div>'
+        f'<div class="result-card-value">{display}</div>'
+        f'<div class="result-card-caption">{caption}</div>'
+        f'{tag_html}'
+        f'<div class="result-card-meter" style="--w:{bar}%"><span></span></div>'
+        f'</div>'
+    )
+
+
+def build_task_card(task_name: str, task_sub: str, score: Optional[float], accuracy: Optional[float], rt_pos: Optional[float]) -> str:
+    acc_pct = None if accuracy is None else round(float(accuracy) * 100, 1)
+    score_bar = percent_bar(score)
+    acc_bar = percent_bar(acc_pct)
+    rt_bar = percent_bar(rt_pos)
+    return (
+        f'<article class="result-task-card">'
+        f'<div class="result-task-head">'
+        f'<div><div class="result-task-title">{task_name}</div><div class="result-task-desc">{task_sub}</div></div>'
+        f'<span class="result-rank-pill">{score_label(score)}</span>'
+        f'</div>'
+        f'<div class="result-submetric">'
+        f'<div class="result-submetric-row"><span class="result-submetric-label">과제별 점수</span><span class="result-submetric-value">{fmt(score, "점")}</span></div>'
+        f'<div class="result-submetric-caption">{score_label(score)}</div>'
+        f'<div class="result-mini-bar" style="--w:{score_bar}%"><span></span></div>'
+        f'</div>'
+        f'<div class="result-submetric">'
+        f'<div class="result-submetric-row"><span class="result-submetric-label">정답률</span><span class="result-submetric-value">{fmt_pct100(acc_pct)}</span></div>'
+        f'<div class="result-submetric-caption">{accuracy_desc(accuracy)}</div>'
+        f'<div class="result-mini-bar" style="--w:{acc_bar}%"><span></span></div>'
+        f'</div>'
+        f'<div class="result-submetric">'
+        f'<div class="result-submetric-row"><span class="result-submetric-label">RT 위치</span><span class="result-submetric-value">{fmt_pct100(rt_pos)}</span></div>'
+        f'<div class="result-submetric-caption">{rt_position_desc(rt_pos)}</div>'
+        f'<div class="result-mini-bar" style="--w:{rt_bar}%"><span></span></div>'
+        f'</div>'
+        f'</article>'
     )
 
 
@@ -1859,19 +2136,23 @@ def build_exam_data(payload: Dict[str, Any]) -> Dict[str, str]:
     trail_accuracy = task_accuracy_from_records(records, "trail")
     gaze_accuracy = as_float(gaze_summary.get("accuracy"))
     flanker_accuracy = as_float(flanker_summary.get("accuracy"))
+    trail_rt_position = rt_position_percent("trail", trail_summary)
+    gaze_rt_position = rt_position_percent("gaze", gaze_summary)
+    flanker_rt_position = rt_position_percent("flanker", flanker_summary)
     result_col = {
         "overall_score": payload.get("overall_score"),
         "overall_label": score_label(payload.get("overall_score")),
-        "processing_speed": (payload.get("domains", {}) or {}).get("processing_speed"),
-        "attention_shift": (payload.get("domains", {}) or {}).get("attention_shift"),
-        "social_attention": (payload.get("domains", {}) or {}).get("social_attention"),
-        "interference_control": (payload.get("domains", {}) or {}).get("interference_control"),
+        "overall_accuracy_pct": overall_accuracy_percent(trail_accuracy, gaze_accuracy, flanker_accuracy),
+        "overall_rt_position_pct": overall_rt_position_percent(trail_rt_position, gaze_rt_position, flanker_rt_position),
+        "trail_score": trail_summary.get("score"),
         "trail_accuracy_pct": round(trail_accuracy * 100, 1) if trail_accuracy is not None else None,
+        "trail_rt_position_pct": trail_rt_position,
+        "gaze_score": gaze_summary.get("score"),
         "gaze_accuracy_pct": round(gaze_accuracy * 100, 1) if gaze_accuracy is not None else None,
+        "gaze_rt_position_pct": gaze_rt_position,
+        "flanker_score": flanker_summary.get("score"),
         "flanker_accuracy_pct": round(flanker_accuracy * 100, 1) if flanker_accuracy is not None else None,
-        "trail_rt_position_pct": rt_position_percent("trail", trail_summary),
-        "gaze_rt_position_pct": rt_position_percent("gaze", gaze_summary),
-        "flanker_rt_position_pct": rt_position_percent("flanker", flanker_summary),
+        "flanker_rt_position_pct": flanker_rt_position,
         "scoring_note": payload.get("scoring_note", ""),
     }
     return {
@@ -1895,105 +2176,106 @@ def page_result(dev_mode: bool = False) -> None:
     exam_data = build_exam_data(payload)
     auto_db_insert(exam_data)
 
-    domains = payload.get("domains", {}) or {}
     summaries = payload.get("summaries", {}) or {}
     overall = payload.get("overall_score")
 
-    st.markdown("<div class='k-wrap'>", unsafe_allow_html=True)
-    st.markdown(
-        f"""
-        <section class="k-hero">
-          <span class="k-badge">Result</span>
-          <span class="k-badge">3-Task Arcade</span>
-          <h1 class="k-title">인지 능력 테스트 결과</h1>
-          <p class="k-text" style="margin-top:12px;">본 검사의 점수는 검사를 진행한 사람들의 평균 대비 점수를 나타내고 있습니다.</p>
-        </section>
-        <section class="result-score-card">
-          <div class="score-label">종합 환산점수</div>
-          <div><span class="score-big">{fmt(overall)}</span><span class="score-unit">점</span></div>
-          <div class="meter" style="--w:{min(max(float(overall or 0), 0), 85)}%"><span></span></div>
-          <div class="score-desc"><b>{score_label(overall)}</b> · {score_desc(overall)}</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    
-    st.markdown("<section class='k-card'><h2 class='k-title-md'>영역별 결과</h2>", unsafe_allow_html=True)
-    cols = st.columns(4)
-    domain_labels = [
-        ("처리속도", domains.get("processing_speed")),
-        ("주의전환", domains.get("attention_shift")),
-        ("시선 판단", domains.get("social_attention")),
-        ("간섭 억제", domains.get("interference_control")),
-    ]
-    for col, (label, score) in zip(cols, domain_labels):
-        with col:
-            st.metric(label, "-" if score is None else f"{float(score):.1f}점")
-    st.markdown("</section>", unsafe_allow_html=True)
-
-    trail = summaries.get("trail", {})
-    gaze = summaries.get("gaze", {})
-    flanker = summaries.get("flanker", {})
+    trail = summaries.get("trail", {}) or {}
+    gaze = summaries.get("gaze", {}) or {}
+    flanker = summaries.get("flanker", {}) or {}
 
     records = payload.get("records", []) or []
     trail_accuracy = task_accuracy_from_records(records, "trail")
     gaze_accuracy = as_float(gaze.get("accuracy"))
     flanker_accuracy = as_float(flanker.get("accuracy"))
 
-    table_rows = "".join([
-        build_result_row(
+    trail_rt = rt_position_percent("trail", trail)
+    gaze_rt = rt_position_percent("gaze", gaze)
+    flanker_rt = rt_position_percent("flanker", flanker)
+
+    overall_accuracy = overall_accuracy_percent(trail_accuracy, gaze_accuracy, flanker_accuracy)
+    overall_rt = overall_rt_position_percent(trail_rt, gaze_rt, flanker_rt)
+
+    overall_bar = min(max(float(overall or 0), 0), 85)
+
+    summary_cards = "".join([
+        build_summary_metric_card(
+            "전체 점수",
+            overall,
+            "점",
+            metric_caption_for_score(overall),
+            overall_bar,
+            tag=score_label(overall),
+            primary=True,
+        ),
+        build_summary_metric_card(
+            "전체 정답률",
+            overall_accuracy,
+            "%",
+            metric_caption_for_accuracy(overall_accuracy),
+            overall_accuracy,
+            tag="정확도",
+        ),
+        build_summary_metric_card(
+            "전체 RT 위치",
+            overall_rt,
+            "%",
+            metric_caption_for_rt(overall_rt),
+            overall_rt,
+            tag="평균 대비",
+        ),
+    ])
+
+    task_cards = "".join([
+        build_task_card(
             "Trail 연결 테스트",
             "시각 탐색 · 주의전환",
             trail.get("score"),
             trail_accuracy,
-            rt_position_percent("trail", trail),
+            trail_rt,
         ),
-        build_result_row(
+        build_task_card(
             "시선 방향 테스트",
             "시선 판단 · 반응속도",
             gaze.get("score"),
             gaze_accuracy,
-            rt_position_percent("gaze", gaze),
+            gaze_rt,
         ),
-        build_result_row(
+        build_task_card(
             "목표 캐릭터 시선 방향 테스트",
             "선택적 주의 · 간섭 억제",
             flanker.get("score"),
             flanker_accuracy,
-            rt_position_percent("flanker", flanker),
+            flanker_rt,
         ),
     ])
+
+    st.markdown("<div class='k-wrap'>", unsafe_allow_html=True)
     st.markdown(
-        f"""
-        <section class="k-card">
-          <h2 class="k-title-md">과제별 결과</h2>
-          <div class="result-table-wrap">
-            <table class="result-table">
-              <thead>
-                <tr>
-                  <th style="width:28%;">과제</th>
-                  <th style="width:18%;">환산점수</th>
-                  <th style="width:18%;">정답률</th>
-                  <th style="width:20%;">RT 위치<br><span style="font-weight:700;">평균 대비</span></th>
-                  <th style="width:16%;">해석</th>
-                </tr>
-              </thead>
-              <tbody>{table_rows}</tbody>
-            </table>
-          </div>
-          <div class="k-note result-help-note">
-            정답률은 전체 응답 중 정답 비율입니다. RT 위치는 현재 내부 기준 반응시간을 50%로 두고 환산한 평균 대비 반응속도 지표이며, 높을수록 기준보다 빠른 수행을 의미합니다.
-          </div>
-        </section>
-        """,
+        f'''<section class="k-hero">
+<span class="k-badge">Result</span>
+<span class="k-badge">3-Task Arcade</span>
+<h1 class="k-title">인지 능력 테스트 결과</h1>
+<p class="k-text" style="margin-top:12px;">전체 점수, 정답률, 반응속도 위치를 중심으로 현재 수행 수준을 요약합니다.</p>
+</section>
+<section class="result-dashboard">{summary_cards}</section>
+<section class="k-card">
+<div class="result-section-title-row">
+  <div>
+    <h2 class="k-title-md" style="margin-bottom:4px;">과제별 세부 결과</h2>
+    <div class="result-section-sub">각 과제의 환산점수, 정답률, RT 위치를 구분하여 제시합니다.</div>
+  </div>
+</div>
+<div class="result-task-grid">{task_cards}</div>
+<div class="k-note result-help-note">
+  전체 점수는 세 과제의 환산점수 평균입니다. 정답률은 과제별 응답 정확도를 평균한 값이며, RT 위치는 내부 기준 반응시간을 50%로 두고 환산한 평균 대비 반응속도 지표입니다. RT 위치는 높을수록 기준보다 빠른 수행을 의미합니다.
+</div>
+</section>''',
         unsafe_allow_html=True,
     )
 
-    
     if st.button("검사 다시하기", type="primary", use_container_width=True):
         reset_all()
         st.rerun()
-    
 
     if dev_mode:
         with st.expander("dev=1 DB exam_data"):
