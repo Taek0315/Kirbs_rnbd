@@ -1745,7 +1745,7 @@ def page_intro() -> None:
         f"""
         <section class="k-hero">
           <span class="k-badge">Cognitive Arcade</span>
-          <span class="k-badge">Attention 3 Tasks</span>
+          <span class="k-badge">Attention 3-Tasks</span>
           <h1 class="k-title">{EXAM_TITLE}</h1>
           <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>간편한 3개의 게임 형태의 검사를 통해 처리속도, 주의 집중, 간섭 억제 경향을 확인합니다.</p>
         </section>
@@ -2243,7 +2243,7 @@ def page_result(dev_mode: bool = False) -> None:
     st.markdown(
         f'''<section class="k-hero">
 <span class="k-badge">Result</span>
-<span class="k-badge">3-Task Arcade</span>
+<span class="k-badge">Attention 3-Tasks</span>
 <h1 class="k-title">인지 능력 테스트 결과</h1>
 <p class="k-text" style="margin-top:12px;">전체 점수, 정답률, 반응속도 위치를 중심으로 현재 수행 수준을 요약합니다.</p>
 </section>
