@@ -7,16 +7,6 @@ KIRBS+ 인지 미니게임 3과제 버전
 - Gaze 방향 판단 과제: 시선 방향 판단 + 반응속도
 - Flanker 캐릭터 과제: 선택적 주의 + 간섭 억제
 
-핵심 원칙
-- 무료 배포용으로 과제 수와 난도를 낮추고, 게임형 진행감을 강화함
-- n-back, Go/No-Go 제거
-- Streamlit iframe 상위 페이지 이동 방식 제거
-- declare_component + Streamlit component message protocol로 JS 결과를 Python에 직접 반환
-- 결과 화면 자동 전환
-- 사용자에게 raw JSON/과제 요약 expander 노출 없음(dev=1에서만 확인)
-- 점수는 정답률과 RT를 결합한 내부 기준 환산점수로 산출
-- 테스타리움 병합 기준에 맞춰 ENABLE_DB_INSERT 환경변수로 DB 저장 분기
-
 실행 예
     ENABLE_DB_INSERT=false streamlit run kirbs_cognitive_arcade_3tasks.py
 """
@@ -49,7 +39,7 @@ st.set_page_config(
 
 KST = timezone(timedelta(hours=9))
 
-EXAM_NAME = "KIRBS_COGNITIVE_ARCADE_3TASKS"
+EXAM_NAME = "attention_3tasks"
 EXAM_TITLE = "KIRBS+ 인지 능력 테스트"
 EXAM_SUBTITLE = "처리속도 · 시각 탐색 · 시선 판단 · 간섭 억제"
 EXAM_VERSION = "streamlit_component_arcade_3tasks_v1.9_result_dashboard_no_domain_section"
