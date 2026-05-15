@@ -2057,12 +2057,12 @@ def metric_caption_for_accuracy(acc_pct: Optional[float]) -> str:
 
 def metric_caption_for_rt(rt_pct: Optional[float]) -> str:
     if rt_pct is None:
-        return "반응속도 위치를 산출할 수 없습니다."
+        return "반응속도를 산출할 수 없습니다."
     if rt_pct >= 65:
-        return "내부 기준보다 빠른 반응속도입니다."
+        return "기준보다 빠른 반응속도입니다."
     if rt_pct >= 45:
-        return "내부 기준과 유사한 반응속도입니다."
-    return "내부 기준보다 느린 반응속도입니다."
+        return "기준과 유사한 반응속도입니다."
+    return "기준보다 느린 반응속도입니다."
 
 
 def build_summary_metric_card(title: str, value: Optional[float], suffix: str, caption: str, bar_value: Optional[float], tag: Optional[str] = None, primary: bool = False) -> str:
