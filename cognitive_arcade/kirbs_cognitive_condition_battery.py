@@ -1745,7 +1745,7 @@ def page_intro() -> None:
         f"""
         <section class="k-hero">
           <span class="k-badge">Cognitive Arcade</span>
-          <span class="k-badge">3 Mini Games</span>
+          <span class="k-badge">Attention 3 Tasks</span>
           <h1 class="k-title">{EXAM_TITLE}</h1>
           <p class="k-text" style="margin-top:12px;">{EXAM_SUBTITLE}<br>간편한 3개의 게임 형태의 검사를 통해 처리속도, 주의 집중, 간섭 억제 경향을 확인합니다.</p>
         </section>
