@@ -2267,7 +2267,7 @@ def page_result(dev_mode: bool = False) -> None:
 </div>
 <div class="result-task-grid">{task_cards}</div>
 <div class="k-note result-help-note">
-  전체 점수는 세 과제의 환산점수 평균입니다. 정답률은 과제별 응답 정확도를 평균한 값이며, RT 위치는 내부 기준 반응시간을 50%로 두고 환산한 평균 대비 반응속도 지표입니다. RT 위치는 높을수록 기준보다 빠른 수행을 의미합니다.
+  전체 점수는 세 과제의 환산점수 평균입니다. 정답률은 과제별 응답 정확도를 평균한 값이며, RT 위치는 기준 반응시간 기준을 50%로 두고 환산한 평균 대비 반응속도 지표입니다. RT 위치는 높을수록 기준보다 빠른 수행을 의미합니다.
 </div>
 </section>''',
         unsafe_allow_html=True,
